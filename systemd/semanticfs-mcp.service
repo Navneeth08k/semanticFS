@@ -1,0 +1,13 @@
+﻿[Unit]
+Description=SemanticFS MCP Service
+After=semanticfs-fuse.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/semanticfs
+ExecStart=/usr/local/bin/semanticfs --config /etc/semanticfs/config.toml serve mcp
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

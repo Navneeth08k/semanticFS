@@ -1,0 +1,14 @@
+﻿[Unit]
+Description=SemanticFS Fuse Bridge Service
+After=semanticfs-indexer.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/semanticfs
+ExecStart=/usr/local/bin/semanticfs --config /etc/semanticfs/config.toml serve fuse
+Restart=always
+RestartSec=2
+WatchdogSec=30
+
+[Install]
+WantedBy=multi-user.target

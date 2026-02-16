@@ -1,0 +1,55 @@
+﻿# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Lockfile policy
+# Keep Cargo.lock for applications, ignore for reusable libraries.
+# This repo is an application, so we keep Cargo.lock tracked.
+# /Cargo.lock
+
+# SemanticFS local runtime artifacts
+.semanticfs/
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+
+# Local config overrides
+config/local.toml
+local.toml
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.pid
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-generated files (cross-platform)
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+Thumbs.db
+Desktop.ini
+
+# Test/coverage outputs
+coverage/
+*.profraw
+*.profdata
+
+# Optional local tooling caches
+.cache/

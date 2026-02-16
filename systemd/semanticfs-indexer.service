@@ -1,0 +1,14 @@
+﻿[Unit]
+Description=SemanticFS Indexer Watch Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/semanticfs
+ExecStart=/usr/local/bin/semanticfs --config /etc/semanticfs/config.toml index watch
+Restart=always
+RestartSec=2
+WatchdogSec=30
+
+[Install]
+WantedBy=multi-user.target

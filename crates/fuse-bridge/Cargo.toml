@@ -1,0 +1,23 @@
+﻿[package]
+name = "fuse-bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+lancedb = ["retrieval-core/lancedb"]
+
+[dependencies]
+anyhow.workspace = true
+lru.workspace = true
+parking_lot.workspace = true
+rusqlite.workspace = true
+semanticfs-common = { path = "../semanticfs-common" }
+retrieval-core = { path = "../retrieval-core" }
+map-engine = { path = "../map-engine" }
+policy-guard = { path = "../policy-guard" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+fuser = "0.14"
+libc = "0.2"

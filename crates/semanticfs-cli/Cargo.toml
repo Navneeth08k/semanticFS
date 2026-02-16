@@ -1,0 +1,26 @@
+﻿[package]
+name = "semanticfs-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = ["lancedb"]
+lancedb = ["indexer/lancedb", "fuse-bridge/lancedb"]
+onnx = ["indexer/onnx"]
+
+[[bin]]
+name = "semanticfs"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+semanticfs-common = { path = "../semanticfs-common" }
+indexer = { path = "../indexer" }
+fuse-bridge = { path = "../fuse-bridge" }
+mcp = { path = "../mcp" }
