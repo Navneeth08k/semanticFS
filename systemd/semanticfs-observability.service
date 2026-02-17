@@ -1,0 +1,13 @@
+[Unit]
+Description=SemanticFS Observability Service
+After=network.target semanticfs-indexer.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/semanticfs
+ExecStart=/opt/semanticfs/bin/semanticfs --config /etc/semanticfs/config.toml serve observability
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

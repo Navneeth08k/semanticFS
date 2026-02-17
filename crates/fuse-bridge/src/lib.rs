@@ -5,7 +5,16 @@ use parking_lot::Mutex;
 use policy_guard::PolicyGuard;
 use retrieval_core::RetrievalCore;
 use semanticfs_common::{FuseCacheConfig, GroundedHit, RetrievalConfig, SemanticFsConfig};
-use std::{fs, num::NonZeroUsize, path::PathBuf, sync::Arc};
+use std::{
+    fs,
+    num::NonZeroUsize,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::Instant,
+};
 
 #[cfg(target_os = "linux")]
 mod linux_mount;
@@ -25,6 +34,93 @@ pub struct FuseBridge {
     map_engine: MapEngine,
     inode_cache: Arc<Mutex<LruCache<String, u64>>>,
     content_cache: Arc<Mutex<LruCache<String, Vec<u8>>>>,
+    stats: Arc<BridgeStats>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BridgeStatsSnapshot {
+    pub read_total: u64,
+    pub read_errors: u64,
+    pub latency_count: u64,
+    pub latency_sum_ms: u64,
+    pub latency_buckets: Vec<(u64, u64)>,
+    pub inode_cache_hits: u64,
+    pub inode_cache_misses: u64,
+    pub content_cache_hits: u64,
+    pub content_cache_misses: u64,
+    pub stale_hits_total: u64,
+    pub policy_denies_total: u64,
+}
+
+struct BridgeStats {
+    read_total: AtomicU64,
+    read_errors: AtomicU64,
+    latency_count: AtomicU64,
+    latency_sum_ms: AtomicU64,
+    latency_buckets: Mutex<Vec<u64>>,
+    inode_cache_hits: AtomicU64,
+    inode_cache_misses: AtomicU64,
+    content_cache_hits: AtomicU64,
+    content_cache_misses: AtomicU64,
+    stale_hits_total: AtomicU64,
+    policy_denies_total: AtomicU64,
+}
+
+const LATENCY_BUCKETS_MS: [u64; 10] = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2000];
+
+impl BridgeStats {
+    fn new() -> Self {
+        Self {
+            read_total: AtomicU64::new(0),
+            read_errors: AtomicU64::new(0),
+            latency_count: AtomicU64::new(0),
+            latency_sum_ms: AtomicU64::new(0),
+            latency_buckets: Mutex::new(vec![0; LATENCY_BUCKETS_MS.len()]),
+            inode_cache_hits: AtomicU64::new(0),
+            inode_cache_misses: AtomicU64::new(0),
+            content_cache_hits: AtomicU64::new(0),
+            content_cache_misses: AtomicU64::new(0),
+            stale_hits_total: AtomicU64::new(0),
+            policy_denies_total: AtomicU64::new(0),
+        }
+    }
+
+    fn observe_read_latency(&self, elapsed_ms: u64) {
+        self.latency_count.fetch_add(1, Ordering::Relaxed);
+        self.latency_sum_ms.fetch_add(elapsed_ms, Ordering::Relaxed);
+
+        let bucket_index = LATENCY_BUCKETS_MS
+            .iter()
+            .position(|bound| elapsed_ms <= *bound)
+            .unwrap_or(LATENCY_BUCKETS_MS.len() - 1);
+        let mut buckets = self.latency_buckets.lock();
+        if let Some(v) = buckets.get_mut(bucket_index) {
+            *v += 1;
+        }
+    }
+
+    fn snapshot(&self) -> BridgeStatsSnapshot {
+        let buckets = self.latency_buckets.lock().clone();
+        let latency_buckets = LATENCY_BUCKETS_MS
+            .iter()
+            .copied()
+            .zip(buckets)
+            .collect::<Vec<_>>();
+
+        BridgeStatsSnapshot {
+            read_total: self.read_total.load(Ordering::Relaxed),
+            read_errors: self.read_errors.load(Ordering::Relaxed),
+            latency_count: self.latency_count.load(Ordering::Relaxed),
+            latency_sum_ms: self.latency_sum_ms.load(Ordering::Relaxed),
+            latency_buckets,
+            inode_cache_hits: self.inode_cache_hits.load(Ordering::Relaxed),
+            inode_cache_misses: self.inode_cache_misses.load(Ordering::Relaxed),
+            content_cache_hits: self.content_cache_hits.load(Ordering::Relaxed),
+            content_cache_misses: self.content_cache_misses.load(Ordering::Relaxed),
+            stale_hits_total: self.stale_hits_total.load(Ordering::Relaxed),
+            policy_denies_total: self.policy_denies_total.load(Ordering::Relaxed),
+        }
+    }
 }
 
 impl FuseBridge {
@@ -49,6 +145,7 @@ impl FuseBridge {
             map_engine,
             inode_cache: Arc::new(Mutex::new(inode_cache)),
             content_cache: Arc::new(Mutex::new(content_cache)),
+            stats: Arc::new(BridgeStats::new()),
         })
     }
 
@@ -58,36 +155,67 @@ impl FuseBridge {
         snapshot_version: u64,
         active_version: u64,
     ) -> Result<Vec<u8>> {
-        if let Some(cached) = self.content_cache.lock().get(virtual_path).cloned() {
-            return Ok(cached);
+        let started = Instant::now();
+
+        let result = (|| {
+            if let Some(cached) = self.content_cache.lock().get(virtual_path).cloned() {
+                self.stats
+                    .content_cache_hits
+                    .fetch_add(1, Ordering::Relaxed);
+                return Ok(cached);
+            }
+            self.stats
+                .content_cache_misses
+                .fetch_add(1, Ordering::Relaxed);
+
+            self.ensure_inode(virtual_path);
+
+            let payload = if let Some(raw_path) = virtual_path.strip_prefix("/raw/") {
+                self.read_raw(raw_path)?
+            } else if let Some(query_file) = virtual_path.strip_prefix("/search/") {
+                self.render_search(query_file, snapshot_version, active_version)?
+            } else if let Some(map_path) = virtual_path.strip_prefix("/map/") {
+                self.render_map(map_path, snapshot_version)?
+            } else if virtual_path == "/.well-known/health.json" {
+                b"{\"live\":true,\"ready\":true}".to_vec()
+            } else {
+                anyhow::bail!("unsupported virtual path")
+            };
+
+            self.content_cache
+                .lock()
+                .put(virtual_path.to_string(), payload.clone());
+
+            Ok(payload)
+        })();
+
+        self.stats.read_total.fetch_add(1, Ordering::Relaxed);
+        let elapsed_ms = started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
+        self.stats.observe_read_latency(elapsed_ms);
+
+        if let Err(err) = &result {
+            self.stats.read_errors.fetch_add(1, Ordering::Relaxed);
+            let msg = err.to_string().to_ascii_lowercase();
+            if msg.contains("deny") || msg.contains("secret") || msg.contains("redact") {
+                self.stats
+                    .policy_denies_total
+                    .fetch_add(1, Ordering::Relaxed);
+            }
         }
 
-        self.ensure_inode(virtual_path);
-
-        let payload = if let Some(raw_path) = virtual_path.strip_prefix("/raw/") {
-            self.read_raw(raw_path)?
-        } else if let Some(query_file) = virtual_path.strip_prefix("/search/") {
-            self.render_search(query_file, snapshot_version, active_version)?
-        } else if let Some(map_path) = virtual_path.strip_prefix("/map/") {
-            self.render_map(map_path, snapshot_version)?
-        } else if virtual_path == "/.well-known/health.json" {
-            b"{\"live\":true,\"ready\":true}".to_vec()
-        } else {
-            anyhow::bail!("unsupported virtual path")
-        };
-
-        self.content_cache
-            .lock()
-            .put(virtual_path.to_string(), payload.clone());
-
-        Ok(payload)
+        result
     }
 
     fn ensure_inode(&self, key: &str) {
         let mut cache = self.inode_cache.lock();
         if cache.get(key).is_none() {
+            self.stats
+                .inode_cache_misses
+                .fetch_add(1, Ordering::Relaxed);
             let inode = hash_inode(key);
             cache.put(key.to_string(), inode);
+        } else {
+            self.stats.inode_cache_hits.fetch_add(1, Ordering::Relaxed);
         }
     }
 
@@ -117,6 +245,10 @@ impl FuseBridge {
         let hits = self
             .retrieval
             .search(&query, snapshot_version, active_version)?;
+        let stale_count = hits.iter().filter(|h| h.stale).count() as u64;
+        self.stats
+            .stale_hits_total
+            .fetch_add(stale_count, Ordering::Relaxed);
         let md = render_search_markdown(&query, &hits);
         Ok(md.into_bytes())
     }
@@ -134,6 +266,10 @@ impl FuseBridge {
         let inode = self.inode_cache.lock().len();
         let content = self.content_cache.lock().len();
         (inode, content)
+    }
+
+    pub fn stats_snapshot(&self) -> BridgeStatsSnapshot {
+        self.stats.snapshot()
     }
 
     pub fn active_version(&self) -> Result<u64> {

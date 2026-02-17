@@ -389,7 +389,7 @@ where
 fn vector_backend_enabled() -> bool {
     std::env::var("SEMANTICFS_VECTOR_BACKEND")
         .map(|v| v.eq_ignore_ascii_case("lancedb"))
-        .unwrap_or(false)
+        .unwrap_or(true)
 }
 
 fn rrf_fuse(rank_lists: &[Vec<PartialHit>], k: f32) -> Vec<(String, f32)> {

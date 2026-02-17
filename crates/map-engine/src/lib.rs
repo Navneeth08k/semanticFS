@@ -36,7 +36,18 @@ impl MapEngine {
         Ok(None)
     }
 
-    fn get_enrichment(&self, _dir: &str, _snapshot_version: u64) -> Result<Option<String>> {
+    fn get_enrichment(&self, dir: &str, snapshot_version: u64) -> Result<Option<String>> {
+        let conn = Connection::open(&self.db_path)?;
+        let mut stmt = conn.prepare(
+            "SELECT enrichment_markdown FROM map_enrichments WHERE dir_path=?1 AND index_version=?2 AND status='ready'",
+        )?;
+
+        let mut rows = stmt.query(params![dir, snapshot_version])?;
+        if let Some(row) = rows.next()? {
+            let md: String = row.get(0)?;
+            return Ok(Some(md));
+        }
+
         Ok(None)
     }
 }

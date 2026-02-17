@@ -6,7 +6,6 @@ license.workspace = true
 
 [features]
 default = []
-onnx = ["dep:ort"]
 lancedb = ["dep:lancedb", "dep:arrow-array", "dep:arrow-schema", "dep:futures-util", "dep:tokio"]
 
 [dependencies]
@@ -25,4 +24,3 @@ futures-util = { workspace = true, optional = true }
 arrow-array = { version = "57", optional = true }
 arrow-schema = { version = "57", optional = true }
 lancedb = { version = "0.26.2", optional = true }
-ort = { version = "2.0.0-rc.11", optional = true }

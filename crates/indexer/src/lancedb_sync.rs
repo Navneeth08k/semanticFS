@@ -15,7 +15,7 @@ pub fn sync_vectors_to_lancedb_if_enabled(_db: &IndexerDb, _version: u64) -> Res
 fn vector_backend_enabled() -> bool {
     std::env::var("SEMANTICFS_VECTOR_BACKEND")
         .map(|v| v.eq_ignore_ascii_case("lancedb"))
-        .unwrap_or(false)
+        .unwrap_or(true)
 }
 
 #[cfg(feature = "lancedb")]

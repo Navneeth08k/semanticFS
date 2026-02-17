@@ -108,6 +108,19 @@ impl IndexerDb {
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY(dir_path, index_version)
             );
+
+            CREATE TABLE IF NOT EXISTS map_enrichments (
+                dir_path TEXT NOT NULL,
+                enrichment_markdown TEXT NOT NULL,
+                index_version INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                model_info TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY(dir_path, index_version)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_map_enrichments_version_status
+            ON map_enrichments(index_version, status);
             "#,
         )?;
         Ok(())
@@ -323,6 +336,100 @@ impl IndexerDb {
             params![summary.dir_path, summary.summary_markdown, version],
         )?;
         Ok(())
+    }
+
+    pub fn upsert_map_enrichment(
+        &self,
+        dir_path: &str,
+        enrichment_markdown: &str,
+        version: u64,
+        status: &str,
+        model_info: &str,
+    ) -> Result<()> {
+        self.conn.execute(
+            r#"
+            INSERT INTO map_enrichments(dir_path, enrichment_markdown, index_version, status, model_info, updated_at)
+            VALUES(?1, ?2, ?3, ?4, ?5, datetime('now'))
+            ON CONFLICT(dir_path, index_version)
+            DO UPDATE SET
+                enrichment_markdown=excluded.enrichment_markdown,
+                status=excluded.status,
+                model_info=excluded.model_info,
+                updated_at=excluded.updated_at
+            "#,
+            params![dir_path, enrichment_markdown, version, status, model_info],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_map_summaries(&self, version: u64) -> Result<Vec<(String, String)>> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT dir_path, summary_markdown
+            FROM map_summaries
+            WHERE index_version=?1
+            ORDER BY dir_path
+            "#,
+        )?;
+        let rows = stmt.query_map(params![version], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        Ok(rows.filter_map(|r| r.ok()).collect())
+    }
+
+    pub fn file_type_counts_for_dir(
+        &self,
+        dir: &str,
+        version: u64,
+        limit: usize,
+    ) -> Result<Vec<(String, u32)>> {
+        let exact = dir;
+        let prefix = format!("{}/%", dir);
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT file_type, COUNT(*) AS c
+            FROM files
+            WHERE index_version=?1
+              AND parse_status='indexed'
+              AND (path=?2 OR path LIKE ?3)
+            GROUP BY file_type
+            ORDER BY c DESC
+            LIMIT ?4
+            "#,
+        )?;
+
+        let rows = stmt.query_map(params![version, exact, prefix, limit as i64], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u32))
+        })?;
+        Ok(rows.filter_map(|r| r.ok()).collect())
+    }
+
+    pub fn top_symbols_for_dir(
+        &self,
+        dir: &str,
+        version: u64,
+        limit: usize,
+    ) -> Result<Vec<(String, String, u32)>> {
+        let exact = dir;
+        let prefix = format!("{}/%", dir);
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT symbol_name, symbol_kind, COUNT(*) AS c
+            FROM symbols
+            WHERE index_version=?1
+              AND (path=?2 OR path LIKE ?3)
+            GROUP BY symbol_name, symbol_kind
+            ORDER BY c DESC, symbol_name ASC
+            LIMIT ?4
+            "#,
+        )?;
+
+        let rows = stmt.query_map(params![version, exact, prefix, limit as i64], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)? as u32,
+            ))
+        })?;
+        Ok(rows.filter_map(|r| r.ok()).collect())
     }
 
     pub fn fetch_vectors_for_version(&self, version: u64) -> Result<Vec<VectorRow>> {

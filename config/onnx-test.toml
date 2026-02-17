@@ -1,5 +1,5 @@
 ﻿[workspace]
-repo_root = "/abs/repo"
+repo_root = "c:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS"
 mount_point = "/mnt/ai"
 
 [filter]
@@ -20,17 +20,12 @@ chunk_overlap_lines = 20
 
 [embedding]
 model = "bge-small-en-v1.5"
-runtime = "hash"
+runtime = "onnx"
 quantization = "int8"
 dimension = 384
-batch_size = 64
+batch_size = 32
 
 [retrieval]
-# v1.1 locked profile:
-# - vector backend: lancedb (default unless SEMANTICFS_VECTOR_BACKEND=sqlite)
-# - rrf_k: 60
-# - topn_vector: 20
-# - topn_final: 5
 rrf_mode = "plain"
 rrf_k = 60
 topn_symbol = 10

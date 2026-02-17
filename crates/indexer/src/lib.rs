@@ -3,6 +3,7 @@ pub mod db;
 pub mod embedding;
 pub mod filetype;
 pub mod lancedb_sync;
+pub mod map_enrichment;
 pub mod map_summary;
 pub mod symbols;
 
@@ -27,6 +28,7 @@ use crate::{
     embedding::Embedder,
     filetype::FileType,
     lancedb_sync::sync_vectors_to_lancedb_if_enabled,
+    map_enrichment::{run_enrichment_job, run_enrichment_job_blocking, EnrichmentMode},
     map_summary::DirectorySummary,
     symbols::extract_symbols,
 };
@@ -34,6 +36,7 @@ use crate::{
 pub struct Indexer {
     cfg: SemanticFsConfig,
     db: IndexerDb,
+    db_path: std::path::PathBuf,
     guard: PolicyGuard,
     embedder: Embedder,
 }
@@ -44,11 +47,12 @@ impl Indexer {
         db.ensure_schema()?;
 
         let guard = PolicyGuard::new(&cfg.filter.allow_roots, &cfg.filter.deny_globs)?;
-        let embedder = Embedder::from_config(&cfg.embedding);
+        let embedder = Embedder::from_config(&cfg.embedding)?;
 
         Ok(Self {
             cfg,
             db,
+            db_path: db_path.to_path_buf(),
             guard,
             embedder,
         })
@@ -67,7 +71,7 @@ impl Indexer {
             }
 
             let path = entry.path();
-            let rel = path.strip_prefix(root)?.to_string_lossy().to_string();
+            let rel = normalize_rel_path(&path.strip_prefix(root)?.to_string_lossy());
             let decision = self.guard.should_index_path(&rel);
             if !decision.allow {
                 self.db
@@ -130,6 +134,7 @@ impl Indexer {
                         continue;
                     }
                     let version = self.build_full_index()?;
+                    self.spawn_map_enrichment(version);
                     *last_build = Instant::now();
                     info!(version, "watch-triggered reindex published");
                 }
@@ -169,8 +174,10 @@ impl Indexer {
                 self.db.delete_symbols_for_path(relative, version)?;
                 self.db.delete_vectors_for_path(relative, version)?;
 
-                for chunk in chunks {
-                    let embedding = self.embedder.embed(&chunk.content);
+                let batch_texts = chunks.iter().map(|c| c.content.clone()).collect::<Vec<_>>();
+                let embeddings = self.embedder.embed_batch(&batch_texts)?;
+
+                for (chunk, embedding) in chunks.into_iter().zip(embeddings.into_iter()) {
                     self.db.upsert_chunk(&chunk, relative, &hash, version)?;
                     self.db
                         .upsert_vector(&chunk.chunk_id, relative, &embedding, version)?;
@@ -191,6 +198,27 @@ impl Indexer {
             self.db.upsert_map_summary(&summary, version)?;
         }
         Ok(())
+    }
+
+    fn spawn_map_enrichment(&self, version: u64) {
+        if EnrichmentMode::from_config(&self.cfg.map.llm_enrichment) == EnrichmentMode::Disabled {
+            return;
+        }
+
+        let db_path = self.db_path.clone();
+        if let Err(err) = std::thread::Builder::new()
+            .name(format!("map-enrichment-v{}", version))
+            .spawn(move || run_enrichment_job(db_path, version))
+        {
+            tracing::warn!(version, error=%err, "failed to spawn map enrichment worker");
+        }
+    }
+
+    pub fn enrich_map_for_version(&self, version: u64) -> Result<()> {
+        if EnrichmentMode::from_config(&self.cfg.map.llm_enrichment) == EnrichmentMode::Disabled {
+            return Ok(());
+        }
+        run_enrichment_job_blocking(&self.db_path, version)
     }
 }
 
@@ -220,4 +248,8 @@ fn should_trigger_reindex(event: &Event) -> bool {
             | EventKind::Any
             | EventKind::Other
     )
+}
+
+fn normalize_rel_path(path: &str) -> String {
+    path.replace('\\', "/")
 }

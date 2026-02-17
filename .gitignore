@@ -53,3 +53,14 @@ coverage/
 
 # Optional local tooling caches
 .cache/
+
+# Python sidecar local artifacts
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
