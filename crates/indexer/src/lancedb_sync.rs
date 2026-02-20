@@ -2,6 +2,9 @@ use anyhow::Result;
 
 use crate::db::IndexerDb;
 
+#[cfg(feature = "lancedb")]
+const MIN_ROWS_FOR_LANCEDB_VECTOR_INDEX: usize = 65_536;
+
 pub fn sync_vectors_to_lancedb_if_enabled(_db: &IndexerDb, _version: u64) -> Result<()> {
     #[cfg(feature = "lancedb")]
     {
@@ -12,6 +15,7 @@ pub fn sync_vectors_to_lancedb_if_enabled(_db: &IndexerDb, _version: u64) -> Res
     Ok(())
 }
 
+#[cfg(feature = "lancedb")]
 fn vector_backend_enabled() -> bool {
     std::env::var("SEMANTICFS_VECTOR_BACKEND")
         .map(|v| v.eq_ignore_ascii_case("lancedb"))
@@ -33,6 +37,7 @@ fn sync_lancedb(db: &IndexerDb, version: u64) -> Result<()> {
     if rows.is_empty() {
         return Ok(());
     }
+    let row_count = rows.len();
 
     let dim = rows[0].embedding.len().max(1);
     let uri = std::env::var("SEMANTICFS_LANCEDB_URI")
@@ -107,14 +112,31 @@ fn sync_lancedb(db: &IndexerDb, version: u64) -> Result<()> {
             .execute()
             .await?;
 
-        let _ = table
-            .create_index(&["vector"], lancedb::index::Index::Auto)
-            .execute()
-            .await;
+        if row_count >= MIN_ROWS_FOR_LANCEDB_VECTOR_INDEX {
+            if let Err(err) = table
+                .create_index(&["vector"], lancedb::index::Index::Auto)
+                .execute()
+                .await
+            {
+                tracing::warn!(
+                    version,
+                    row_count,
+                    error = %err,
+                    "failed to build lancedb vector index; continuing without ANN index"
+                );
+            }
+        } else {
+            tracing::info!(
+                version,
+                row_count,
+                min_rows = MIN_ROWS_FOR_LANCEDB_VECTOR_INDEX,
+                "skipping lancedb vector index for small dataset"
+            );
+        }
         Ok::<(), anyhow::Error>(())
     })?;
 
-    tracing::info!(version, uri, "synced vectors to lancedb");
+    tracing::info!(version, uri, row_count, "synced vectors to lancedb");
     Ok(())
 }
 

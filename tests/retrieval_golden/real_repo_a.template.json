@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "dataset_name": "real_repo_a_v1",
+  "queries": [
+    {
+      "id": "a01",
+      "query": "replace with real query",
+      "expected_paths": ["src/replace/me.rs"]
+    },
+    {
+      "id": "a02",
+      "query": "replace with symbol query",
+      "expected_paths": ["src/replace/symbol.rs"],
+      "symbol_query": true
+    }
+  ]
+}

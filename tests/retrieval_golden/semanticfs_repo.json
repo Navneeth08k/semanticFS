@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "dataset_name": "semanticfs_repo_v1",
+  "queries": [
+    { "id": "s01", "query": "spawn_async_map_enrichment", "expected_paths": ["crates/semanticfs-cli/src/main.rs"], "symbol_query": true },
+    { "id": "s02", "query": "benchmark_command", "expected_paths": ["crates/semanticfs-cli/src/main.rs"], "symbol_query": true },
+    { "id": "s03", "query": "parse_usize_csv", "expected_paths": ["crates/semanticfs-cli/src/main.rs"], "symbol_query": true },
+    { "id": "s04", "query": "serve_observability", "expected_paths": ["crates/semanticfs-cli/src/main.rs"] },
+    { "id": "s05", "query": "metrics_prometheus", "expected_paths": ["crates/semanticfs-cli/src/main.rs"] },
+    { "id": "s06", "query": "run_query_bench", "expected_paths": ["crates/semanticfs-cli/src/benchmark.rs"], "symbol_query": true },
+    { "id": "s07", "query": "run_soak", "expected_paths": ["crates/semanticfs-cli/src/benchmark.rs"], "symbol_query": true },
+    { "id": "s08", "query": "collect_golden_files", "expected_paths": ["crates/semanticfs-cli/src/benchmark.rs"], "symbol_query": true },
+    { "id": "s09", "query": "evaluate_fixture", "expected_paths": ["crates/semanticfs-cli/src/benchmark.rs"], "symbol_query": true },
+    { "id": "s10", "query": "write_bench_artifact", "expected_paths": ["crates/semanticfs-cli/src/benchmark.rs"], "symbol_query": true },
+    { "id": "s11", "query": "render_search_markdown", "expected_paths": ["crates/fuse-bridge/src/lib.rs"], "symbol_query": true },
+    { "id": "s12", "query": "normalize_query", "expected_paths": ["crates/fuse-bridge/src/lib.rs"], "symbol_query": true },
+    { "id": "s13", "query": "extract_symbols", "expected_paths": ["crates/indexer/src/symbols.rs"], "symbol_query": true },
+    { "id": "s14", "query": "parse_symbol_name", "expected_paths": ["crates/indexer/src/symbols.rs"], "symbol_query": true },
+    { "id": "s15", "query": "run_enrichment_job_blocking", "expected_paths": ["crates/indexer/src/map_enrichment.rs"], "symbol_query": true },
+    { "id": "s16", "query": "onnx_metrics_snapshot", "expected_paths": ["crates/indexer/src/embedding.rs"], "symbol_query": true },
+    { "id": "s17", "query": "vector nearest search lancedb", "expected_paths": ["crates/retrieval-core/src/lib.rs", "crates/indexer/src/lancedb_sync.rs"] },
+    { "id": "s18", "query": "policy guard entropy detector", "expected_paths": ["crates/policy-guard/src/lib.rs", "crates/policy-guard/Cargo.toml"] },
+    { "id": "s19", "query": "rc preflight powershell", "expected_paths": ["scripts/rc_preflight.ps1", "docs/release-v1_1_0-rc1.md"] },
+    { "id": "s20", "query": "future steps log", "expected_paths": ["docs/future-steps-log.md"] }
+  ]
+}

@@ -18,6 +18,8 @@ pub struct SemanticFsConfig {
     pub embedding: EmbeddingConfig,
     pub retrieval: RetrievalConfig,
     pub fuse_cache: FuseCacheConfig,
+    #[serde(default)]
+    pub fuse_session: FuseSessionConfig,
     pub map: MapConfig,
     pub policy: PolicyConfig,
     pub observability: ObservabilityConfig,
@@ -44,6 +46,12 @@ pub struct IndexConfig {
     pub publish_mode: String,
     pub chunk_max_lines: usize,
     pub chunk_overlap_lines: usize,
+    #[serde(default = "default_bulk_event_threshold")]
+    pub bulk_event_threshold: usize,
+    #[serde(default = "default_hotset_max_paths")]
+    pub hotset_max_paths: usize,
+    #[serde(default = "default_pending_path_report_limit")]
+    pub pending_path_report_limit: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,6 +74,18 @@ pub struct RetrievalConfig {
     pub symbol_exact_boost: f32,
     pub symbol_prefix_boost: f32,
     pub allow_stale: bool,
+    #[serde(default = "default_code_path_boost")]
+    pub code_path_boost: f32,
+    #[serde(default = "default_docs_path_penalty")]
+    pub docs_path_penalty: f32,
+    #[serde(default = "default_test_path_penalty")]
+    pub test_path_penalty: f32,
+    #[serde(default = "default_recency_half_life_hours")]
+    pub recency_half_life_hours: f32,
+    #[serde(default = "default_recency_min_boost")]
+    pub recency_min_boost: f32,
+    #[serde(default = "default_recency_max_boost")]
+    pub recency_max_boost: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +94,23 @@ pub struct FuseCacheConfig {
     pub max_cached_mb: usize,
     pub entry_ttl_ms: u64,
     pub attr_ttl_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FuseSessionConfig {
+    #[serde(default = "default_fuse_session_mode")]
+    pub mode: String,
+    #[serde(default = "default_fuse_session_max_entries")]
+    pub max_entries: usize,
+}
+
+impl Default for FuseSessionConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_fuse_session_mode(),
+            max_entries: default_fuse_session_max_entries(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,4 +146,48 @@ impl SemanticFsConfig {
         let raw = fs::read_to_string(path).map_err(|e| ConfigError::Read(e.to_string()))?;
         toml::from_str::<SemanticFsConfig>(&raw).map_err(|e| ConfigError::Parse(e.to_string()))
     }
+}
+
+fn default_bulk_event_threshold() -> usize {
+    80
+}
+
+fn default_hotset_max_paths() -> usize {
+    32
+}
+
+fn default_pending_path_report_limit() -> usize {
+    20
+}
+
+fn default_code_path_boost() -> f32 {
+    1.15
+}
+
+fn default_docs_path_penalty() -> f32 {
+    0.85
+}
+
+fn default_test_path_penalty() -> f32 {
+    0.95
+}
+
+fn default_recency_half_life_hours() -> f32 {
+    24.0
+}
+
+fn default_recency_min_boost() -> f32 {
+    0.85
+}
+
+fn default_recency_max_boost() -> f32 {
+    1.20
+}
+
+fn default_fuse_session_mode() -> String {
+    "pinned".to_string()
+}
+
+fn default_fuse_session_max_entries() -> usize {
+    512
 }

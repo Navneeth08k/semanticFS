@@ -1,131 +1,149 @@
-﻿# SemanticFS v1.1 Scaffold
+# SemanticFS
 
-This repository contains a production-oriented scaffold for SemanticFS v1.1.
+SemanticFS is a filesystem-wide intelligence layer for AI agents.
+Currently (v1.x), SemanticFS is optimized for software repositories as we build toward full system-scope capabilities.
+It keeps deterministic file truth (`/raw`) while adding semantic discovery (`/search`) and orientation summaries (`/map`).
 
-## Workspace crates
-- `semanticfs-common`: shared config/types/audit/health structures.
-- `policy-guard`: allow/deny filtering, secret detection, and redaction.
-- `indexer`: indexing pipeline, schema management, symbol extraction, map precompute, two-phase publish.
-- `retrieval-core`: symbol-first planner + BM25 + plain RRF fusion.
-- `map-engine`: deterministic map summary retrieval + optional enrichment merge.
-- `fuse-bridge`: virtual path router with inode/content LRU caches and snapshot-scoped reads.
-- `mcp`: minimal MCP-compatible HTTP surface.
-- `semanticfs-cli`: user-facing commands.
+## Purpose
+Traditional agent tooling wastes turns finding context.
+SemanticFS moves retrieval into a filesystem-shaped interface so agents can use normal file operations to get grounded results faster.
 
-## Current implementation status
-SemanticFS now works as a local intelligence layer around your repository rather than a plain file index.  
-In bigger-picture terms, the system already supports the core grounded loop: semantic discovery (`/search`), deterministic orientation (`/map`), and byte-accurate verification (`/raw`) on snapshot-versioned data.  
-Operationally, it includes policy enforcement, index publishing, MCP exposure, and observability surfaces needed to run this as an always-on developer service.
+Core design goal:
+1. Probabilistic discovery.
+2. Deterministic verification before edits.
 
-Implemented now:
-- Full config model.
-- SQLite schema and index versioning.
-- Symbol table extraction and lookup.
-- Policy guard + audit event model.
-- Search and map virtual rendering paths.
-- Vector persistence + retrieval path with RRF integration.
-- Optional LanceDB vector backend (index sync + nearest-neighbor retrieval).
-- Optional ONNX embedding backend via persistent Python sidecar with startup health check and batched embedding requests.
-- MCP minimal tools/resources/prompt endpoints.
-- systemd service templates.
-- Automated benchmark harness (`benchmark run`) with E2E checks and soak latency reporting.
-- Long-soak gate command (`benchmark soak`) for stability sign-off with thresholded pass/fail output.
-- ONNX telemetry instrumentation (batch latency, failures, queue depth) exposed in benchmark output and `/metrics`.
-- CI release pipeline (`.github/workflows/ci.yml`) running fmt/test/release-gate/soak on each PR/push.
-- RC preflight helper: `scripts/rc_preflight.sh` and checklist at `docs/release-v1_1_0-rc1.md`.
+## Product Shape (v1.x)
+SemanticFS is currently optimized for software repositories, not whole-machine indexing.
 
-Stubbed next increments:
-- ONNX throughput tuning on larger real-world corpora and model-host optimization.
+Provided surfaces:
+1. `/raw/<path>`: byte-accurate passthrough.
+2. `/search/<query>.md`: hybrid retrieval results with grounded paths/lines.
+3. `/map/<dir>/directory_overview.md`: deterministic summaries with optional async enrichment.
+4. MCP minimal server for agent discovery/use.
 
-Implemented async `/map` enrichment:
-- Deterministic map base summaries are written at index time.
-- After publish, a background enrichment worker computes optional enrichment per directory.
-- `/map/.../directory_overview.md` serves base immediately and appends enrichment only when available.
-- Manual fallback command: `semanticfs index enrich --version <n>`.
+## Architecture
 
-## Quickstart (after Rust toolchain install)
-1. `cargo build`
-2. `cp config/semanticfs.sample.toml local.toml` and edit `repo_root`/`mount_point`
-3. `cargo run -p semanticfs-cli -- --config local.toml index build`
-4. `cargo run -p semanticfs-cli -- --config local.toml serve mcp`
-5. `cargo run -p semanticfs-cli -- --config local.toml index watch` for continuous reindexing
-6. `cargo run -p semanticfs-cli -- --config local.toml serve observability` for `/health/*` and `/metrics`
-7. `cargo run --release -p semanticfs-cli -- --config local.toml benchmark run --soak-seconds 30` for accurate E2E + soak report
-8. `cargo run --release -p semanticfs-cli -- --config local.toml benchmark tune-lancedb --fixture-repo tests/fixtures/benchmark_repo` for backend tuning passes
-9. `cargo run --release -p semanticfs-cli -- --config local.toml benchmark tune-onnx --fixture-repo tests/fixtures/benchmark_repo` for real ONNX throughput sweeps
-10. `cargo run --release -p semanticfs-cli -- --config local.toml benchmark release-gate --refresh --fixture-repo tests/fixtures/benchmark_repo` for RC gate evaluation
-11. `cargo run --release -p semanticfs-cli -- --config local.toml benchmark soak --duration-seconds 1800 --fixture-repo tests/fixtures/benchmark_repo` for long-soak sign-off
+Request flow:
+1. Files change in repo.
+2. `indexer` updates metadata/symbols/vectors and publishes a new index version via two-phase publish.
+3. `fuse-bridge` serves virtual paths against a snapshot.
+4. `retrieval-core` executes symbol-first + BM25 + vector fusion and applies policy + ranking priors.
+5. Agent verifies final edit targets through `/raw`.
 
-Vector backend selection:
-1. Default v1.1 profile is LanceDB when `SEMANTICFS_VECTOR_BACKEND` is unset.
-2. `SEMANTICFS_VECTOR_BACKEND=sqlite` to force SQLite vector fallback.
-3. `SEMANTICFS_VECTOR_BACKEND=lancedb` to explicitly pin LanceDB mode.
-4. Optional LanceDB location override: `SEMANTICFS_LANCEDB_URI=./.semanticfs/lancedb`
+Main crates:
+1. `semanticfs-common`: shared config/types.
+2. `policy-guard`: filtering, secret heuristics, redaction.
+3. `indexer`: chunking/symbol extraction/embedding/map precompute/watch.
+4. `retrieval-core`: hybrid planner + RRF + priors.
+5. `map-engine`: map summary read path + enrichment merge.
+6. `fuse-bridge`: virtual FS rendering + caches + stats.
+7. `mcp`: minimal MCP-compatible tool/resource server.
+8. `semanticfs-cli`: operational commands and benchmarks.
 
-Embedding backend selection:
-1. `embedding.runtime = "hash"` for deterministic local hash embeddings
-2. `embedding.runtime = "onnx"` plus:
-   - `SEMANTICFS_ONNX_MODEL=/abs/path/model.onnx`
-   - optional `SEMANTICFS_ONNX_TOKENIZER=/abs/path/tokenizer_dir`
-   - optional `SEMANTICFS_ONNX_PYTHON=python3`
-   - optional `SEMANTICFS_ONNX_SCRIPT=scripts/onnx_embed.py`
-   - optional `SEMANTICFS_ONNX_PROVIDER=CPUExecutionProvider`
-   - optional `SEMANTICFS_ONNX_MAX_LENGTH=512`
-   - optional `SEMANTICFS_ONNX_INTRA_THREADS=0`
-   - optional `SEMANTICFS_ONNX_INTER_THREADS=0`
-3. Install ONNX sidecar dependencies:
-   - `pip install -r scripts/requirements-onnx.txt`
-4. Tuned baseline on this repo (release build, `.semanticfs/bench/onnx_tuning.json`):
-   - `SEMANTICFS_ONNX_PROVIDER=CPUExecutionProvider`
-   - `SEMANTICFS_ONNX_MAX_LENGTH=128`
-   - `embedding.batch_size=32`
+## Current State (As of February 20, 2026)
+Implemented:
+1. Core `/raw` + `/search` + `/map` behavior.
+2. Snapshot versioning and two-phase publish.
+3. Symbol-first hybrid retrieval (symbol + BM25 + vector).
+4. Policy guard at indexing and retrieval/render.
+5. Async `/map` enrichment worker.
+6. MCP session pinning (`session_id`, `refresh_session`).
+7. Branch-swap queue planning with in-progress status signaling.
+8. Anti-shadowing ranking priors (file-type + recency).
+9. FUSE long-lived session pinning with explicit refresh/status control files.
+10. Benchmark suite: run/soak/relevance/release-gate/head-to-head.
+11. Mounted Linux FUSE workflow validation for `/.well-known/session.json` and `/.well-known/session.refresh` in WSL long-lived session.
+12. Strict daytime tune-vs-holdout workflow with deterministic suite splitting and holdout-only final reporting.
 
-Windows note:
-1. LanceDB build requires `protoc` on PATH.
-2. ONNX sidecar avoids Rust/MSVC linking issues by running inference in Python.
+Known constraints:
+1. Default embedding runtime is `hash` unless ONNX is configured.
+2. FUSE mount path is Linux-only; Windows/macOS can still use indexing/retrieval/MCP/benchmarks.
 
-Linux-only mount:
-1. Ensure FUSE userspace tooling is installed and mountpoint exists.
-2. Run `cargo run -p semanticfs-cli -- --config local.toml serve fuse`.
-3. On non-Linux targets, `serve fuse` exits with a clear unsupported-platform error.
+## Quickstart
+1. Build:
+```bash
+cargo build
+```
+2. Copy config and set repo path:
+```bash
+cp config/semanticfs.sample.toml local.toml
+```
+3. Build index:
+```bash
+cargo run -p semanticfs-cli -- --config local.toml index build
+```
+4. Start MCP server:
+```bash
+cargo run -p semanticfs-cli -- --config local.toml serve mcp
+```
+5. Run benchmark in release mode:
+```bash
+cargo run --release -p semanticfs-cli -- --config local.toml benchmark run --soak-seconds 30
+```
 
-## Security model
-Policy guard is enforced in indexing and retrieval/render pathways and supports:
-- deny/allow glob filters
-- secret heuristics (regex + entropy)
-- retrieval redaction
+## Validation Commands
+1. Relevance:
+```bash
+cargo run --release -p semanticfs-cli -- --config local.toml benchmark relevance --fixture-repo /abs/repo --golden-dir tests/retrieval_golden --history
+```
+2. Head-to-head (SemanticFS vs `rg` baseline):
+```bash
+cargo run --release -p semanticfs-cli -- --config local.toml benchmark head-to-head --fixture-repo /abs/repo --golden-dir tests/retrieval_golden --history
+```
+3. Daytime smoke:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/daytime_smoke.ps1 -SoakSeconds 2
+```
+4. Nightly sequence:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/nightly_bench.ps1 -ConfigPath config/semanticfs.sample.toml -FixtureRepo tests/fixtures/benchmark_repo -GoldenDir tests/retrieval_golden -SoakSeconds 30
+```
+5. Representative nightly (semanticFS + ai-testgen suites + strict release gate):
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/nightly_representative.ps1 -SoakSeconds 30
+```
+6. Mounted Linux FUSE session validation (WSL):
+```powershell
+wsl -d Ubuntu -- bash -lc 'cd /mnt/c/path/to/semanticFS && bash scripts/wsl_run_fuse_session_validation.sh'
+```
+7. Drift summary (history counts + deltas + date coverage):
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/drift_summary.ps1
+```
+8. Daytime full action runner (split + smoke + tune/holdout + drift summary):
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2
+```
+Optional strict gate variant:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2 -IncludeReleaseGate
+```
+9. Tune-vs-holdout selection on a repo:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label repo -RepoRoot C:\path\repo -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/repo_tune.json -HoldoutGolden tests/retrieval_golden/repo_holdout.json -History
+```
+10. Deterministic split from bootstrap suite:
+```bash
+python scripts/split_golden_suite.py --input tests/retrieval_golden/repo_bootstrap.json --tune-output tests/retrieval_golden/repo_tune.json --holdout-output tests/retrieval_golden/repo_holdout.json --tune-count 10
+```
 
-## Recovery
-Use:
-- `semanticfs recover mount --force-unmount`
-- then remount/restart service using systemd
+## Documentation Map
+Use these docs by role:
+1. `docs/new-chat-handoff.md`: current status, exact next steps, execution order.
+2. `docs/big-picture-roadmap.md`: multi-phase product direction and guardrails.
+3. `docs/v1_2_execution_plan.md`: v1.2 scope, acceptance criteria, active work items.
+4. `docs/future-steps-log.md`: running backlog/history of discussed future work.
+5. `docs/benchmark.md`: command reference and artifact semantics.
+6. `docs/implemented-v1_1.md`: v1.1 implementation baseline.
+7. `docs/release-v1_1_0-rc1.md`: release gate checklist.
+8. `docs/README.md`: documentation index and read order.
 
-## Observability endpoints
-- `GET /health/live`
-- `GET /health/ready`
-- `GET /health/index`
-- `GET /metrics` (Prometheus format)
-  - includes ONNX counters/gauges: requests, batches, texts, failures, health checks, queue depth, latency sum/count/max
+## New Chat Bootstrap
+If starting a fresh assistant chat, read in this order:
+1. `README.md`
+2. `docs/new-chat-handoff.md`
+3. `docs/v1_2_execution_plan.md`
+4. `docs/future-steps-log.md`
+5. `docs/benchmark.md`
 
-## Benchmark harness
-- Accuracy note:
-  - use `--release` for all benchmark/tuning/gate commands; debug builds are only for functional checks.
-- Command:
-  - `cargo run --release -p semanticfs-cli -- --config <config> benchmark run --soak-seconds 60`
-- Deterministic fixture mode:
-  - `cargo run --release -p semanticfs-cli -- --config <config> benchmark run --fixture-repo tests/fixtures/benchmark_repo --soak-seconds 20`
-- LanceDB tuning sweep:
-  - `cargo run --release -p semanticfs-cli -- --config <config> benchmark tune-lancedb --fixture-repo tests/fixtures/benchmark_repo --soak-seconds 10`
-- ONNX throughput sweep:
-  - `cargo run --release -p semanticfs-cli -- --config <config> benchmark tune-onnx --fixture-repo tests/fixtures/benchmark_repo --samples 1000 --rounds 5 --batch-sizes 16,32,64 --max-lengths 128,256,384,512`
-- Release gate (fails non-zero on threshold breach):
-  - `cargo run --release -p semanticfs-cli -- --config <config> benchmark release-gate --refresh --fixture-repo tests/fixtures/benchmark_repo --max-query-p95-ms 250 --max-soak-p95-ms 250 --max-rss-mb 2048`
-- Long soak gate (fails non-zero on threshold breach):
-  - `cargo run --release -p semanticfs-cli -- --config <config> benchmark soak --duration-seconds 1800 --fixture-repo tests/fixtures/benchmark_repo --max-soak-p95-ms 250 --max-errors 0 --max-rss-mb 2048`
-- Output report:
-  - `.semanticfs/bench/latest.json` with E2E pass/fail, soak P50/P95/max, error count, and RSS.
-  - ONNX section includes requests/batches/text volume, failures, queue depth, and latency counters.
-  - LanceDB sweep report: `.semanticfs/bench/lancedb_tuning.json` with per-pass query P50/P95/max + soak + RSS.
-  - ONNX sweep report: `.semanticfs/bench/onnx_tuning.json` with per-pass throughput and sidecar telemetry.
-  - Release gate report: `.semanticfs/bench/release_gate.json` with per-check pass/fail and thresholds.
-  - Soak gate report: `.semanticfs/bench/soak_latest.json` with pass/fail checks and thresholds.
+This sequence is the source of truth for current priorities.

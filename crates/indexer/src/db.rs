@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use rusqlite::{params, Connection};
 
 use crate::{chunking::ChunkRecord, map_summary::DirectorySummary, symbols::SymbolRecord};
+use semanticfs_common::IndexingStatus;
 
 pub struct IndexerDb {
     conn: Connection,
@@ -121,6 +122,12 @@ impl IndexerDb {
 
             CREATE INDEX IF NOT EXISTS idx_map_enrichments_version_status
             ON map_enrichments(index_version, status);
+
+            CREATE TABLE IF NOT EXISTS runtime_state (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             "#,
         )?;
         Ok(())
@@ -473,5 +480,45 @@ impl IndexerDb {
             .prepare("SELECT COALESCE(MAX(version), 0) + 1 FROM index_versions")?;
         let next: u64 = stmt.query_row([], |row| row.get(0))?;
         Ok(next)
+    }
+
+    pub fn set_runtime_state(&self, key: &str, value: &str) -> Result<()> {
+        self.conn.execute(
+            r#"
+            INSERT INTO runtime_state(key, value, updated_at)
+            VALUES(?1, ?2, datetime('now'))
+            ON CONFLICT(key)
+            DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+            "#,
+            params![key, value],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_runtime_state(&self, key: &str) -> Result<Option<String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT value FROM runtime_state WHERE key=?1 LIMIT 1")?;
+        let mut rows = stmt.query(params![key])?;
+        if let Some(row) = rows.next()? {
+            let value: String = row.get(0)?;
+            return Ok(Some(value));
+        }
+        Ok(None)
+    }
+
+    pub fn clear_runtime_state(&self, key: &str) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM runtime_state WHERE key=?1", params![key])?;
+        Ok(())
+    }
+
+    pub fn set_indexing_status(&self, status: &IndexingStatus) -> Result<()> {
+        let value = serde_json::to_string(status)?;
+        self.set_runtime_state("indexing_status", &value)
+    }
+
+    pub fn clear_indexing_status(&self) -> Result<()> {
+        self.clear_runtime_state("indexing_status")
     }
 }

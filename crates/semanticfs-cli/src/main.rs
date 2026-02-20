@@ -10,6 +10,7 @@ use serde_json::json;
 use std::{fs, net::SocketAddr, path::PathBuf, process::Command, sync::Arc, time::Instant};
 use sysinfo::{Pid, ProcessesToUpdate, System};
 use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 mod benchmark;
 
@@ -87,12 +88,16 @@ enum BenchmarkCommand {
         skip_reindex: bool,
         #[arg(long)]
         fixture_repo: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        history: bool,
     },
     TuneLancedb {
         #[arg(long, default_value_t = 10)]
         soak_seconds: u64,
         #[arg(long)]
         fixture_repo: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        history: bool,
     },
     TuneOnnx {
         #[arg(long)]
@@ -107,6 +112,8 @@ enum BenchmarkCommand {
         max_lengths: String,
         #[arg(long, default_value = "CPUExecutionProvider")]
         providers: String,
+        #[arg(long, default_value_t = false)]
+        history: bool,
     },
     Soak {
         #[arg(long, default_value_t = 3600)]
@@ -121,6 +128,8 @@ enum BenchmarkCommand {
         max_errors: u64,
         #[arg(long, default_value_t = 2048)]
         max_rss_mb: u64,
+        #[arg(long, default_value_t = false)]
+        history: bool,
     },
     ReleaseGate {
         #[arg(long, default_value_t = false)]
@@ -135,12 +144,50 @@ enum BenchmarkCommand {
         max_soak_p95_ms: f64,
         #[arg(long, default_value_t = 2048)]
         max_rss_mb: u64,
+        #[arg(long, default_value_t = false)]
+        enforce_relevance: bool,
+        #[arg(long, default_value_t = 20)]
+        min_relevance_queries: u64,
+        #[arg(long, default_value_t = 0.90)]
+        min_recall_at_5: f64,
+        #[arg(long, default_value_t = 0.99)]
+        min_symbol_hit_rate: f64,
+        #[arg(long, default_value_t = 0.80)]
+        min_mrr: f64,
+    },
+    Relevance {
+        #[arg(long)]
+        fixture_repo: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        skip_reindex: bool,
+        #[arg(long)]
+        golden: Option<PathBuf>,
+        #[arg(long)]
+        golden_dir: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        history: bool,
+    },
+    HeadToHead {
+        #[arg(long)]
+        fixture_repo: Option<PathBuf>,
+        #[arg(long, default_value_t = false)]
+        skip_reindex: bool,
+        #[arg(long)]
+        golden: Option<PathBuf>,
+        #[arg(long)]
+        golden_dir: Option<PathBuf>,
+        #[arg(long, default_value_t = 5)]
+        baseline_topn: usize,
+        #[arg(long, default_value_t = false)]
+        history: bool,
     },
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt().with_env_filter("info").init();
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,lance=warn,lancedb=warn"));
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     let cli = Cli::parse();
     match cli.command {
@@ -171,7 +218,7 @@ fn index_command(cmd: IndexCommand, config_path: &PathBuf) -> Result<()> {
         .llm_enrichment
         .eq_ignore_ascii_case("async_optional");
 
-    let db_path = PathBuf::from("semanticfs.db");
+    let db_path = resolve_db_path();
     let indexer = Indexer::new(cfg, &db_path)?;
 
     match cmd {
@@ -200,7 +247,7 @@ fn index_command(cmd: IndexCommand, config_path: &PathBuf) -> Result<()> {
 
 async fn serve_command(cmd: ServeCommand, config_path: &PathBuf) -> Result<()> {
     let cfg = SemanticFsConfig::load(config_path)?;
-    let db_path = PathBuf::from("semanticfs.db");
+    let db_path = resolve_db_path();
 
     match cmd {
         ServeCommand::Fuse => {
@@ -238,19 +285,23 @@ fn benchmark_command(cmd: BenchmarkCommand, config_path: &PathBuf) -> Result<()>
             soak_seconds,
             skip_reindex,
             fixture_repo,
+            history,
         } => benchmark::run(benchmark::BenchmarkRunOptions {
             config_path: config_path.clone(),
             soak_seconds,
             skip_reindex,
             fixture_repo,
+            history,
         }),
         BenchmarkCommand::TuneLancedb {
             soak_seconds,
             fixture_repo,
+            history,
         } => benchmark::tune_lancedb(benchmark::LanceDbTuneOptions {
             config_path: config_path.clone(),
             fixture_repo,
             soak_seconds,
+            history,
         }),
         BenchmarkCommand::TuneOnnx {
             fixture_repo,
@@ -259,6 +310,7 @@ fn benchmark_command(cmd: BenchmarkCommand, config_path: &PathBuf) -> Result<()>
             batch_sizes,
             max_lengths,
             providers,
+            history,
         } => benchmark::tune_onnx(benchmark::OnnxTuneOptions {
             config_path: config_path.clone(),
             fixture_repo,
@@ -267,6 +319,7 @@ fn benchmark_command(cmd: BenchmarkCommand, config_path: &PathBuf) -> Result<()>
             batch_sizes: parse_usize_csv(&batch_sizes)?,
             max_lengths: parse_usize_csv(&max_lengths)?,
             providers: parse_string_csv(&providers),
+            history,
         }),
         BenchmarkCommand::Soak {
             duration_seconds,
@@ -275,6 +328,7 @@ fn benchmark_command(cmd: BenchmarkCommand, config_path: &PathBuf) -> Result<()>
             max_soak_p95_ms,
             max_errors,
             max_rss_mb,
+            history,
         } => benchmark::soak(benchmark::SoakOptions {
             config_path: config_path.clone(),
             duration_seconds,
@@ -283,6 +337,7 @@ fn benchmark_command(cmd: BenchmarkCommand, config_path: &PathBuf) -> Result<()>
             max_soak_p95_ms,
             max_errors,
             max_rss_mb,
+            history,
         }),
         BenchmarkCommand::ReleaseGate {
             refresh,
@@ -291,6 +346,11 @@ fn benchmark_command(cmd: BenchmarkCommand, config_path: &PathBuf) -> Result<()>
             max_query_p95_ms,
             max_soak_p95_ms,
             max_rss_mb,
+            enforce_relevance,
+            min_relevance_queries,
+            min_recall_at_5,
+            min_symbol_hit_rate,
+            min_mrr,
         } => benchmark::release_gate(benchmark::ReleaseGateOptions {
             refresh,
             config_path: config_path.clone(),
@@ -299,6 +359,41 @@ fn benchmark_command(cmd: BenchmarkCommand, config_path: &PathBuf) -> Result<()>
             max_query_p95_ms,
             max_soak_p95_ms,
             max_rss_mb,
+            enforce_relevance,
+            min_relevance_queries,
+            min_recall_at_5,
+            min_symbol_hit_rate,
+            min_mrr,
+        }),
+        BenchmarkCommand::Relevance {
+            fixture_repo,
+            skip_reindex,
+            golden,
+            golden_dir,
+            history,
+        } => benchmark::relevance(benchmark::RelevanceOptions {
+            config_path: config_path.clone(),
+            fixture_repo,
+            skip_reindex,
+            golden_path: golden,
+            golden_dir,
+            history,
+        }),
+        BenchmarkCommand::HeadToHead {
+            fixture_repo,
+            skip_reindex,
+            golden,
+            golden_dir,
+            baseline_topn,
+            history,
+        } => benchmark::head_to_head(benchmark::HeadToHeadOptions {
+            config_path: config_path.clone(),
+            fixture_repo,
+            skip_reindex,
+            golden_path: golden,
+            golden_dir,
+            baseline_topn,
+            history,
         }),
     }
 }
@@ -362,6 +457,12 @@ fn spawn_async_map_enrichment(
         "spawned async map enrichment worker process"
     );
     Ok(())
+}
+
+fn resolve_db_path() -> PathBuf {
+    std::env::var("SEMANTICFS_DB_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("semanticfs.db"))
 }
 
 #[derive(Clone)]

@@ -13,6 +13,7 @@
 
 ## Fast local preflight
 1. `bash scripts/rc_preflight.sh config/semanticfs.sample.toml tests/fixtures/benchmark_repo`
+2. PowerShell (Windows): `powershell -ExecutionPolicy Bypass -File scripts/rc_preflight.ps1 -ConfigPath config/semanticfs.sample.toml -FixtureRepo tests/fixtures/benchmark_repo -SoakSeconds 30`
 
 ## Required artifacts
 1. `.semanticfs/bench/latest.json`

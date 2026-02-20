@@ -4,7 +4,9 @@ use map_engine::MapEngine;
 use parking_lot::Mutex;
 use policy_guard::PolicyGuard;
 use retrieval_core::RetrievalCore;
-use semanticfs_common::{FuseCacheConfig, GroundedHit, RetrievalConfig, SemanticFsConfig};
+use semanticfs_common::{
+    FuseCacheConfig, GroundedHit, RetrievalConfig, SemanticFsConfig, TrustLevel,
+};
 use std::{
     fs,
     num::NonZeroUsize,
@@ -35,6 +37,12 @@ pub struct FuseBridge {
     inode_cache: Arc<Mutex<LruCache<String, u64>>>,
     content_cache: Arc<Mutex<LruCache<String, Vec<u8>>>>,
     stats: Arc<BridgeStats>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FuseSessionMode {
+    PerRequest,
+    Pinned,
 }
 
 #[derive(Debug, Clone)]
@@ -128,6 +136,7 @@ impl FuseBridge {
         let guard = PolicyGuard::new(&cfg.filter.allow_roots, &cfg.filter.deny_globs)?;
         let retrieval = RetrievalCore::open(
             sqlite_path,
+            PathBuf::from(&cfg.workspace.repo_root).as_path(),
             cfg.retrieval.clone(),
             cfg.embedding.dimension,
             guard,
@@ -156,9 +165,10 @@ impl FuseBridge {
         active_version: u64,
     ) -> Result<Vec<u8>> {
         let started = Instant::now();
+        let cache_key = content_cache_key(virtual_path, snapshot_version, active_version);
 
         let result = (|| {
-            if let Some(cached) = self.content_cache.lock().get(virtual_path).cloned() {
+            if let Some(cached) = self.content_cache.lock().get(&cache_key).cloned() {
                 self.stats
                     .content_cache_hits
                     .fetch_add(1, Ordering::Relaxed);
@@ -182,9 +192,7 @@ impl FuseBridge {
                 anyhow::bail!("unsupported virtual path")
             };
 
-            self.content_cache
-                .lock()
-                .put(virtual_path.to_string(), payload.clone());
+            self.content_cache.lock().put(cache_key, payload.clone());
 
             Ok(payload)
         })();
@@ -249,7 +257,8 @@ impl FuseBridge {
         self.stats
             .stale_hits_total
             .fetch_add(stale_count, Ordering::Relaxed);
-        let md = render_search_markdown(&query, &hits);
+        let status = self.retrieval.indexing_status().ok().flatten();
+        let md = render_search_markdown(&query, &hits, status.as_ref());
         Ok(md.into_bytes())
     }
 
@@ -293,6 +302,14 @@ impl FuseBridge {
         &self.cfg.fuse_cache
     }
 
+    pub fn fuse_session_mode(&self) -> FuseSessionMode {
+        parse_fuse_session_mode(&self.cfg.fuse_session.mode)
+    }
+
+    pub fn fuse_session_max_entries(&self) -> usize {
+        self.cfg.fuse_session.max_entries.max(1)
+    }
+
     pub fn mount_point(&self) -> &str {
         &self.cfg.workspace.mount_point
     }
@@ -309,22 +326,49 @@ fn normalize_query(query_file: &str) -> String {
         .replace("%20", " ")
 }
 
-fn render_search_markdown(query: &str, hits: &[GroundedHit]) -> String {
+fn render_search_markdown(
+    query: &str,
+    hits: &[GroundedHit],
+    status: Option<&semanticfs_common::IndexingStatus>,
+) -> String {
     let mut out = format!("# Search Results\n\nQuery: `{}`\n\n", query);
+    if let Some(s) = status {
+        if s.in_progress {
+            let pending = if s.pending_paths.is_empty() {
+                "none".to_string()
+            } else {
+                s.pending_paths.join(", ")
+            };
+            out.push_str(&format!(
+                "> [INDEXING IN PROGRESS] `{}`. Changed paths pending: {}. Results may be incomplete; re-run query on latest snapshot.\n\n",
+                s.phase, pending
+            ));
+        }
+    }
+
     if hits.is_empty() {
         out.push_str("No results found.\n");
         return out;
     }
 
     for hit in hits {
+        let symbol = hit.symbol_kind.as_deref().unwrap_or("n/a");
+        let trust = trust_label(hit.trust_level);
+        let short_hash = &hit.file_hash.chars().take(12).collect::<String>();
         out.push_str(&format!(
-            "## {}. `{}`:{}-{}\n- source: {:?}\n- hash: `{}`\n- snapshot: {} (active: {})\n- stale: {}\n- why: {}\n\n",
+            "## {}. `{}`:{}-{}\n`// Source: {} | Symbol: {} | Hash: {} | Snapshot: {} (active: {}) | Trust: {}`\n- source: {:?}\n- hash: `{}`\n- snapshot: {} (active: {})\n- stale: {}\n- why: {}\n\n",
             hit.rank,
             hit.path,
             hit.start_line,
             hit.end_line,
+            hit.path,
+            symbol,
+            short_hash,
+            hit.snapshot_version,
+            hit.active_version,
+            trust,
             hit.source,
-            &hit.file_hash.chars().take(12).collect::<String>(),
+            short_hash,
             hit.snapshot_version,
             hit.active_version,
             hit.stale,
@@ -344,6 +388,99 @@ fn hash_inode(key: &str) -> u64 {
     hash
 }
 
+fn content_cache_key(virtual_path: &str, snapshot_version: u64, active_version: u64) -> String {
+    format!(
+        "{}|snapshot={}|active={}",
+        virtual_path, snapshot_version, active_version
+    )
+}
+
+fn parse_fuse_session_mode(raw: &str) -> FuseSessionMode {
+    if raw.eq_ignore_ascii_case("per_request") {
+        FuseSessionMode::PerRequest
+    } else {
+        FuseSessionMode::Pinned
+    }
+}
+
+fn trust_label(level: TrustLevel) -> &'static str {
+    match level {
+        TrustLevel::Trusted => "trusted",
+        TrustLevel::Untrusted => "untrusted",
+    }
+}
+
 fn nz(v: usize) -> NonZeroUsize {
     NonZeroUsize::new(v.max(1)).unwrap_or(NonZeroUsize::MIN)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        content_cache_key, parse_fuse_session_mode, render_search_markdown, FuseSessionMode,
+    };
+    use semanticfs_common::{GroundedHit, HitSource, IndexingStatus, TrustLevel};
+
+    #[test]
+    fn search_markdown_contains_breadcrumb_contract() {
+        let hits = vec![GroundedHit {
+            rank: 1,
+            path: "src/lib/auth.rs".to_string(),
+            start_line: 10,
+            end_line: 24,
+            file_hash: "abcdef1234567890".to_string(),
+            snapshot_version: 7,
+            active_version: 7,
+            score_rrf: 0.1,
+            score_symbol: Some(2.0),
+            score_bm25: None,
+            score_vector: None,
+            source: HitSource::Symbol,
+            symbol_kind: Some("function".to_string()),
+            stale: false,
+            trust_level: TrustLevel::Trusted,
+            why_selected: "exact symbol match".to_string(),
+        }];
+
+        let md = render_search_markdown("auth handler", &hits, None);
+        assert!(md.contains("`// Source: src/lib/auth.rs"));
+        assert!(md.contains("| Symbol: function |"));
+        assert!(md.contains("| Snapshot: 7 (active: 7) |"));
+        assert!(md.contains("| Trust: trusted`"));
+    }
+
+    #[test]
+    fn search_markdown_surfaces_indexing_in_progress() {
+        let status = IndexingStatus {
+            in_progress: true,
+            phase: "p3_backfill".to_string(),
+            started_unix_ms: 1,
+            updated_unix_ms: 2,
+            total_changed_paths: 2,
+            hotset_total: 1,
+            deferred_total: 1,
+            pending_paths: vec!["src/new_auth.rs".to_string()],
+            message: "indexing".to_string(),
+        };
+        let md = render_search_markdown("auth", &[], Some(&status));
+        assert!(md.contains("INDEXING IN PROGRESS"));
+        assert!(md.contains("src/new_auth.rs"));
+    }
+
+    #[test]
+    fn content_cache_key_includes_snapshot_context() {
+        let a = content_cache_key("/search/auth.md", 10, 12);
+        let b = content_cache_key("/search/auth.md", 11, 12);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn fuse_session_mode_defaults_to_pinned_for_unknown_values() {
+        assert_eq!(
+            parse_fuse_session_mode("per_request"),
+            FuseSessionMode::PerRequest
+        );
+        assert_eq!(parse_fuse_session_mode("pinned"), FuseSessionMode::Pinned);
+        assert_eq!(parse_fuse_session_mode("invalid"), FuseSessionMode::Pinned);
+    }
 }

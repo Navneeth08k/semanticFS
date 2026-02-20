@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "tensorflow_models_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "_collective_communication",
+      "expected_paths": [
+        "official/common/distribute_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "define_flags",
+      "expected_paths": [
+        "official/common/flags.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "ActionsTest",
+      "expected_paths": [
+        "official/core/actions_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "_async_loop_fn",
+      "expected_paths": [
+        "official/core/base_trainer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "DataConfig",
+      "expected_paths": [
+        "official/core/config_definitions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "ExportModule",
+      "expected_paths": [
+        "official/core/export_base.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "_decode_and_parse_dataset",
+      "expected_paths": [
+        "official/core/input_reader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ClassRegistryKey",
+      "expected_paths": [
+        "official/core/registry_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "_Dense",
+      "expected_paths": [
+        "official/core/test_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "build_losses",
+      "expected_paths": [
+        "official/core/train_lib_test.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

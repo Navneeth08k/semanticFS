@@ -3,8 +3,11 @@ use fuse_bridge::FuseBridge;
 use indexer::embedding::{onnx_metrics_snapshot, reset_onnx_metrics, Embedder};
 use indexer::Indexer;
 use semanticfs_common::SemanticFsConfig;
+use serde::Deserialize;
 use serde_json::json;
+use std::collections::HashSet;
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::{Duration, Instant};
 use sysinfo::{Pid, ProcessesToUpdate, System};
 use walkdir::WalkDir;
@@ -14,12 +17,14 @@ pub struct BenchmarkRunOptions {
     pub soak_seconds: u64,
     pub skip_reindex: bool,
     pub fixture_repo: Option<PathBuf>,
+    pub history: bool,
 }
 
 pub struct LanceDbTuneOptions {
     pub config_path: PathBuf,
     pub fixture_repo: Option<PathBuf>,
     pub soak_seconds: u64,
+    pub history: bool,
 }
 
 pub struct ReleaseGateOptions {
@@ -30,6 +35,11 @@ pub struct ReleaseGateOptions {
     pub max_query_p95_ms: f64,
     pub max_soak_p95_ms: f64,
     pub max_rss_mb: u64,
+    pub enforce_relevance: bool,
+    pub min_relevance_queries: u64,
+    pub min_recall_at_5: f64,
+    pub min_symbol_hit_rate: f64,
+    pub min_mrr: f64,
 }
 
 pub struct SoakOptions {
@@ -40,6 +50,7 @@ pub struct SoakOptions {
     pub max_soak_p95_ms: f64,
     pub max_errors: u64,
     pub max_rss_mb: u64,
+    pub history: bool,
 }
 
 pub struct OnnxTuneOptions {
@@ -50,6 +61,26 @@ pub struct OnnxTuneOptions {
     pub batch_sizes: Vec<usize>,
     pub max_lengths: Vec<usize>,
     pub providers: Vec<String>,
+    pub history: bool,
+}
+
+pub struct RelevanceOptions {
+    pub config_path: PathBuf,
+    pub fixture_repo: Option<PathBuf>,
+    pub skip_reindex: bool,
+    pub golden_path: Option<PathBuf>,
+    pub golden_dir: Option<PathBuf>,
+    pub history: bool,
+}
+
+pub struct HeadToHeadOptions {
+    pub config_path: PathBuf,
+    pub fixture_repo: Option<PathBuf>,
+    pub skip_reindex: bool,
+    pub golden_path: Option<PathBuf>,
+    pub golden_dir: Option<PathBuf>,
+    pub baseline_topn: usize,
+    pub history: bool,
 }
 
 pub fn run(options: BenchmarkRunOptions) -> Result<()> {
@@ -62,7 +93,7 @@ pub fn run(options: BenchmarkRunOptions) -> Result<()> {
         cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
     }
 
-    let db_path = PathBuf::from("semanticfs.db");
+    let db_path = benchmark_db_path();
     let indexer = Indexer::new(cfg.clone(), &db_path)?;
 
     let active = if options.skip_reindex {
@@ -129,11 +160,7 @@ pub fn run(options: BenchmarkRunOptions) -> Result<()> {
         }
     });
 
-    let out_dir = PathBuf::from(".semanticfs").join("bench");
-    std::fs::create_dir_all(&out_dir)?;
-    let out_path = out_dir.join("latest.json");
-    std::fs::write(&out_path, serde_json::to_string_pretty(&report)?)?;
-
+    let out_path = write_bench_artifact("latest", &report, options.history)?;
     println!("{}", serde_json::to_string_pretty(&report)?);
     println!("saved benchmark report: {}", out_path.display());
     Ok(())
@@ -151,7 +178,7 @@ pub fn tune_lancedb(options: LanceDbTuneOptions) -> Result<()> {
     let old_backend = std::env::var("SEMANTICFS_VECTOR_BACKEND").ok();
     let old_uri = std::env::var("SEMANTICFS_LANCEDB_URI").ok();
 
-    let db_path = PathBuf::from("semanticfs.db");
+    let db_path = benchmark_db_path();
     let queries = fixed_query_set();
 
     let mut passes = Vec::new();
@@ -208,11 +235,7 @@ pub fn tune_lancedb(options: LanceDbTuneOptions) -> Result<()> {
         "passes": passes
     });
 
-    let out_dir = PathBuf::from(".semanticfs").join("bench");
-    std::fs::create_dir_all(&out_dir)?;
-    let out_path = out_dir.join("lancedb_tuning.json");
-    std::fs::write(&out_path, serde_json::to_string_pretty(&out)?)?;
-
+    let out_path = write_bench_artifact("lancedb_tuning", &out, options.history)?;
     println!("{}", serde_json::to_string_pretty(&out)?);
     println!("saved tuning report: {}", out_path.display());
     Ok(())
@@ -227,7 +250,7 @@ pub fn soak(options: SoakOptions) -> Result<()> {
         cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
     }
 
-    let db_path = PathBuf::from("semanticfs.db");
+    let db_path = benchmark_db_path();
     let indexer = Indexer::new(cfg.clone(), &db_path)?;
 
     let active = if options.skip_reindex {
@@ -318,11 +341,7 @@ pub fn soak(options: SoakOptions) -> Result<()> {
         "passed": passed
     });
 
-    let out_dir = PathBuf::from(".semanticfs").join("bench");
-    std::fs::create_dir_all(&out_dir)?;
-    let out_path = out_dir.join("soak_latest.json");
-    std::fs::write(&out_path, serde_json::to_string_pretty(&report)?)?;
-
+    let out_path = write_bench_artifact("soak_latest", &report, options.history)?;
     println!("{}", serde_json::to_string_pretty(&report)?);
     println!("saved soak report: {}", out_path.display());
 
@@ -432,13 +451,288 @@ pub fn tune_onnx(options: OnnxTuneOptions) -> Result<()> {
         "best": best
     });
 
-    let out_dir = PathBuf::from(".semanticfs").join("bench");
-    std::fs::create_dir_all(&out_dir)?;
-    let out_path = out_dir.join("onnx_tuning.json");
-    std::fs::write(&out_path, serde_json::to_string_pretty(&out)?)?;
-
+    let out_path = write_bench_artifact("onnx_tuning", &out, options.history)?;
     println!("{}", serde_json::to_string_pretty(&out)?);
     println!("saved onnx tuning report: {}", out_path.display());
+    Ok(())
+}
+
+pub fn relevance(options: RelevanceOptions) -> Result<()> {
+    let mut cfg = SemanticFsConfig::load(&options.config_path)
+        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    if let Some(fixture) = options.fixture_repo {
+        cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
+    }
+
+    let db_path = benchmark_db_path();
+    let indexer = Indexer::new(cfg.clone(), &db_path)?;
+    let active = if options.skip_reindex {
+        indexer.active_version()?
+    } else {
+        indexer.build_full_index()?
+    };
+    if active == 0 {
+        anyhow::bail!("no active index version found; run `semanticfs index build` first");
+    }
+
+    let bridge = FuseBridge::new(cfg, &db_path)?;
+    let fixture_paths =
+        collect_golden_files(options.golden_path.clone(), options.golden_dir.clone())?;
+    if fixture_paths.is_empty() {
+        anyhow::bail!("no golden fixtures provided; pass --golden or --golden-dir");
+    }
+
+    let mut datasets = Vec::new();
+    let mut total_queries = 0u64;
+    let mut total_recall_hits = 0u64;
+    let mut total_rr_sum = 0.0f64;
+    let mut total_symbol_queries = 0u64;
+    let mut total_symbol_hits = 0u64;
+
+    for path in &fixture_paths {
+        let raw = std::fs::read_to_string(path)
+            .with_context(|| format!("read golden fixture: {}", path.display()))?;
+        let fixture: GoldenFixture = serde_json::from_str(&raw)
+            .with_context(|| format!("parse golden fixture: {}", path.display()))?;
+        if fixture.queries.is_empty() {
+            continue;
+        }
+        let ds = evaluate_fixture(&bridge, active, &fixture)?;
+        total_queries += ds.query_count as u64;
+        total_recall_hits += ds.recall_hits;
+        total_rr_sum += ds.rr_sum;
+        total_symbol_queries += ds.symbol_queries;
+        total_symbol_hits += ds.symbol_hits;
+        datasets.push(json!({
+            "dataset_name": fixture.dataset_name,
+            "schema_version": fixture.schema_version,
+            "fixture_path": path,
+            "query_count": ds.query_count,
+            "metrics": {
+                "recall_at_5": ds.recall_at_5,
+                "mrr": ds.mrr,
+                "symbol_hit_rate": ds.symbol_hit_rate
+            },
+            "details": ds.details
+        }));
+    }
+
+    if total_queries == 0 {
+        anyhow::bail!("all golden fixtures were empty");
+    }
+
+    let recall_at_5 = (total_recall_hits as f64) / (total_queries as f64);
+    let mrr = total_rr_sum / (total_queries as f64);
+    let symbol_hit_rate = if total_symbol_queries == 0 {
+        1.0
+    } else {
+        (total_symbol_hits as f64) / (total_symbol_queries as f64)
+    };
+
+    let report = json!({
+        "scenario": "relevance",
+        "active_version": active,
+        "query_count": total_queries,
+        "metrics": {
+            "recall_at_5": recall_at_5,
+            "mrr": mrr,
+            "symbol_hit_rate": symbol_hit_rate
+        },
+        "thresholds": {
+            "recall_at_5_target": 0.90,
+            "symbol_hit_rate_target": 0.97
+        },
+        "datasets": datasets
+    });
+
+    let out_path = write_bench_artifact("relevance_latest", &report, options.history)?;
+    println!("{}", serde_json::to_string_pretty(&report)?);
+    println!("saved relevance report: {}", out_path.display());
+    Ok(())
+}
+
+pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
+    let mut cfg = SemanticFsConfig::load(&options.config_path)
+        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    if let Some(fixture) = options.fixture_repo {
+        cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
+    }
+
+    let db_path = benchmark_db_path();
+    let indexer = Indexer::new(cfg.clone(), &db_path)?;
+    let active = if options.skip_reindex {
+        indexer.active_version()?
+    } else {
+        indexer.build_full_index()?
+    };
+    if active == 0 {
+        anyhow::bail!("no active index version found; run `semanticfs index build` first");
+    }
+
+    let bridge = FuseBridge::new(cfg.clone(), &db_path)?;
+    let fixture_paths =
+        collect_golden_files(options.golden_path.clone(), options.golden_dir.clone())?;
+    if fixture_paths.is_empty() {
+        anyhow::bail!("no golden fixtures provided; pass --golden or --golden-dir");
+    }
+
+    let mut datasets = Vec::new();
+    let mut total_queries = 0u64;
+
+    let mut semantic_recall_hits = 0u64;
+    let mut semantic_rr_sum = 0.0f64;
+    let mut semantic_symbol_queries = 0u64;
+    let mut semantic_symbol_hits = 0u64;
+    let mut semantic_latencies_us = Vec::new();
+
+    let mut baseline_recall_hits = 0u64;
+    let mut baseline_rr_sum = 0.0f64;
+    let mut baseline_symbol_queries = 0u64;
+    let mut baseline_symbol_hits = 0u64;
+    let mut baseline_latencies_us = Vec::new();
+
+    for path in &fixture_paths {
+        let raw = std::fs::read_to_string(path)
+            .with_context(|| format!("read golden fixture: {}", path.display()))?;
+        let fixture: GoldenFixture = serde_json::from_str(&raw)
+            .with_context(|| format!("parse golden fixture: {}", path.display()))?;
+        if fixture.queries.is_empty() {
+            continue;
+        }
+
+        let mut details = Vec::with_capacity(fixture.queries.len());
+
+        for q in &fixture.queries {
+            total_queries += 1;
+            let query_path = format!("/search/{}.md", q.query.replace(' ', "_"));
+
+            let sem_started = Instant::now();
+            let sem_bytes = bridge.read_virtual(&query_path, active, active)?;
+            let sem_elapsed = sem_started.elapsed().as_micros() as u64;
+            semantic_latencies_us.push(sem_elapsed);
+            let sem_paths = parse_search_paths(&String::from_utf8_lossy(&sem_bytes));
+
+            let base_started = Instant::now();
+            let base_paths =
+                baseline_rg_search(&cfg.workspace.repo_root, &q.query, options.baseline_topn)?;
+            let base_elapsed = base_started.elapsed().as_micros() as u64;
+            baseline_latencies_us.push(base_elapsed);
+
+            let sem_rank = first_relevant_rank(&sem_paths, &q.expected_paths);
+            let base_rank = first_relevant_rank(&base_paths, &q.expected_paths);
+
+            if sem_rank.is_some() {
+                semantic_recall_hits += 1;
+            }
+            if base_rank.is_some() {
+                baseline_recall_hits += 1;
+            }
+            if let Some(r) = sem_rank {
+                semantic_rr_sum += 1.0 / (r as f64);
+            }
+            if let Some(r) = base_rank {
+                baseline_rr_sum += 1.0 / (r as f64);
+            }
+
+            if q.symbol_query.unwrap_or(false) {
+                semantic_symbol_queries += 1;
+                baseline_symbol_queries += 1;
+                if sem_rank == Some(1) {
+                    semantic_symbol_hits += 1;
+                }
+                if base_rank == Some(1) {
+                    baseline_symbol_hits += 1;
+                }
+            }
+
+            details.push(json!({
+                "id": q.id,
+                "query": q.query,
+                "expected_paths": q.expected_paths,
+                "semanticfs": {
+                    "first_relevant_rank": sem_rank,
+                    "retrieved_paths_topn": sem_paths,
+                    "latency_ms": micros_to_ms(sem_elapsed)
+                },
+                "baseline_rg": {
+                    "first_relevant_rank": base_rank,
+                    "retrieved_paths_topn": base_paths,
+                    "latency_ms": micros_to_ms(base_elapsed)
+                }
+            }));
+        }
+
+        datasets.push(json!({
+            "dataset_name": fixture.dataset_name,
+            "schema_version": fixture.schema_version,
+            "fixture_path": path,
+            "query_count": fixture.queries.len(),
+            "details": details
+        }));
+    }
+
+    if total_queries == 0 {
+        anyhow::bail!("all golden fixtures were empty");
+    }
+
+    semantic_latencies_us.sort_unstable();
+    baseline_latencies_us.sort_unstable();
+
+    let semantic_recall_at_5 = semantic_recall_hits as f64 / total_queries as f64;
+    let semantic_mrr = semantic_rr_sum / total_queries as f64;
+    let semantic_symbol_hit_rate = if semantic_symbol_queries == 0 {
+        1.0
+    } else {
+        semantic_symbol_hits as f64 / semantic_symbol_queries as f64
+    };
+
+    let baseline_recall_at_5 = baseline_recall_hits as f64 / total_queries as f64;
+    let baseline_mrr = baseline_rr_sum / total_queries as f64;
+    let baseline_symbol_hit_rate = if baseline_symbol_queries == 0 {
+        1.0
+    } else {
+        baseline_symbol_hits as f64 / baseline_symbol_queries as f64
+    };
+
+    let report = json!({
+        "scenario": "head_to_head",
+        "active_version": active,
+        "repo_root": cfg.workspace.repo_root,
+        "query_count": total_queries,
+        "engines": {
+            "semanticfs": {
+                "recall_at_topn": semantic_recall_at_5,
+                "mrr": semantic_mrr,
+                "symbol_hit_rate": semantic_symbol_hit_rate,
+                "latency_ms": {
+                    "p50": micros_to_ms(percentile(&semantic_latencies_us, 0.50)),
+                    "p95": micros_to_ms(percentile(&semantic_latencies_us, 0.95)),
+                    "max": micros_to_ms(semantic_latencies_us.last().copied().unwrap_or(0))
+                }
+            },
+            "baseline_rg": {
+                "recall_at_topn": baseline_recall_at_5,
+                "mrr": baseline_mrr,
+                "symbol_hit_rate": baseline_symbol_hit_rate,
+                "latency_ms": {
+                    "p50": micros_to_ms(percentile(&baseline_latencies_us, 0.50)),
+                    "p95": micros_to_ms(percentile(&baseline_latencies_us, 0.95)),
+                    "max": micros_to_ms(baseline_latencies_us.last().copied().unwrap_or(0))
+                }
+            }
+        },
+        "delta_semanticfs_minus_baseline": {
+            "recall_at_topn": semantic_recall_at_5 - baseline_recall_at_5,
+            "mrr": semantic_mrr - baseline_mrr,
+            "symbol_hit_rate": semantic_symbol_hit_rate - baseline_symbol_hit_rate,
+            "p95_latency_ms": micros_to_ms(percentile(&semantic_latencies_us, 0.95)) - micros_to_ms(percentile(&baseline_latencies_us, 0.95))
+        },
+        "datasets": datasets
+    });
+
+    let out_path = write_bench_artifact("head_to_head_latest", &report, options.history)?;
+    println!("{}", serde_json::to_string_pretty(&report)?);
+    println!("saved head-to-head report: {}", out_path.display());
     Ok(())
 }
 
@@ -449,11 +743,13 @@ pub fn release_gate(options: ReleaseGateOptions) -> Result<()> {
             soak_seconds: options.soak_seconds.max(1),
             skip_reindex: false,
             fixture_repo: options.fixture_repo.clone(),
+            history: false,
         })?;
         tune_lancedb(LanceDbTuneOptions {
             config_path: options.config_path.clone(),
             fixture_repo: options.fixture_repo.clone(),
             soak_seconds: options.soak_seconds.max(1),
+            history: false,
         })?;
     }
 
@@ -582,6 +878,55 @@ pub fn release_gate(options: ReleaseGateOptions) -> Result<()> {
         &mut passed,
     );
 
+    if options.enforce_relevance {
+        let relevance_path = PathBuf::from(".semanticfs/bench/relevance_latest.json");
+        let relevance = read_json(&relevance_path)?;
+        let query_count = as_u64(&relevance, &["query_count"]).unwrap_or(0);
+        record_check(
+            &mut checks,
+            "relevance_query_count_threshold",
+            query_count >= options.min_relevance_queries,
+            format!(
+                "relevance.query_count={} >= {}",
+                query_count, options.min_relevance_queries
+            ),
+            &mut passed,
+        );
+
+        let recall = as_f64(&relevance, &["metrics", "recall_at_5"]).unwrap_or(0.0);
+        record_check(
+            &mut checks,
+            "relevance_recall_at_5_threshold",
+            recall >= options.min_recall_at_5,
+            format!(
+                "relevance.recall_at_5={:.4} >= {:.4}",
+                recall, options.min_recall_at_5
+            ),
+            &mut passed,
+        );
+
+        let symbol_rate = as_f64(&relevance, &["metrics", "symbol_hit_rate"]).unwrap_or(0.0);
+        record_check(
+            &mut checks,
+            "relevance_symbol_hit_rate_threshold",
+            symbol_rate >= options.min_symbol_hit_rate,
+            format!(
+                "relevance.symbol_hit_rate={:.4} >= {:.4}",
+                symbol_rate, options.min_symbol_hit_rate
+            ),
+            &mut passed,
+        );
+
+        let mrr = as_f64(&relevance, &["metrics", "mrr"]).unwrap_or(0.0);
+        record_check(
+            &mut checks,
+            "relevance_mrr_threshold",
+            mrr >= options.min_mrr,
+            format!("relevance.mrr={:.4} >= {:.4}", mrr, options.min_mrr),
+            &mut passed,
+        );
+    }
+
     let report = json!({
         "release_gate": {
             "passed": passed,
@@ -608,6 +953,47 @@ pub fn release_gate(options: ReleaseGateOptions) -> Result<()> {
     Ok(())
 }
 
+fn collect_golden_files(
+    golden_path: Option<PathBuf>,
+    golden_dir: Option<PathBuf>,
+) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    if let Some(p) = golden_path {
+        files.push(p);
+    }
+    if let Some(dir) = golden_dir {
+        if !dir.exists() {
+            anyhow::bail!("golden_dir does not exist: {}", dir.display());
+        }
+        for entry in WalkDir::new(&dir).into_iter().filter_map(|e| e.ok()) {
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let path = entry.path();
+            let is_json = path
+                .extension()
+                .and_then(|s| s.to_str())
+                .map(|s| s.eq_ignore_ascii_case("json"))
+                .unwrap_or(false);
+            if !is_json {
+                continue;
+            }
+            let file_name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if file_name.ends_with(".template.json") {
+                continue;
+            }
+            files.push(path.to_path_buf());
+        }
+    }
+    files.sort();
+    files.dedup();
+    Ok(files)
+}
+
 struct E2eResult {
     passed: bool,
     total: usize,
@@ -622,10 +1008,16 @@ fn run_e2e_checks(bridge: &FuseBridge, version: u64) -> Result<E2eResult> {
 
     let search = bridge.read_virtual("/search/policy_guard.md", version, version)?;
     let search_str = String::from_utf8_lossy(&search);
-    if search_str.contains("# Search Results") {
+    let has_header = search_str.contains("# Search Results");
+    let has_breadcrumb = search_str.contains("`// Source: ")
+        && search_str.contains("| Snapshot:")
+        && search_str.contains("| Trust:");
+    if has_header && has_breadcrumb {
         passed_count += 1;
     } else {
-        failures.push("search did not render expected markdown header".to_string());
+        failures.push(
+            "search did not render expected markdown header + breadcrumb contract".to_string(),
+        );
     }
 
     let map = bridge.read_virtual("/map/docs/directory_overview.md", version, version)?;
@@ -774,7 +1166,8 @@ fn run_query_bench(
 }
 
 fn run_soak(bridge: &FuseBridge, version: u64, duration_sec: u64) -> SoakResult {
-    let mut latencies = Vec::new();
+    const MAX_LATENCY_SAMPLES: usize = 200_000;
+    let mut latencies = Vec::with_capacity(MAX_LATENCY_SAMPLES);
     let mut errors = 0u64;
     let mut ops = 0u64;
     let start = Instant::now();
@@ -794,7 +1187,14 @@ fn run_soak(bridge: &FuseBridge, version: u64, duration_sec: u64) -> SoakResult 
             errors += 1;
         }
         ops += 1;
-        latencies.push(t0.elapsed().as_micros() as u64);
+        let elapsed = t0.elapsed().as_micros() as u64;
+        if latencies.len() < MAX_LATENCY_SAMPLES {
+            latencies.push(elapsed);
+        } else {
+            // Keep a bounded rotating sample set for percentile estimates in long soaks.
+            let idx = (ops as usize) % MAX_LATENCY_SAMPLES;
+            latencies[idx] = elapsed;
+        }
     }
 
     latencies.sort_unstable();
@@ -857,6 +1257,12 @@ fn fixed_query_set() -> Vec<&'static str> {
         "index version publish",
         "search codebase tool",
     ]
+}
+
+fn benchmark_db_path() -> PathBuf {
+    std::env::var("SEMANTICFS_DB_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("semanticfs.db"))
 }
 
 fn restore_env(name: &str, value: Option<String>) {
@@ -926,6 +1332,26 @@ fn read_json(path: &PathBuf) -> Result<serde_json::Value> {
     Ok(value)
 }
 
+fn write_bench_artifact(
+    base_name: &str,
+    payload: &serde_json::Value,
+    append_history: bool,
+) -> Result<PathBuf> {
+    let out_dir = PathBuf::from(".semanticfs").join("bench");
+    std::fs::create_dir_all(&out_dir)?;
+    let out_path = out_dir.join(format!("{}.json", base_name));
+    std::fs::write(&out_path, serde_json::to_string_pretty(payload)?)?;
+
+    if append_history {
+        let history_dir = out_dir.join("history");
+        std::fs::create_dir_all(&history_dir)?;
+        let ts = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+        let history_path = history_dir.join(format!("{}_{}.json", base_name, ts));
+        std::fs::write(history_path, serde_json::to_string_pretty(payload)?)?;
+    }
+    Ok(out_path)
+}
+
 fn as_u64(v: &serde_json::Value, path: &[&str]) -> Option<u64> {
     let mut cur = v;
     for k in path {
@@ -957,4 +1383,245 @@ fn record_check(
         "ok": ok,
         "detail": detail
     }));
+}
+
+#[derive(Debug, Deserialize)]
+struct GoldenFixture {
+    schema_version: u64,
+    dataset_name: String,
+    queries: Vec<GoldenQuery>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GoldenQuery {
+    id: String,
+    query: String,
+    expected_paths: Vec<String>,
+    symbol_query: Option<bool>,
+}
+
+struct FixtureEval {
+    query_count: usize,
+    recall_hits: u64,
+    rr_sum: f64,
+    symbol_queries: u64,
+    symbol_hits: u64,
+    recall_at_5: f64,
+    mrr: f64,
+    symbol_hit_rate: f64,
+    details: Vec<serde_json::Value>,
+}
+
+fn evaluate_fixture(
+    bridge: &FuseBridge,
+    active: u64,
+    fixture: &GoldenFixture,
+) -> Result<FixtureEval> {
+    let mut recall_hits = 0u64;
+    let mut rr_sum = 0.0f64;
+    let mut symbol_queries = 0u64;
+    let mut symbol_hits = 0u64;
+    let mut details = Vec::with_capacity(fixture.queries.len());
+
+    for q in &fixture.queries {
+        let query_path = format!("/search/{}.md", q.query.replace(' ', "_"));
+        let bytes = bridge.read_virtual(&query_path, active, active)?;
+        let text = String::from_utf8_lossy(&bytes);
+        let ranked_paths = parse_search_paths(&text);
+
+        let mut found = false;
+        let mut first_rank = None;
+        for (idx, p) in ranked_paths.iter().enumerate() {
+            if q.expected_paths.iter().any(|exp| exp == p) {
+                found = true;
+                first_rank = Some((idx + 1) as u64);
+                break;
+            }
+        }
+        if found {
+            recall_hits += 1;
+        }
+        if let Some(rank) = first_rank {
+            rr_sum += 1.0 / (rank as f64);
+        }
+        if q.symbol_query.unwrap_or(false) {
+            symbol_queries += 1;
+            if first_rank == Some(1) {
+                symbol_hits += 1;
+            }
+        }
+        details.push(json!({
+            "id": q.id,
+            "query": q.query,
+            "expected_paths": q.expected_paths,
+            "retrieved_paths_top5": ranked_paths,
+            "matched": found,
+            "first_relevant_rank": first_rank
+        }));
+    }
+
+    let total = fixture.queries.len() as f64;
+    let recall_at_5 = (recall_hits as f64) / total;
+    let mrr = rr_sum / total;
+    let symbol_hit_rate = if symbol_queries == 0 {
+        1.0
+    } else {
+        (symbol_hits as f64) / (symbol_queries as f64)
+    };
+
+    Ok(FixtureEval {
+        query_count: fixture.queries.len(),
+        recall_hits,
+        rr_sum,
+        symbol_queries,
+        symbol_hits,
+        recall_at_5,
+        mrr,
+        symbol_hit_rate,
+        details,
+    })
+}
+
+fn parse_search_paths(markdown: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for line in markdown.lines() {
+        if !line.starts_with("## ") {
+            continue;
+        }
+        let first_tick = match line.find('`') {
+            Some(v) => v,
+            None => continue,
+        };
+        let rest = &line[first_tick + 1..];
+        let second_tick = match rest.find('`') {
+            Some(v) => v,
+            None => continue,
+        };
+        let path = rest[..second_tick].trim();
+        if !path.is_empty() {
+            out.push(path.to_string());
+        }
+    }
+    out
+}
+
+fn first_relevant_rank(retrieved_paths: &[String], expected_paths: &[String]) -> Option<u64> {
+    for (idx, p) in retrieved_paths.iter().enumerate() {
+        if expected_paths.iter().any(|exp| exp == p) {
+            return Some((idx + 1) as u64);
+        }
+    }
+    None
+}
+
+fn baseline_rg_search(repo_root: &str, query: &str, topn: usize) -> Result<Vec<String>> {
+    let topn = topn.max(1);
+    let rg = Command::new("rg")
+        .arg("--json")
+        .arg("-F")
+        .arg(query)
+        .arg(repo_root)
+        .output();
+
+    let Ok(output) = rg else {
+        return Ok(fallback_text_search(repo_root, query, topn));
+    };
+
+    if !output.status.success() && output.status.code() != Some(1) {
+        anyhow::bail!(
+            "rg baseline failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let mut out = Vec::new();
+    let mut seen = HashSet::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if out.len() >= topn {
+            break;
+        }
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        if v.get("type").and_then(|t| t.as_str()) != Some("match") {
+            continue;
+        }
+        let Some(path) = v
+            .get("data")
+            .and_then(|d| d.get("path"))
+            .and_then(|p| p.get("text"))
+            .and_then(|t| t.as_str())
+        else {
+            continue;
+        };
+
+        let normalized = normalize_repo_relative(path, repo_root);
+        if seen.insert(normalized.clone()) {
+            out.push(normalized);
+        }
+    }
+
+    if out.is_empty() && output.status.code() == Some(1) {
+        return Ok(Vec::new());
+    }
+    Ok(out)
+}
+
+fn fallback_text_search(repo_root: &str, query: &str, topn: usize) -> Vec<String> {
+    let root = PathBuf::from(repo_root);
+    let query_lower = query.to_ascii_lowercase();
+    let mut out = Vec::new();
+    for entry in WalkDir::new(&root).into_iter().filter_map(|e| e.ok()) {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let path = entry.path();
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        let allowed = matches!(
+            ext.as_str(),
+            "rs" | "py"
+                | "ts"
+                | "tsx"
+                | "js"
+                | "jsx"
+                | "java"
+                | "go"
+                | "md"
+                | "txt"
+                | "toml"
+                | "yaml"
+                | "yml"
+                | "json"
+        );
+        if !allowed {
+            continue;
+        }
+
+        let Ok(raw) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        if raw.to_ascii_lowercase().contains(&query_lower) {
+            out.push(normalize_repo_relative(&path.to_string_lossy(), repo_root));
+            if out.len() >= topn {
+                break;
+            }
+        }
+    }
+    out
+}
+
+fn normalize_repo_relative(path: &str, repo_root: &str) -> String {
+    let normalized = path.replace('\\', "/");
+    let root = repo_root.replace('\\', "/");
+    if let Some(rest) = normalized.strip_prefix(&(root.clone() + "/")) {
+        return rest.to_string();
+    }
+    if let Some(rest) = normalized.strip_prefix(&(root + "\\")) {
+        return rest.replace('\\', "/");
+    }
+    normalized
 }

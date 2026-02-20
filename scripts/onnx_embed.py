@@ -73,18 +73,42 @@ def compute_embedding(session, tokenizer, text: str, max_length: int, dim: int) 
 def compute_embeddings(session, tokenizer, texts, max_length: int, dim: int):
     if not texts:
         return []
-    enc = tokenizer(
-        texts,
-        return_tensors="np",
-        truncation=True,
-        max_length=max_length,
-        padding=True,
-    )
-    feed = build_feed(session, enc)
-    outputs = session.run(None, feed)
-    if len(outputs) == 0:
-        raise RuntimeError("model produced no outputs")
-    return postprocess_embeddings(outputs[0], enc["attention_mask"], dim)
+    # Defensive normalization for mixed/odd payloads during long-running daemon use.
+    normalized = []
+    for t in texts:
+        if t is None:
+            normalized.append("")
+        elif isinstance(t, str):
+            normalized.append(t)
+        else:
+            normalized.append(str(t))
+    normalized = [
+        s.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+        for s in normalized
+    ]
+
+    try:
+        enc = tokenizer(
+            normalized,
+            return_tensors="np",
+            truncation=True,
+            max_length=max_length,
+            padding=True,
+        )
+        feed = build_feed(session, enc)
+        outputs = session.run(None, feed)
+        if len(outputs) == 0:
+            raise RuntimeError("model produced no outputs")
+        return postprocess_embeddings(outputs[0], enc["attention_mask"], dim)
+    except Exception:
+        # Fallback to per-text encoding to isolate malformed/problematic items.
+        out = []
+        for t in normalized:
+            try:
+                out.append(compute_embedding(session, tokenizer, t, max_length, dim))
+            except Exception:
+                out.append(compute_embedding(session, tokenizer, "", max_length, dim))
+        return out
 
 
 def print_error(msg: str):
@@ -108,6 +132,8 @@ def serve_loop(session, tokenizer, max_length: int, dim: int):
                 # Backward-compatible single-text request shape.
                 text = payload.get("text", "")
                 texts = [text]
+            elif not isinstance(texts, list):
+                texts = [texts]
 
             embs = compute_embeddings(session, tokenizer, texts, max_length, dim)
             print(json.dumps({"embeddings": [e.tolist() for e in embs]}), flush=True)

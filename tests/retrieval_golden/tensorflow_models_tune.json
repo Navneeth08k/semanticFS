@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "tensorflow_models_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "pick_dataset_fn",
+      "expected_paths": [
+        "official/common/dataset_fn.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "GetDistributionStrategyTest",
+      "expected_paths": [
+        "official/common/distribute_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "EMACheckpointing",
+      "expected_paths": [
+        "official/core/actions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "aggregate_logs",
+      "expected_paths": [
+        "official/core/base_task.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "all_strategy_combinations",
+      "expected_paths": [
+        "official/core/base_trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "get_exp_config",
+      "expected_paths": [
+        "official/core/exp_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "_inference_step",
+      "expected_paths": [
+        "official/core/export_base_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "lookup",
+      "expected_paths": [
+        "official/core/registry.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "get_task",
+      "expected_paths": [
+        "official/core/task_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "run_experiment",
+      "expected_paths": [
+        "official/core/train_lib.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

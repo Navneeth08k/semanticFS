@@ -26,6 +26,8 @@
 - soak P50/P95/max + errors
 - RSS
 - ONNX counters snapshot
+4. Small-dataset behavior:
+- LanceDB ANN index build is skipped under `65_536` rows to reduce non-actionable KMeans empty-cluster warning noise on fixture-scale runs.
 
 ## ONNX throughput sweep
 1. `cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark tune-onnx --fixture-repo tests/fixtures/benchmark_repo --samples 1000 --rounds 5 --batch-sizes 16,32,64 --max-lengths 128,256,384,512`
@@ -44,14 +46,92 @@
 
 ## Release gate
 1. `cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark release-gate --refresh --fixture-repo tests/fixtures/benchmark_repo`
-2. Checks:
+2. Optional relevance enforcement:
+- defaults are now strict for representative suites: `min_relevance_queries=20`, `min_recall_at_5=0.90`, `min_symbol_hit_rate=0.99`, `min_mrr=0.80`
+- add explicit flags to override when needed
+- requires `.semanticfs/bench/relevance_latest.json` to exist
+3. Checks:
 - latest benchmark E2E pass
 - latest soak error count + p95 threshold
 - latest RSS threshold
 - tuning report presence + backend coverage
 - tuning query/soak errors
 - worst-case tuning query/soak p95 thresholds
-3. Exits non-zero on failure (CI friendly).
+- optional relevance thresholds (when enabled)
+4. Exits non-zero on failure (CI friendly).
+
+## Relevance metrics (golden queries)
+1. `cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark relevance --fixture-repo tests/fixtures/benchmark_repo --golden tests/retrieval_golden/benchmark_repo.json`
+2. Multi-suite mode:
+- `cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark relevance --fixture-repo /abs/repo --golden-dir tests/retrieval_golden`
+3. Emits:
+- `recall_at_5`
+- `mrr`
+- `symbol_hit_rate`
+- per-query retrieved top-5 paths and first relevant rank
+
+## Head-to-head validation (SemanticFS vs baseline)
+1. Run:
+- `cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark head-to-head --fixture-repo /abs/repo --golden-dir tests/retrieval_golden --history`
+2. Baseline:
+- `rg` fixed-string search (`-F`) over the same repo and same query suite.
+3. Emits:
+- per-engine `recall_at_topn`, `mrr`, `symbol_hit_rate`
+- per-engine latency `p50/p95/max`
+- delta block (`semanticfs - baseline`) for quick concept validation
+4. Output:
+- `.semanticfs/bench/head_to_head_latest.json`
+
+## Retrieval prior knobs (anti-shadowing)
+1. `retrieval.code_path_boost`
+2. `retrieval.docs_path_penalty`
+3. `retrieval.test_path_penalty`
+4. `retrieval.recency_half_life_hours`
+5. `retrieval.recency_min_boost` / `retrieval.recency_max_boost`
+6. Tune these against golden suites to reduce verbose-doc shadowing.
+
+## History artifacts (nightly trendline)
+1. Add `--history` to `benchmark run`, `benchmark tune-lancedb`, `benchmark tune-onnx`, `benchmark soak`, or `benchmark relevance`.
+2. Latest artifact is still written to `.semanticfs/bench/*.json`.
+3. Timestamped snapshots are additionally written under `.semanticfs/bench/history/`.
+4. Nightly helper script (Windows):
+- `powershell -ExecutionPolicy Bypass -File scripts/nightly_bench.ps1 -ConfigPath config/semanticfs.sample.toml -FixtureRepo tests/fixtures/benchmark_repo -GoldenDir tests/retrieval_golden -SoakSeconds 30`
+5. Representative nightly helper (Windows, real suites + strict gate):
+- `powershell -ExecutionPolicy Bypass -File scripts/nightly_representative.ps1 -SoakSeconds 30`
+6. Drift summary helper (counts + last-N deltas + date coverage):
+- `powershell -ExecutionPolicy Bypass -File scripts/drift_summary.ps1`
+- Output: `.semanticfs/bench/drift_summary_latest.json`
+
+## Additional repo bootstrap suites
+1. Generate a bootstrap golden suite from a local repo:
+- `python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20`
+2. Run exploratory head-to-head on that repo:
+- `cargo run --release -p semanticfs-cli -- --config config/relevance-real.toml benchmark head-to-head --fixture-repo C:\path\repo --golden tests/retrieval_golden/repo_bootstrap.json --history`
+3. Bootstrap suites are exploratory only; curate/lock queries before using them as release evidence.
+
+## Tune vs holdout protocol (strict)
+1. Split exploratory suite into deterministic tune/holdout:
+- `python scripts/split_golden_suite.py --input tests/retrieval_golden/repo_bootstrap.json --tune-output tests/retrieval_golden/repo_tune.json --holdout-output tests/retrieval_golden/repo_holdout.json --tune-count 10`
+2. Tune only on `*_tune.json`; do not read holdout metrics until selection is complete.
+3. Run selection + one-shot holdout report:
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label repo -RepoRoot C:\path\repo -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/repo_tune.json -HoldoutGolden tests/retrieval_golden/repo_holdout.json -History`
+4. Artifacts:
+- `.semanticfs/bench/tune_holdout_<label>_latest.json`
+- `.semanticfs/bench/history/tune_holdout_<label>_*.json`
+
+## Daytime smoke (no overnight run needed)
+1. Run both real-repo relevance suites (lightweight default):
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_smoke.ps1 -SoakSeconds 2`
+2. Optional custom repo paths:
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_smoke.ps1 -SemanticFsRepo C:\path\semanticFS -AiTestgenRepo C:\path\ai-testgen -SoakSeconds 2`
+3. Include heavier release gate explicitly:
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_smoke.ps1 -IncludeReleaseGate -SoakSeconds 2`
+
+## Full daytime action runner
+1. Run split + smoke + tune/holdout sweeps + drift summary:
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2`
+2. Include strict release gate in the smoke step:
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2 -IncludeReleaseGate`
 
 ## What it checks
 1. Search markdown path renders.
@@ -65,6 +145,7 @@
 3. latency P50/P95/max
 4. process RSS
 5. ONNX telemetry: requests/batches/texts, failures, queue depth current/max, latency sum/count/max
+6. long-run memory safety: latency percentiles use bounded sampling during soak
 
 ## Output artifact
 1. `.semanticfs/bench/latest.json`
@@ -72,3 +153,7 @@
 3. `.semanticfs/bench/release_gate.json`
 4. `.semanticfs/bench/soak_latest.json`
 5. `.semanticfs/bench/onnx_tuning.json`
+6. `.semanticfs/bench/relevance_latest.json`
+7. `.semanticfs/bench/head_to_head_latest.json`
+8. `.semanticfs/bench/drift_summary_latest.json`
+9. `.semanticfs/bench/tune_holdout_<label>_latest.json`

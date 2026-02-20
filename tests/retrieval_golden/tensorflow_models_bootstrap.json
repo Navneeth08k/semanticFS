@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_name": "tensorflow_models_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "pick_dataset_fn",
+      "expected_paths": [
+        "official/common/dataset_fn.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "_collective_communication",
+      "expected_paths": [
+        "official/common/distribute_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "GetDistributionStrategyTest",
+      "expected_paths": [
+        "official/common/distribute_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "define_flags",
+      "expected_paths": [
+        "official/common/flags.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "EMACheckpointing",
+      "expected_paths": [
+        "official/core/actions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "ActionsTest",
+      "expected_paths": [
+        "official/core/actions_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "aggregate_logs",
+      "expected_paths": [
+        "official/core/base_task.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "_async_loop_fn",
+      "expected_paths": [
+        "official/core/base_trainer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "all_strategy_combinations",
+      "expected_paths": [
+        "official/core/base_trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "DataConfig",
+      "expected_paths": [
+        "official/core/config_definitions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "get_exp_config",
+      "expected_paths": [
+        "official/core/exp_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "ExportModule",
+      "expected_paths": [
+        "official/core/export_base.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "_inference_step",
+      "expected_paths": [
+        "official/core/export_base_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "_decode_and_parse_dataset",
+      "expected_paths": [
+        "official/core/input_reader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "lookup",
+      "expected_paths": [
+        "official/core/registry.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ClassRegistryKey",
+      "expected_paths": [
+        "official/core/registry_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "get_task",
+      "expected_paths": [
+        "official/core/task_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "_Dense",
+      "expected_paths": [
+        "official/core/test_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "run_experiment",
+      "expected_paths": [
+        "official/core/train_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "build_losses",
+      "expected_paths": [
+        "official/core/train_lib_test.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

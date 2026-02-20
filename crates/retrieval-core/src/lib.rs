@@ -2,10 +2,12 @@ use anyhow::Result;
 use policy_guard::PolicyGuard;
 use rusqlite::{params, Connection};
 use semanticfs_common::{
-    cosine_similarity, embed_text_hash, GroundedHit, HitSource, RetrievalConfig, TrustLevel,
+    cosine_similarity, embed_text_hash, GroundedHit, HitSource, IndexingStatus, RetrievalConfig,
+    TrustLevel,
 };
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 #[cfg(feature = "lancedb")]
 use std::cmp::Ordering;
@@ -26,6 +28,7 @@ struct PartialHit {
 
 pub struct RetrievalCore {
     db_path: PathBuf,
+    repo_root: PathBuf,
     cfg: RetrievalConfig,
     embed_dim: usize,
     guard: PolicyGuard,
@@ -34,12 +37,14 @@ pub struct RetrievalCore {
 impl RetrievalCore {
     pub fn open(
         db_path: &Path,
+        repo_root: &Path,
         cfg: RetrievalConfig,
         embed_dim: usize,
         guard: PolicyGuard,
     ) -> Result<Self> {
         Ok(Self {
             db_path: db_path.to_path_buf(),
+            repo_root: repo_root.to_path_buf(),
             cfg,
             embed_dim: embed_dim.max(1),
             guard,
@@ -57,12 +62,12 @@ impl RetrievalCore {
 
         let exact = self.symbol_exact(&conn, query, snapshot_version)?;
         if !exact.is_empty() {
-            rank_lists.push(exact);
+            rank_lists.push(exact.clone());
         }
 
         let prefix = self.symbol_prefix(&conn, query, snapshot_version)?;
         if !prefix.is_empty() {
-            rank_lists.push(prefix);
+            rank_lists.push(prefix.clone());
         }
 
         let bm25 = self.bm25(&conn, query, snapshot_version)?;
@@ -76,15 +81,66 @@ impl RetrievalCore {
         }
 
         let fused = rrf_fuse(&rank_lists, self.cfg.rrf_k as f32);
-        let mut out = Vec::new();
+        let mut adjusted_fused = fused
+            .iter()
+            .map(|(path_key, base_score)| {
+                let prior = rank_lists
+                    .iter()
+                    .flat_map(|v| v.iter())
+                    .find(|h| make_key(h) == *path_key)
+                    .map(|h| self.score_prior(&h.path))
+                    .unwrap_or(1.0);
+                (path_key.clone(), *base_score * prior)
+            })
+            .collect::<Vec<_>>();
+        adjusted_fused.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        for (idx, (path_key, score)) in fused.into_iter().take(self.cfg.topn_final).enumerate() {
+        let symbol_hint = query
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':');
+        let mut ordered_keys: Vec<String> = Vec::new();
+        let mut seen = HashSet::new();
+
+        if !exact.is_empty() {
+            for hit in &exact {
+                let k = make_key(hit);
+                if seen.insert(k.clone()) {
+                    ordered_keys.push(k);
+                }
+            }
+        } else if symbol_hint && !prefix.is_empty() {
+            for hit in &prefix {
+                let k = make_key(hit);
+                if seen.insert(k.clone()) {
+                    ordered_keys.push(k);
+                }
+            }
+        }
+
+        for (path_key, _) in &adjusted_fused {
+            if seen.insert(path_key.clone()) {
+                ordered_keys.push(path_key.clone());
+            }
+            if ordered_keys.len() >= self.cfg.topn_final {
+                break;
+            }
+        }
+
+        let fused_scores: HashMap<String, f32> = adjusted_fused.into_iter().collect();
+        let mut out = Vec::new();
+        for (idx, path_key) in ordered_keys
+            .into_iter()
+            .take(self.cfg.topn_final)
+            .enumerate()
+        {
             if let Some(hit) = rank_lists
                 .iter()
                 .flat_map(|v| v.iter())
                 .find(|h| make_key(h) == path_key)
                 .cloned()
             {
+                let path_prior = self.path_prior_multiplier(&hit.path);
+                let recency_prior = self.recency_prior_multiplier(&hit.path);
                 out.push(GroundedHit {
                     rank: (idx + 1) as u32,
                     path: hit.path,
@@ -93,7 +149,7 @@ impl RetrievalCore {
                     file_hash: hit.file_hash,
                     snapshot_version,
                     active_version,
-                    score_rrf: score,
+                    score_rrf: fused_scores.get(&path_key).copied().unwrap_or(0.0),
                     score_symbol: hit.score_symbol,
                     score_bm25: hit.score_bm25,
                     score_vector: hit.score_vector,
@@ -101,7 +157,10 @@ impl RetrievalCore {
                     symbol_kind: hit.symbol_kind,
                     stale: snapshot_version != active_version,
                     trust_level: TrustLevel::Trusted,
-                    why_selected: hit.why_selected,
+                    why_selected: format!(
+                        "{}; prior(path={:.2}, recency={:.2})",
+                        hit.why_selected, path_prior, recency_prior
+                    ),
                 });
             }
         }
@@ -121,24 +180,38 @@ impl RetrievalCore {
         Ok(0)
     }
 
+    pub fn indexing_status(&self) -> Result<Option<IndexingStatus>> {
+        let conn = Connection::open(&self.db_path)?;
+        let mut stmt =
+            conn.prepare("SELECT value FROM runtime_state WHERE key='indexing_status' LIMIT 1")?;
+        let mut rows = stmt.query([])?;
+        if let Some(row) = rows.next()? {
+            let raw: String = row.get(0)?;
+            let parsed = serde_json::from_str::<IndexingStatus>(&raw).ok();
+            return Ok(parsed);
+        }
+        Ok(None)
+    }
+
     fn symbol_exact(
         &self,
         conn: &Connection,
         query: &str,
         version: u64,
     ) -> Result<Vec<PartialHit>> {
+        let symbol_query = query.replace(' ', "_");
         let mut stmt = conn.prepare(
             r#"
             SELECT path, line_start, line_end, symbol_kind, file_hash
             FROM symbols
-            WHERE index_version=?1 AND symbol_name=?2
+            WHERE index_version=?1 AND (symbol_name=?2 OR symbol_name=?3)
             ORDER BY exported DESC
-            LIMIT ?3
+            LIMIT ?4
             "#,
         )?;
 
         let rows = stmt.query_map(
-            params![version, query, self.cfg.topn_symbol as i64],
+            params![version, query, symbol_query, self.cfg.topn_symbol as i64],
             |row| {
                 Ok(PartialHit {
                     path: row.get(0)?,
@@ -165,30 +238,34 @@ impl RetrievalCore {
         version: u64,
     ) -> Result<Vec<PartialHit>> {
         let like = format!("{}%", query);
+        let symbol_like = format!("{}%", query.replace(' ', "_"));
         let mut stmt = conn.prepare(
             r#"
             SELECT path, line_start, line_end, symbol_kind, file_hash
             FROM symbols
-            WHERE index_version=?1 AND symbol_name LIKE ?2
+            WHERE index_version=?1 AND (symbol_name LIKE ?2 OR symbol_name LIKE ?3)
             ORDER BY exported DESC
-            LIMIT ?3
+            LIMIT ?4
             "#,
         )?;
 
-        let rows = stmt.query_map(params![version, like, self.cfg.topn_symbol as i64], |row| {
-            Ok(PartialHit {
-                path: row.get(0)?,
-                start_line: row.get::<_, i64>(1)? as u32,
-                end_line: row.get::<_, i64>(2)? as u32,
-                symbol_kind: Some(row.get(3)?),
-                file_hash: row.get(4)?,
-                source: HitSource::Symbol,
-                score_symbol: Some(self.cfg.symbol_prefix_boost),
-                score_bm25: None,
-                score_vector: None,
-                why_selected: "prefix symbol match".to_string(),
-            })
-        })?;
+        let rows = stmt.query_map(
+            params![version, like, symbol_like, self.cfg.topn_symbol as i64],
+            |row| {
+                Ok(PartialHit {
+                    path: row.get(0)?,
+                    start_line: row.get::<_, i64>(1)? as u32,
+                    end_line: row.get::<_, i64>(2)? as u32,
+                    symbol_kind: Some(row.get(3)?),
+                    file_hash: row.get(4)?,
+                    source: HitSource::Symbol,
+                    score_symbol: Some(self.cfg.symbol_prefix_boost),
+                    score_bm25: None,
+                    score_vector: None,
+                    why_selected: "prefix symbol match".to_string(),
+                })
+            },
+        )?;
 
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
@@ -285,6 +362,47 @@ impl RetrievalCore {
         });
         hits.truncate(self.cfg.topn_vector);
         Ok(hits)
+    }
+
+    fn score_prior(&self, path: &str) -> f32 {
+        self.path_prior_multiplier(path) * self.recency_prior_multiplier(path)
+    }
+
+    fn path_prior_multiplier(&self, path: &str) -> f32 {
+        let lower = path.to_ascii_lowercase();
+        let mut mult = 1.0f32;
+
+        if is_code_path(&lower) {
+            mult *= self.cfg.code_path_boost.max(0.1);
+        }
+        if is_docs_path(&lower) {
+            mult *= self.cfg.docs_path_penalty.max(0.1);
+        }
+        if is_test_path(&lower) {
+            mult *= self.cfg.test_path_penalty.max(0.1);
+        }
+        mult
+    }
+
+    fn recency_prior_multiplier(&self, path: &str) -> f32 {
+        let half_life = self.cfg.recency_half_life_hours.max(0.1);
+        let min_boost = self.cfg.recency_min_boost.max(0.1);
+        let max_boost = self.cfg.recency_max_boost.max(min_boost);
+
+        let mut full_path = self.repo_root.clone();
+        full_path.push(path);
+        let Ok(meta) = std::fs::metadata(&full_path) else {
+            return 1.0;
+        };
+        let Ok(modified) = meta.modified() else {
+            return 1.0;
+        };
+        let Ok(age) = SystemTime::now().duration_since(modified) else {
+            return max_boost;
+        };
+        let age_hours = age.as_secs_f32() / 3600.0;
+        let decay = 0.5f32.powf(age_hours / half_life);
+        min_boost + (max_boost - min_boost) * decay.clamp(0.0, 1.0)
     }
 
     #[cfg(feature = "lancedb")]
@@ -386,10 +504,45 @@ where
     runtime.block_on(fut)
 }
 
+#[cfg(feature = "lancedb")]
 fn vector_backend_enabled() -> bool {
     std::env::var("SEMANTICFS_VECTOR_BACKEND")
         .map(|v| v.eq_ignore_ascii_case("lancedb"))
         .unwrap_or(true)
+}
+
+fn is_docs_path(path: &str) -> bool {
+    path.contains("/docs/")
+        || path.ends_with(".md")
+        || path.ends_with(".rst")
+        || path.ends_with(".adoc")
+        || path.ends_with("readme")
+        || path.ends_with("readme.md")
+}
+
+fn is_test_path(path: &str) -> bool {
+    path.contains("/tests/")
+        || path.contains("/test/")
+        || path.ends_with("_test.rs")
+        || path.ends_with("_test.py")
+        || path.ends_with(".spec.ts")
+        || path.ends_with(".test.ts")
+}
+
+fn is_code_path(path: &str) -> bool {
+    path.ends_with(".rs")
+        || path.ends_with(".py")
+        || path.ends_with(".ts")
+        || path.ends_with(".tsx")
+        || path.ends_with(".js")
+        || path.ends_with(".jsx")
+        || path.ends_with(".go")
+        || path.ends_with(".java")
+        || path.ends_with(".c")
+        || path.ends_with(".cpp")
+        || path.ends_with(".h")
+        || path.ends_with(".hpp")
+        || path.ends_with(".cs")
 }
 
 fn rrf_fuse(rank_lists: &[Vec<PartialHit>], k: f32) -> Vec<(String, f32)> {
@@ -450,5 +603,36 @@ mod tests {
 
         assert!(!fused.is_empty());
         assert!(fused[0].0.contains("src/a.rs"));
+    }
+
+    #[test]
+    fn symbol_first_ordering_keeps_symbol_hits_first() {
+        let exact = vec![sample("src/symbol.rs", 10), sample("src/alt.rs", 20)];
+        let bm25 = vec![sample("docs/readme.md", 1), sample("src/symbol.rs", 10)];
+        let fused = rrf_fuse(&[exact.clone(), bm25], 60.0);
+
+        let mut ordered = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        for h in &exact {
+            let k = make_key(h);
+            if seen.insert(k.clone()) {
+                ordered.push(k);
+            }
+        }
+        for (k, _) in &fused {
+            if seen.insert(k.clone()) {
+                ordered.push(k.clone());
+            }
+        }
+
+        assert!(!ordered.is_empty());
+        assert!(ordered[0].starts_with("src/symbol.rs"));
+    }
+
+    #[test]
+    fn path_prior_penalizes_docs_vs_code() {
+        assert!(is_code_path("src/lib/auth.rs"));
+        assert!(is_docs_path("docs/architecture.md"));
+        assert!(!is_docs_path("src/lib/auth.rs"));
     }
 }

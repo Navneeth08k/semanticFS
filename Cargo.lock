@@ -4971,11 +4971,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "chrono",
  "clap",
  "fuse-bridge",
  "indexer",
  "mcp",
  "semanticfs-common",
+ "serde",
  "serde_json",
  "sysinfo",
  "tokio",

@@ -1,5 +1,6 @@
 ﻿# Rust build artifacts
 /target/
+/target_daytime/
 **/*.rs.bk
 
 # Lockfile policy
@@ -10,10 +11,15 @@
 # SemanticFS local runtime artifacts
 .semanticfs/
 *.db
+*.db-shm
+*.db-wal
+*.db-*
 *.sqlite
 *.sqlite3
 *.sqlite-shm
 *.sqlite-wal
+*.sqlite-*
+*.sqlite3-*
 
 # Local config overrides
 config/local.toml

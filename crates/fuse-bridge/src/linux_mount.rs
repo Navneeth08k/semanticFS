@@ -18,16 +18,39 @@ use std::{
 };
 
 #[cfg(target_os = "linux")]
-use crate::FuseBridge;
+use crate::{FuseBridge, FuseSessionMode};
 
 #[cfg(target_os = "linux")]
 const TTL: Duration = Duration::from_millis(300);
+#[cfg(target_os = "linux")]
+const HEALTH_PATH: &str = "/.well-known/health.json";
+#[cfg(target_os = "linux")]
+const SESSION_STATUS_PATH: &str = "/.well-known/session.json";
+#[cfg(target_os = "linux")]
+const SESSION_REFRESH_PATH: &str = "/.well-known/session.refresh";
+#[cfg(target_os = "linux")]
+const FOPEN_DIRECT_IO_FLAG: u32 = 1;
 
 #[cfg(target_os = "linux")]
 #[derive(Clone)]
 struct Node {
     path: String,
     kind: FileType,
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct SessionKey {
+    uid: u32,
+    pid: u32,
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug, Clone)]
+struct SessionPin {
+    snapshot_version: u64,
+    pinned_at: SystemTime,
+    last_access: SystemTime,
 }
 
 #[cfg(target_os = "linux")]
@@ -54,6 +77,9 @@ struct SemanticFsFuse {
     bridge: Arc<FuseBridge>,
     inode_to_node: HashMap<u64, Node>,
     path_to_inode: HashMap<String, u64>,
+    session_pins: HashMap<SessionKey, SessionPin>,
+    session_mode: FuseSessionMode,
+    max_session_entries: usize,
 }
 
 #[cfg(target_os = "linux")]
@@ -61,6 +87,8 @@ impl SemanticFsFuse {
     fn new(bridge: Arc<FuseBridge>) -> Self {
         let mut inode_to_node = HashMap::new();
         let mut path_to_inode = HashMap::new();
+        let session_mode = bridge.fuse_session_mode();
+        let max_session_entries = bridge.fuse_session_max_entries();
 
         for (path, kind) in [
             ("/".to_string(), FileType::Directory),
@@ -68,12 +96,15 @@ impl SemanticFsFuse {
             ("/search".to_string(), FileType::Directory),
             ("/map".to_string(), FileType::Directory),
             ("/.well-known".to_string(), FileType::Directory),
-            (
-                "/.well-known/health.json".to_string(),
-                FileType::RegularFile,
-            ),
+            (HEALTH_PATH.to_string(), FileType::RegularFile),
+            (SESSION_STATUS_PATH.to_string(), FileType::RegularFile),
+            (SESSION_REFRESH_PATH.to_string(), FileType::RegularFile),
         ] {
-            let ino = hash_inode(&path);
+            let ino = if path == "/" {
+                fuser::FUSE_ROOT_ID
+            } else {
+                hash_inode(&path)
+            };
             inode_to_node.insert(
                 ino,
                 Node {
@@ -88,6 +119,9 @@ impl SemanticFsFuse {
             bridge,
             inode_to_node,
             path_to_inode,
+            session_pins: HashMap::new(),
+            session_mode,
+            max_session_entries,
         }
     }
 
@@ -101,10 +135,15 @@ impl SemanticFsFuse {
         };
 
         let size = if node.kind == FileType::RegularFile {
-            self.bridge
-                .read_virtual_current(&node.path)
-                .map(|v| v.len() as u64)
-                .unwrap_or(0)
+            if let Some(raw_path) = node.path.strip_prefix("/raw/") {
+                let mut disk = PathBuf::from(self.bridge.repo_root());
+                disk.push(raw_path);
+                fs::metadata(disk).map(|m| m.len()).unwrap_or(0)
+            } else {
+                // Virtual files are rendered dynamically at read-time.
+                // Advertise a non-zero size so clients issue reads instead of treating as EOF.
+                4096
+            }
         } else {
             0
         };
@@ -178,6 +217,150 @@ impl SemanticFsFuse {
         self.path_to_inode.insert(full, ino);
         Some(ino)
     }
+
+    fn session_key(req: &Request<'_>) -> SessionKey {
+        SessionKey {
+            uid: req.uid(),
+            pid: req.pid(),
+        }
+    }
+
+    fn prune_session_pins_if_needed(&mut self) {
+        if self.session_pins.len() < self.max_session_entries {
+            return;
+        }
+        if let Some((oldest_key, _)) = self
+            .session_pins
+            .iter()
+            .min_by_key(|(_, pin)| pin.last_access)
+            .map(|(key, pin)| (*key, pin.last_access))
+        {
+            self.session_pins.remove(&oldest_key);
+        }
+    }
+
+    fn resolve_snapshot_versions(&mut self, req: &Request<'_>, refresh: bool) -> (u64, u64, bool) {
+        let active = self.bridge.active_version().unwrap_or(0);
+        if self.session_mode == FuseSessionMode::PerRequest {
+            return (active, active, false);
+        }
+
+        let key = Self::session_key(req);
+        let now = SystemTime::now();
+
+        if refresh {
+            self.prune_session_pins_if_needed();
+            self.session_pins.insert(
+                key,
+                SessionPin {
+                    snapshot_version: active,
+                    pinned_at: now,
+                    last_access: now,
+                },
+            );
+            return (active, active, true);
+        }
+
+        let pin = self.session_pins.entry(key).or_insert_with(|| SessionPin {
+            snapshot_version: active,
+            pinned_at: now,
+            last_access: now,
+        });
+        pin.last_access = now;
+        (pin.snapshot_version, active, false)
+    }
+
+    fn resolve_status_snapshot_versions(&mut self, req: &Request<'_>) -> (u64, u64, bool) {
+        let active = self.bridge.active_version().unwrap_or(0);
+        if self.session_mode == FuseSessionMode::PerRequest {
+            return (active, active, false);
+        }
+
+        let key = Self::session_key(req);
+        if let Some(pin) = self.session_pins.get(&key) {
+            return (pin.snapshot_version, active, false);
+        }
+
+        let now = SystemTime::now();
+        self.prune_session_pins_if_needed();
+        self.session_pins.insert(
+            key,
+            SessionPin {
+                snapshot_version: active,
+                pinned_at: now,
+                last_access: now,
+            },
+        );
+        (active, active, false)
+    }
+
+    fn render_session_status_json(&mut self, req: &Request<'_>, refresh: bool) -> Result<Vec<u8>> {
+        let (snapshot, active, refreshed) = if refresh {
+            self.resolve_snapshot_versions(req, true)
+        } else {
+            self.resolve_status_snapshot_versions(req)
+        };
+        let key = Self::session_key(req);
+        let (pinned_at_ms, last_access_ms) = self
+            .session_pins
+            .get(&key)
+            .map(|pin| {
+                let pinned = unix_ms(pin.pinned_at);
+                let last = unix_ms(pin.last_access);
+                (pinned, last)
+            })
+            .unwrap_or((0, 0));
+
+        Ok(encode_session_status_json(
+            self.session_mode,
+            key,
+            snapshot,
+            active,
+            refreshed,
+            pinned_at_ms,
+            last_access_ms,
+        ))
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn unix_ms(ts: SystemTime) -> u64 {
+    ts.duration_since(SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+#[cfg(target_os = "linux")]
+fn session_mode_label(mode: FuseSessionMode) -> &'static str {
+    match mode {
+        FuseSessionMode::Pinned => "pinned",
+        FuseSessionMode::PerRequest => "per_request",
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn encode_session_status_json(
+    mode: FuseSessionMode,
+    key: SessionKey,
+    snapshot: u64,
+    active: u64,
+    refreshed: bool,
+    pinned_at_ms: u64,
+    last_access_ms: u64,
+) -> Vec<u8> {
+    format!(
+        "{{\"mode\":\"{}\",\"session\":{{\"uid\":{},\"pid\":{}}},\"snapshot_version\":{},\"active_version\":{},\"stale\":{},\"refreshed\":{},\"pinned_at_unix_ms\":{},\"last_access_unix_ms\":{}}}",
+        session_mode_label(mode),
+        key.uid,
+        key.pid,
+        snapshot,
+        active,
+        if snapshot != active { "true" } else { "false" },
+        if refreshed { "true" } else { "false" },
+        pinned_at_ms,
+        last_access_ms
+    )
+    .into_bytes()
 }
 
 #[cfg(target_os = "linux")]
@@ -192,7 +375,7 @@ impl Filesystem for SemanticFsFuse {
         reply.error(ENOENT);
     }
 
-    fn getattr(&mut self, _req: &Request<'_>, ino: u64, _fh: Option<u64>, reply: ReplyAttr) {
+    fn getattr(&mut self, _req: &Request<'_>, ino: u64, reply: ReplyAttr) {
         match self.attr_for(ino) {
             Some(attr) => reply.attr(&TTL, &attr),
             None => reply.error(ENOENT),
@@ -228,8 +411,22 @@ impl Filesystem for SemanticFsFuse {
                 }
             }
             "/.well-known" => {
-                if let Some(inode) = self.path_to_inode.get("/.well-known/health.json") {
+                if let Some(inode) = self.path_to_inode.get(HEALTH_PATH) {
                     entries.push((*inode, FileType::RegularFile, OsString::from("health.json")));
+                }
+                if let Some(inode) = self.path_to_inode.get(SESSION_STATUS_PATH) {
+                    entries.push((
+                        *inode,
+                        FileType::RegularFile,
+                        OsString::from("session.json"),
+                    ));
+                }
+                if let Some(inode) = self.path_to_inode.get(SESSION_REFRESH_PATH) {
+                    entries.push((
+                        *inode,
+                        FileType::RegularFile,
+                        OsString::from("session.refresh"),
+                    ));
                 }
             }
             p if p.starts_with("/raw") => {
@@ -320,8 +517,15 @@ impl Filesystem for SemanticFsFuse {
             return;
         }
 
-        if self.inode_to_node.contains_key(&ino) {
-            reply.opened(0, 0);
+        if let Some(node) = self.inode_to_node.get(&ino) {
+            let open_flags = if node.path.starts_with("/raw/") {
+                0
+            } else {
+                // Virtual files are synthesized per-read and can change between accesses.
+                // Use direct I/O to avoid kernel page-cache size/content staleness.
+                FOPEN_DIRECT_IO_FLAG
+            };
+            reply.opened(0, open_flags);
             return;
         }
 
@@ -330,7 +534,7 @@ impl Filesystem for SemanticFsFuse {
 
     fn read(
         &mut self,
-        _req: &Request<'_>,
+        req: &Request<'_>,
         ino: u64,
         _fh: u64,
         offset: i64,
@@ -344,12 +548,27 @@ impl Filesystem for SemanticFsFuse {
             return;
         };
 
-        if node.kind != FileType::RegularFile {
+        let node_kind = node.kind;
+        let node_path = node.path.clone();
+
+        if node_kind != FileType::RegularFile {
             reply.error(ENOENT);
             return;
         }
 
-        match self.bridge.read_virtual_current(&node.path) {
+        let read_result = if node_path == SESSION_REFRESH_PATH {
+            self.render_session_status_json(req, true)
+        } else if node_path == SESSION_STATUS_PATH {
+            self.render_session_status_json(req, false)
+        } else if node_path == HEALTH_PATH {
+            let active = self.bridge.active_version().unwrap_or(0);
+            self.bridge.read_virtual(&node_path, active, active)
+        } else {
+            let (snapshot, active, _) = self.resolve_snapshot_versions(req, false);
+            self.bridge.read_virtual(&node_path, snapshot, active)
+        };
+
+        match read_result {
             Ok(data) => {
                 let start = offset.max(0) as usize;
                 let end = (start + size as usize).min(data.len());
@@ -372,4 +591,70 @@ fn hash_inode(key: &str) -> u64 {
         hash = hash.wrapping_mul(1099511628211);
     }
     hash
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::{encode_session_status_json, SessionKey};
+    use crate::FuseSessionMode;
+
+    fn as_str(bytes: Vec<u8>) -> String {
+        String::from_utf8(bytes).expect("session status JSON should be utf8")
+    }
+
+    #[test]
+    fn session_json_marks_stale_when_active_advances_without_refresh() {
+        let body = as_str(encode_session_status_json(
+            FuseSessionMode::Pinned,
+            SessionKey { uid: 1000, pid: 42 },
+            10,
+            11,
+            false,
+            1700000000000,
+            1700000000100,
+        ));
+
+        assert!(body.contains("\"mode\":\"pinned\""));
+        assert!(body.contains("\"snapshot_version\":10"));
+        assert!(body.contains("\"active_version\":11"));
+        assert!(body.contains("\"stale\":true"));
+        assert!(body.contains("\"refreshed\":false"));
+    }
+
+    #[test]
+    fn session_refresh_marks_refreshed_and_clears_stale() {
+        let body = as_str(encode_session_status_json(
+            FuseSessionMode::Pinned,
+            SessionKey { uid: 1000, pid: 42 },
+            11,
+            11,
+            true,
+            1700000000200,
+            1700000000200,
+        ));
+
+        assert!(body.contains("\"snapshot_version\":11"));
+        assert!(body.contains("\"active_version\":11"));
+        assert!(body.contains("\"stale\":false"));
+        assert!(body.contains("\"refreshed\":true"));
+        assert!(body.contains("\"pinned_at_unix_ms\":1700000000200"));
+        assert!(body.contains("\"last_access_unix_ms\":1700000000200"));
+    }
+
+    #[test]
+    fn per_request_mode_label_is_exposed_in_status_json() {
+        let body = as_str(encode_session_status_json(
+            FuseSessionMode::PerRequest,
+            SessionKey { uid: 501, pid: 777 },
+            99,
+            99,
+            false,
+            0,
+            0,
+        ));
+
+        assert!(body.contains("\"mode\":\"per_request\""));
+        assert!(body.contains("\"session\":{\"uid\":501,\"pid\":777}"));
+        assert!(body.contains("\"stale\":false"));
+    }
 }

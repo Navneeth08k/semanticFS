@@ -1,0 +1,297 @@
+#!/usr/bin/env python3
+"""
+Generate a bootstrap retrieval golden file for an arbitrary repository.
+
+This is intentionally lightweight: it extracts likely symbol names from code
+files and maps each query to an expected path that defines the symbol.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+from pathlib import Path
+from typing import Dict, Iterable, List, Sequence, Tuple
+
+
+ALLOWED_EXTENSIONS = {
+    ".py",
+    ".rs",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".java",
+    ".go",
+    ".c",
+    ".cc",
+    ".cpp",
+    ".h",
+    ".hpp",
+}
+
+SKIP_DIR_NAMES = {
+    ".git",
+    ".hg",
+    ".svn",
+    ".idea",
+    ".vscode",
+    "node_modules",
+    "dist",
+    "build",
+    "target",
+    ".venv",
+    "venv",
+    "__pycache__",
+}
+
+MAX_FILE_BYTES = 512 * 1024
+SKIP_SYMBOLS = {
+    "main",
+    "test",
+    "tests",
+    "init",
+    "setup",
+    "teardown",
+    "run",
+    "load",
+    "save",
+    "build",
+    "export",
+    "decorator",
+}
+
+
+LANG_PATTERNS: Sequence[Tuple[Sequence[str], Sequence[re.Pattern[str]]]] = [
+    (
+        [".py"],
+        [
+            re.compile(r"^\s*(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("),
+            re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+        ],
+    ),
+    (
+        [".rs"],
+        [
+            re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+            re.compile(r"^\s*(?:pub\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+            re.compile(r"^\s*(?:pub\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+            re.compile(r"^\s*(?:pub\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+        ],
+    ),
+    (
+        [".ts", ".tsx", ".js", ".jsx"],
+        [
+            re.compile(
+                r"^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
+            ),
+            re.compile(
+                r"^\s*(?:export\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)\b"
+            ),
+            re.compile(
+                r"^\s*(?:export\s+)?const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:async\s*)?\("
+            ),
+        ],
+    ),
+    (
+        [".java"],
+        [
+            re.compile(
+                r"^\s*(?:public|private|protected)?\s*(?:static\s+)?(?:class|interface|enum)\s+([A-Za-z_][A-Za-z0-9_]*)\b"
+            ),
+            re.compile(
+                r"^\s*(?:public|private|protected)\s+(?:static\s+)?[A-Za-z_<>\[\], ?]+\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
+            ),
+        ],
+    ),
+    (
+        [".go"],
+        [
+            re.compile(
+                r"^\s*func\s+(?:\([^)]+\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\("
+            )
+        ],
+    ),
+    (
+        [".c", ".cc", ".cpp", ".h", ".hpp"],
+        [
+            re.compile(
+                r"^\s*[A-Za-z_][A-Za-z0-9_*\s]+\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^;]*\)\s*\{?\s*$"
+            )
+        ],
+    ),
+]
+
+
+def parser_for_extension(ext: str) -> Sequence[re.Pattern[str]]:
+    for exts, patterns in LANG_PATTERNS:
+        if ext in exts:
+            return patterns
+    return ()
+
+
+def iter_source_files(root: Path) -> Iterable[Path]:
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
+        for name in filenames:
+            path = Path(dirpath) / name
+            ext = path.suffix.lower()
+            if ext not in ALLOWED_EXTENSIONS:
+                continue
+            try:
+                size = path.stat().st_size
+            except OSError:
+                continue
+            if size > MAX_FILE_BYTES:
+                continue
+            yield path
+
+
+def extract_symbols(path: Path, repo_root: Path, min_len: int) -> List[Dict[str, str]]:
+    ext = path.suffix.lower()
+    patterns = parser_for_extension(ext)
+    if not patterns:
+        return []
+    try:
+        raw = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return []
+
+    rel = path.relative_to(repo_root).as_posix()
+    out: List[Dict[str, str]] = []
+    seen: set[str] = set()
+    for line in raw.splitlines():
+        for pat in patterns:
+            m = pat.match(line)
+            if not m:
+                continue
+            symbol = m.group(1).strip()
+            if len(symbol) < min_len:
+                continue
+            if symbol.startswith("__") and symbol.endswith("__"):
+                continue
+            if symbol.lower() in SKIP_SYMBOLS:
+                continue
+            if symbol in seen:
+                continue
+            seen.add(symbol)
+            out.append({"symbol": symbol, "path": rel})
+            break
+    return out
+
+
+def choose_queries(
+    candidates: Sequence[Dict[str, str]], max_queries: int
+) -> List[Dict[str, str]]:
+    if max_queries <= 0:
+        return []
+
+    selected: List[Dict[str, str]] = []
+    used_symbols: set[str] = set()
+    used_paths: set[str] = set()
+
+    # First pass: maximize path coverage.
+    for c in candidates:
+        if len(selected) >= max_queries:
+            break
+        sym = c["symbol"]
+        path = c["path"]
+        if sym in used_symbols or path in used_paths:
+            continue
+        selected.append(c)
+        used_symbols.add(sym)
+        used_paths.add(path)
+
+    # Second pass: fill remaining slots with unique symbols.
+    for c in candidates:
+        if len(selected) >= max_queries:
+            break
+        sym = c["symbol"]
+        if sym in used_symbols:
+            continue
+        selected.append(c)
+        used_symbols.add(sym)
+
+    return selected
+
+
+def build_fixture(
+    dataset_name: str, selected: Sequence[Dict[str, str]]
+) -> Dict[str, object]:
+    queries = []
+    for idx, item in enumerate(selected, start=1):
+        queries.append(
+            {
+                "id": f"b{idx:02d}",
+                "query": item["symbol"],
+                "expected_paths": [item["path"]],
+                "symbol_query": True,
+            }
+        )
+    return {
+        "schema_version": 1,
+        "dataset_name": dataset_name,
+        "queries": queries,
+    }
+
+
+def default_dataset_name(repo_root: Path) -> str:
+    stem = re.sub(r"[^a-zA-Z0-9]+", "_", repo_root.name).strip("_").lower()
+    if not stem:
+        stem = "repo"
+    return f"{stem}_bootstrap_v1"
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Generate bootstrap golden queries from a repo")
+    ap.add_argument("--repo-root", required=True, help="Path to repository root")
+    ap.add_argument("--output", required=True, help="Output JSON file path")
+    ap.add_argument("--dataset-name", default="", help="Dataset name override")
+    ap.add_argument(
+        "--max-queries",
+        type=int,
+        default=20,
+        help="Max query count to emit (default: 20)",
+    )
+    ap.add_argument(
+        "--min-symbol-len",
+        type=int,
+        default=4,
+        help="Minimum symbol length to include (default: 4)",
+    )
+    args = ap.parse_args()
+
+    repo_root = Path(args.repo_root).resolve()
+    if not repo_root.exists() or not repo_root.is_dir():
+        raise SystemExit(f"repo root not found or not a directory: {repo_root}")
+
+    dataset_name = args.dataset_name.strip() or default_dataset_name(repo_root)
+
+    all_candidates: List[Dict[str, str]] = []
+    for path in iter_source_files(repo_root):
+        all_candidates.extend(extract_symbols(path, repo_root, args.min_symbol_len))
+
+    # Stable ordering: file path then symbol name.
+    all_candidates.sort(key=lambda c: (c["path"], c["symbol"].lower(), c["symbol"]))
+    selected = choose_queries(all_candidates, args.max_queries)
+    if not selected:
+        raise SystemExit(
+            "no symbols extracted for bootstrap fixture; try lowering --min-symbol-len"
+        )
+
+    fixture = build_fixture(dataset_name, selected)
+    out_path = Path(args.output)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(fixture, indent=2), encoding="utf-8")
+
+    print(f"repo_root={repo_root}")
+    print(f"dataset_name={dataset_name}")
+    print(f"candidates={len(all_candidates)}")
+    print(f"queries={len(selected)}")
+    print(f"output={out_path.resolve()}")
+
+
+if __name__ == "__main__":
+    main()
