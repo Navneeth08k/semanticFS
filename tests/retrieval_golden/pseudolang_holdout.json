@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "dataset_name": "pseudolang_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "fetchProject",
+      "expected_paths": [
+        "app/(protected)/ide/[projectId]/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "handleCompleteTutorial",
+      "expected_paths": [
+        "app/(protected)/learn/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "POST",
+      "expected_paths": [
+        "app/api/save/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "handleGoogleSignIn",
+      "expected_paths": [
+        "app/auth/sign-in/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "handleUpdatePassword",
+      "expected_paths": [
+        "app/auth/update-password/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "Footer",
+      "expected_paths": [
+        "components/footer.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "handleResize",
+      "expected_paths": [
+        "components/mobile-sidebar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "PublicNavbar",
+      "expected_paths": [
+        "components/public-navbar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "handleSignOut",
+      "expected_paths": [
+        "components/sidebar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "useCarousel",
+      "expected_paths": [
+        "components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "CommandDialog",
+      "expected_paths": [
+        "components/ui/command.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "DialogFooter",
+      "expected_paths": [
+        "components/ui/dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "DropdownMenuShortcut",
+      "expected_paths": [
+        "components/ui/dropdown-menu.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

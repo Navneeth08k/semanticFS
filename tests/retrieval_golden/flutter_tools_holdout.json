@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "dataset_name": "flutter_tools_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "addObservatoryBonjourService",
+      "expected_paths": [
+        "bin/xcode_backend.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "cleanAdbDeviceName",
+      "expected_paths": [
+        "lib/src/android/adb.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "_write",
+      "expected_paths": [
+        "lib/src/android/android_console.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "_doesNotHaveAdb",
+      "expected_paths": [
+        "lib/src/android/android_device_discovery.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "_canRun",
+      "expected_paths": [
+        "lib/src/android/android_sdk.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "_hasIssues",
+      "expected_paths": [
+        "lib/src/android/android_studio_validator.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "_Attribute",
+      "expected_paths": [
+        "lib/src/android/application_package.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "_parseLoadingUnitsCache",
+      "expected_paths": [
+        "lib/src/android/deferred_components_gen_snapshot_validator.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "attemptToolExit",
+      "expected_paths": [
+        "lib/src/android/deferred_components_validator.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "_lineMatcher",
+      "expected_paths": [
+        "lib/src/android/gradle_errors.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "_getManifestFile",
+      "expected_paths": [
+        "lib/src/android/multidex.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "_artifactToFileName",
+      "expected_paths": [
+        "lib/src/artifacts.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "_buildNodeName",
+      "expected_paths": [
+        "lib/src/base/analyze_size.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "AzureDetector",
+      "expected_paths": [
+        "lib/src/base/bot_detector.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "CommandHelp",
+      "expected_paths": [
+        "lib/src/base/command_help.dart"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

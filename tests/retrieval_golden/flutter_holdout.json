@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "dataset_name": "flutter_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "BatteryPlugin",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/battery-2.0.3/android/src/main/java/io/flutter/plugins/battery/BatteryPlugin.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "FlutterActivityTest",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/battery-2.0.3/example/android/app/src/androidTest/java/io/flutter/plugins/battery/FlutterActivityTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "Camera",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/Camera.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "hasAudioPermission",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraPermissions.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "CameraProperties",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraProperties.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "CameraState",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraState.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "computeZoom",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraZoom.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "Callback",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/ImageSaver.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "checkIsSupported",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/CameraFeature.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "CameraFeatureFactoryImpl",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/CameraFeatureFactoryImpl.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "Point",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/Point.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "FocusMode",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/autofocus/FocusMode.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "ExposureMode",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/exposurelock/ExposureMode.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "buildExposureRectangle",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/exposurepoint/ExposurePointFeature.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "FlashMode",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/flash/FlashMode.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b32",
+      "query": "FpsRangeFeature",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/fpsrange/FpsRangeFeature.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b34",
+      "query": "getValueForString",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/noisereduction/NoiseReductionMode.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b36",
+      "query": "ResolutionPreset",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/resolution/ResolutionPreset.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b38",
+      "query": "getDeviceOrientationManager",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/sensororientation/SensorOrientationFeature.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b40",
+      "query": "MediaRecorderBuilder",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/media/MediaRecorderBuilder.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b42",
+      "query": "CaptureTimeoutsWrapper",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/types/CaptureTimeoutsWrapper.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b44",
+      "query": "getIsExpired",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/types/Timeout.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b46",
+      "query": "CameraCaptureCallbackTest",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/CameraCaptureCallbackTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b48",
+      "query": "before",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/CameraPropertiesImplTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b50",
+      "query": "CameraRegionUtils_getCameraBoundariesTest",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/CameraRegionUtils_getCameraBoundariesTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b52",
+      "query": "CameraTest_getRecordingProfileTest",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/CameraTest_getRecordingProfileTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b54",
+      "query": "CameraZoomTest",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/CameraZoomTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b56",
+      "query": "ImageSaverTests",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/ImageSaverTests.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b58",
+      "query": "AutoFocusFeatureTest",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/features/autofocus/AutoFocusFeatureTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b60",
+      "query": "checkIsSupported_shouldReturnTrue",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/test/java/io/flutter/plugins/camera/features/exposurelock/ExposureLockFeatureTest.java"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

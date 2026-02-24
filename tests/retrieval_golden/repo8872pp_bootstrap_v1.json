@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "dataset_name": "repo8872pp_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "BasicOmniOpMode_Linear",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/BasicOmniOpMode_Linear.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "BasicOpMode_Iterative",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/BasicOpMode_Iterative.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "BasicOpMode_Linear",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/BasicOpMode_Linear.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "ConceptCompassCalibration",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptCompassCalibration.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "ConceptExternalHardwareClass",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptExternalHardwareClass.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "ConceptGamepadRumble",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptGamepadRumble.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "ConceptGamepadTouchpad",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptGamepadTouchpad.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "ConceptMotorBulkRead",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "ConceptNullOp",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptNullOp.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "ConceptRampMotorSpeed",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptRampMotorSpeed.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "ConceptRevSPARKMini",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptRevSPARKMini.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "ConceptScanServo",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptScanServo.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "ConceptSoundsASJava",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptSoundsASJava.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ConceptSoundsOnBotJava",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptSoundsOnBotJava.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "ConceptSoundsSKYSTONE",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptSoundsSKYSTONE.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ConceptTelemetry",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptTelemetry.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "ConceptTensorFlowObjectDetection",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptTensorFlowObjectDetection.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "ConceptTensorFlowObjectDetectionSwitchableCameras",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptTensorFlowObjectDetectionSwitchableCameras.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "ConceptTensorFlowObjectDetectionWebcam",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptTensorFlowObjectDetectionWebcam.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "ConceptVuMarkIdentification",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuMarkIdentification.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "ConceptVuMarkIdentificationWebcam",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuMarkIdentificationWebcam.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "ConceptVuforiaDriveToTargetWebcam",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaDriveToTargetWebcam.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "ConceptVuforiaFieldNavigation",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaFieldNavigation.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "ConceptVuforiaFieldNavigationWebcam",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaFieldNavigationWebcam.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "ConceptVuforiaSkyStoneNavigation",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaSkyStoneNavigation.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "ConceptVuforiaSkyStoneNavigationWebcam",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaSkyStoneNavigationWebcam.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "encoderDrive",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/RobotAutoDriveByEncoder_Linear.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "driveStraight",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/RobotAutoDriveByGyro_Linear.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "RobotAutoDriveByTime_Linear",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/RobotAutoDriveByTime_Linear.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "RobotAutoDriveToLine_Linear",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/RobotAutoDriveToLine_Linear.java"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

@@ -126,6 +126,18 @@ powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label
 ```bash
 python scripts/split_golden_suite.py --input tests/retrieval_golden/repo_bootstrap.json --tune-output tests/retrieval_golden/repo_tune.json --holdout-output tests/retrieval_golden/repo_holdout.json --tune-count 10
 ```
+11. Curated mixed split build from expanded bootstrap suite:
+```bash
+python scripts/build_curated_mixed_suites.py --input tests/retrieval_golden/repo_bootstrap_v2_full.json --tune-output tests/retrieval_golden/repo_curated_tune.json --holdout-output tests/retrieval_golden/repo_curated_holdout.json --split-size 40 --non-symbol-per-split 10 --dataset-prefix repo
+```
+12. Filesystem candidate discovery (workspace mirrors excluded + remote dedupe by default):
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/discover_repo_candidates.ps1 -Roots C:\Users\<user> -MinTrackedFiles 80 -TopN 80 -OutputPath .semanticfs/bench/filesystem_repo_candidates_min80.json
+```
+13. Filesystem backlog build (prioritized uncovered/gap/partial/ok queue):
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build_filesystem_scope_backlog.ps1 -CandidatesPath .semanticfs/bench/filesystem_repo_candidates_min80.json -OutputPath .semanticfs/bench/filesystem_scope_backlog_latest.json
+```
 
 ## Documentation Map
 Use these docs by role:

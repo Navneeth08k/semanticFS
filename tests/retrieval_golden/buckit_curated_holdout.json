@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "dataset_name": "buckit_curated_holdout_v1",
+  "queries": [
+    {
+      "id": "hs001",
+      "query": "useUser",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs002",
+      "query": "executePendingAction",
+      "expected_paths": [
+        "navigation/navigationService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs003",
+      "query": "onNavigationReady",
+      "expected_paths": [
+        "navigation/navigationService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs004",
+      "query": "openLink",
+      "expected_paths": [
+        "screens/AboutScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs005",
+      "query": "confirmDeactivation",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs006",
+      "query": "handleDeactivateAccount",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs007",
+      "query": "AdminModerationScreen",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs008",
+      "query": "fetchReports",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs009",
+      "query": "handleReportAction",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs010",
+      "query": "renderReportModal",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs011",
+      "query": "AuthScreen",
+      "expected_paths": [
+        "screens/AuthScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs012",
+      "query": "checkBiometrics",
+      "expected_paths": [
+        "screens/AuthScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs013",
+      "query": "ChangePasswordScreen",
+      "expected_paths": [
+        "screens/ChangePasswordScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs014",
+      "query": "CreateTournamentScreen",
+      "expected_paths": [
+        "screens/CreateTournamentScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs015",
+      "query": "cleanupRealtimeSubscriptions",
+      "expected_paths": [
+        "screens/GameHistoryScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs016",
+      "query": "getGroupMemberCounts",
+      "expected_paths": [
+        "screens/GroupsScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs017",
+      "query": "handleLogin",
+      "expected_paths": [
+        "screens/LoginScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs018",
+      "query": "confirmGame",
+      "expected_paths": [
+        "screens/LogScreen_fixed.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs019",
+      "query": "handlePermissionRequest",
+      "expected_paths": [
+        "screens/OnboardingScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs020",
+      "query": "SettingsScreen",
+      "expected_paths": [
+        "screens/SettingsScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs021",
+      "query": "addTextElement",
+      "expected_paths": [
+        "screens/StoryCanvasScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs022",
+      "query": "handleAccept",
+      "expected_paths": [
+        "screens/TermsOfServiceScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs023",
+      "query": "formatMessageTimestamp",
+      "expected_paths": [
+        "screens/TournamentChatScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs024",
+      "query": "fetchTournaments",
+      "expected_paths": [
+        "screens/TournamentListScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs025",
+      "query": "compareVersions",
+      "expected_paths": [
+        "services/appVersionService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs026",
+      "query": "distanceMiles",
+      "expected_paths": [
+        "services/userService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs027",
+      "query": "testEdgeFunction",
+      "expected_paths": [
+        "test_edge_function.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs028",
+      "query": "capsCount",
+      "expected_paths": [
+        "utils/contentFilter.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs029",
+      "query": "captureImageWithPermissions",
+      "expected_paths": [
+        "utils/permissions.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs030",
+      "query": "getTrackingStatus",
+      "expected_paths": [
+        "utils/trackingTransparency.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hn001",
+      "query": "use user",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn002",
+      "query": "execute pending action",
+      "expected_paths": [
+        "navigation/navigationService.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn003",
+      "query": "on navigation ready",
+      "expected_paths": [
+        "navigation/navigationService.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn004",
+      "query": "open link",
+      "expected_paths": [
+        "screens/AboutScreen.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn005",
+      "query": "confirm deactivation",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn006",
+      "query": "handle deactivate account",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn007",
+      "query": "admin moderation screen",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn008",
+      "query": "fetch reports",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn009",
+      "query": "handle report action",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn010",
+      "query": "auth screen",
+      "expected_paths": [
+        "screens/AuthScreen.js"
+      ],
+      "symbol_query": false
+    }
+  ]
+}

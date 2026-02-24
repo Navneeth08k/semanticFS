@@ -78,7 +78,9 @@
       "id": "b20",
       "query": "build_losses",
       "expected_paths": [
-        "official/core/train_lib_test.py"
+        "official/core/base_task.py",
+        "official/core/train_lib_test.py",
+        "official/projects/yt8m/tasks/yt8m_task.py"
       ],
       "symbol_query": true
     }

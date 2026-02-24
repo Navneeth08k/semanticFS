@@ -1,0 +1,328 @@
+{
+  "schema_version": 1,
+  "dataset_name": "tensorflow_models_curated_tune_v1",
+  "queries": [
+    {
+      "id": "ts001",
+      "query": "pick_dataset_fn",
+      "expected_paths": [
+        "official/common/dataset_fn.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts002",
+      "query": "GetDistributionStrategyTest",
+      "expected_paths": [
+        "official/common/distribute_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts003",
+      "query": "EMACheckpointing",
+      "expected_paths": [
+        "official/core/actions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts004",
+      "query": "aggregate_logs",
+      "expected_paths": [
+        "official/core/base_task.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts005",
+      "query": "all_strategy_combinations",
+      "expected_paths": [
+        "official/core/base_trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts006",
+      "query": "get_exp_config",
+      "expected_paths": [
+        "official/core/exp_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts007",
+      "query": "_inference_step",
+      "expected_paths": [
+        "official/core/export_base_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts008",
+      "query": "ClassRegistryKey",
+      "expected_paths": [
+        "official/core/registry_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts009",
+      "query": "_Dense",
+      "expected_paths": [
+        "official/core/test_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts010",
+      "query": "build_losses",
+      "expected_paths": [
+        "official/core/base_task.py",
+        "official/core/train_lib_test.py",
+        "official/projects/yt8m/tasks/yt8m_task.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts011",
+      "query": "test_cast_leaf_nested_dict",
+      "expected_paths": [
+        "official/core/train_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts012",
+      "query": "relu6",
+      "expected_paths": [
+        "official/modeling/activations/relu.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts013",
+      "query": "hard_sigmoid",
+      "expected_paths": [
+        "official/modeling/activations/sigmoid.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts014",
+      "query": "hard_swish",
+      "expected_paths": [
+        "official/modeling/activations/swish.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts015",
+      "query": "expand_1_axis",
+      "expected_paths": [
+        "official/modeling/fast_training/experimental/tf2_utils_2x_wide.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts016",
+      "query": "compute_stage_id",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/policies.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts017",
+      "query": "get_eval_dataset",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/train_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts018",
+      "query": "_build_inputs",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts019",
+      "query": "_filter_and_allreduce_gradients",
+      "expected_paths": [
+        "official/modeling/grad_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts020",
+      "query": "as_dict",
+      "expected_paths": [
+        "official/modeling/hyperparams/oneof.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts021",
+      "query": "_get_kv",
+      "expected_paths": [
+        "official/modeling/hyperparams/params_dict.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts022",
+      "query": "_instantiate_sub_tasks",
+      "expected_paths": [
+        "official/modeling/multitask/base_model.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts023",
+      "query": "BaseTrainerTest",
+      "expected_paths": [
+        "official/modeling/multitask/base_trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts024",
+      "query": "eval_step_fn",
+      "expected_paths": [
+        "official/modeling/multitask/evaluator.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts025",
+      "query": "_get_task_step",
+      "expected_paths": [
+        "official/modeling/multitask/interleaving_trainer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts026",
+      "query": "create_optimizer",
+      "expected_paths": [
+        "official/modeling/multitask/multitask.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts027",
+      "query": "TaskSamplerTest",
+      "expected_paths": [
+        "official/modeling/multitask/task_sampler_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts028",
+      "query": "run_experiment_with_multitask_eval",
+      "expected_paths": [
+        "official/modeling/multitask/train_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts029",
+      "query": "ConstantLrConfig",
+      "expected_paths": [
+        "official/modeling/optimization/configs/learning_rate_config.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts030",
+      "query": "OptimizerConfigTest",
+      "expected_paths": [
+        "official/modeling/optimization/configs/optimization_config_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "tn001",
+      "query": "pick dataset fn",
+      "expected_paths": [
+        "official/common/dataset_fn.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn002",
+      "query": "aggregate logs",
+      "expected_paths": [
+        "official/core/base_task.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn003",
+      "query": "all strategy combinations",
+      "expected_paths": [
+        "official/core/base_trainer_test.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn004",
+      "query": "get exp config",
+      "expected_paths": [
+        "official/core/exp_factory.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn005",
+      "query": "class registry key",
+      "expected_paths": [
+        "official/core/registry_test.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn006",
+      "query": "hard sigmoid",
+      "expected_paths": [
+        "official/modeling/activations/sigmoid.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn007",
+      "query": "hard swish",
+      "expected_paths": [
+        "official/modeling/activations/swish.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn008",
+      "query": "expand 1 axis",
+      "expected_paths": [
+        "official/modeling/fast_training/experimental/tf2_utils_2x_wide.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn009",
+      "query": "compute stage id",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/policies.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn010",
+      "query": "get eval dataset",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/train_lib_test.py"
+      ],
+      "symbol_query": false
+    }
+  ]
+}

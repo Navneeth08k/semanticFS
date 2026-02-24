@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "dataset_name": "apex_scholars_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "POST",
+      "expected_paths": [
+        "app/api/create-checkout-session/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "BookingPageContent",
+      "expected_paths": [
+        "app/booking/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "handleChange",
+      "expected_paths": [
+        "app/contact/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "seedPackages",
+      "expected_paths": [
+        "app/debug/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "fetchTutor",
+      "expected_paths": [
+        "app/faculty/[id]/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "handleEmailCapture",
+      "expected_paths": [
+        "app/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "handleInputChange",
+      "expected_paths": [
+        "app/profile/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "fetchSubjects",
+      "expected_paths": [
+        "app/subjects/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "Header",
+      "expected_paths": [
+        "components/layout/header.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "useCarousel",
+      "expected_paths": [
+        "components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "CommandDialog",
+      "expected_paths": [
+        "components/ui/command.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "DialogFooter",
+      "expected_paths": [
+        "components/ui/dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "DropdownMenuShortcut",
+      "expected_paths": [
+        "components/ui/dropdown-menu.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

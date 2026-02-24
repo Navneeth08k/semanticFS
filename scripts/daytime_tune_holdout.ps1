@@ -4,7 +4,8 @@ param(
   [Parameter(Mandatory = $true)][string]$BaseConfig,
   [Parameter(Mandatory = $true)][string]$TuneGolden,
   [Parameter(Mandatory = $true)][string]$HoldoutGolden,
-  [switch]$History
+  [switch]$History,
+  [string[]]$CandidateIds = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -99,12 +100,11 @@ Assert-PathExists $TuneGolden "tune golden"
 Assert-PathExists $HoldoutGolden "holdout golden"
 
 $cliBin = Join-Path (Get-Location).Path "target\release\semanticfs.exe"
-if (-not (Test-Path $cliBin)) {
-  Write-Host "Building semanticfs-cli release binary..."
-  cargo build --release -p semanticfs-cli
-  if ($LASTEXITCODE -ne 0) {
-    throw "cargo build failed with exit code $LASTEXITCODE"
-  }
+# Always rebuild release binary to avoid stale-code benchmark results.
+Write-Host "Building semanticfs-cli release binary..."
+cargo build --release -p semanticfs-cli
+if ($LASTEXITCODE -ne 0) {
+  throw "cargo build failed with exit code $LASTEXITCODE"
 }
 
 $safeLabel = ($Label -replace "[^a-zA-Z0-9_-]", "_").ToLowerInvariant()
@@ -150,8 +150,64 @@ $candidates = @(
       "topn_symbol" = "15"
       "topn_vector" = "40"
     }
+  },
+  @{
+    id = "latency_guard"
+    overrides = @{
+      "symbol_exact_boost" = "2.4"
+      "symbol_prefix_boost" = "1.10"
+      "code_path_boost" = "1.10"
+      "docs_path_penalty" = "0.90"
+      "test_path_penalty" = "0.95"
+      "topn_symbol" = "8"
+      "topn_bm25" = "10"
+      "topn_vector" = "8"
+    }
+  },
+  @{
+    id = "symbol_latency_guard"
+    overrides = @{
+      "symbol_exact_boost" = "3.2"
+      "symbol_prefix_boost" = "1.60"
+      "code_path_boost" = "1.25"
+      "docs_path_penalty" = "0.82"
+      "test_path_penalty" = "0.92"
+      "topn_symbol" = "12"
+      "topn_bm25" = "12"
+      "topn_vector" = "8"
+    }
   }
 )
+
+if ($CandidateIds.Count -gt 0) {
+  $expandedIds = @()
+  foreach ($id in $CandidateIds) {
+    if ($null -eq $id) {
+      continue
+    }
+    $parts = $id -split ","
+    foreach ($part in $parts) {
+      $trimmed = $part.Trim()
+      if ($trimmed.Length -gt 0) {
+        $expandedIds += $trimmed
+      }
+    }
+  }
+
+  if ($expandedIds.Count -eq 0) {
+    throw "candidate filter provided but no usable candidate ids were parsed"
+  }
+
+  $requested = @{}
+  foreach ($id in $expandedIds) {
+    $requested[$id.ToLowerInvariant()] = $true
+  }
+
+  $candidates = @($candidates | Where-Object { $requested.ContainsKey(([string]$_.id).ToLowerInvariant()) })
+  if ($candidates.Count -eq 0) {
+    throw "no matching candidates after filter; requested: $($expandedIds -join ', ')"
+  }
+}
 
 $tuneResults = @()
 foreach ($candidate in $candidates) {

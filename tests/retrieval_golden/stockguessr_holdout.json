@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "dataset_name": "stockguessr_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "_interop_require_wildcard",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_5a73e911._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "anticipate",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_84e2c497._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "analyseComplexValue",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_motion-dom_dist_es_3a3ed872._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "addIssueToContext",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_dist_295df2f1._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "abortPendingCacheNode",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_dist_2dcdf4da._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "Forbidden",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_dist_client_components_builtin_forbidden_a0221405.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ApiError",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_dist_e126c298._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "handleSubmit",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__14f2ac2e._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "aggregateToWeekly",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__2160337a._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "advanceWeek",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__56ec6376._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "_interop_require_default",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__70a73b34._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "RegisterPage",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__7a54d6b8._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "candleSeriesRef",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__99604150._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "RootLayout",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__9e12854c._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "fetchScenario",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__c6809a04._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b32",
+      "query": "chart",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__f070228c._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b34",
+      "query": "handleBuy",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/app_page_tsx_55b2e5ee._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b36",
+      "query": "_deconstructPacket",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_2cca31bf._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b38",
+      "query": "Backoff",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_83696f33._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b40",
+      "query": "calcBezier",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_c15a693b._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b42",
+      "query": "BaseWS",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_e4aae358._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b44",
+      "query": "circIn",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_f77fdc93._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b46",
+      "query": "addPointerEvent",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_framer-motion_dist_es_ad7b6bfa._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b48",
+      "query": "abortOnSynchronousDynamicDataAccess",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_5c35b70d._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b50",
+      "query": "arrayBufferToString",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_0c11442c._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b52",
+      "query": "accessedDynamicData",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_2eb74c46._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b54",
+      "query": "assertNever",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_6919d953._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b56",
+      "query": "NotFound",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_client_components_9774470f._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b58",
+      "query": "botType",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_fb4d169c._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b60",
+      "query": "_byteLength",
+      "expected_paths": [
+        "client/.next/dev/static/chunks/0603f_1b9ea4a3._.js"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

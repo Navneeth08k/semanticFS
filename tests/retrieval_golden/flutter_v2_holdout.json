@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "dataset_name": "flutter_bootstrap_v2_src_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "BatteryPlugin",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/battery-2.0.3/android/src/main/java/io/flutter/plugins/battery/BatteryPlugin.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "FlutterActivityTest",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/battery-2.0.3/example/android/app/src/androidTest/java/io/flutter/plugins/battery/FlutterActivityTest.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "Camera",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/Camera.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "hasAudioPermission",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraPermissions.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "CameraProperties",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraProperties.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "CameraState",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraState.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "computeZoom",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/CameraZoom.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "Callback",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/ImageSaver.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "checkIsSupported",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/CameraFeature.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "CameraFeatureFactoryImpl",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/CameraFeatureFactoryImpl.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "Point",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/Point.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "FocusMode",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/autofocus/FocusMode.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "ExposureMode",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/exposurelock/ExposureMode.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "buildExposureRectangle",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/exposurepoint/ExposurePointFeature.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "FlashMode",
+      "expected_paths": [
+        ".pub-cache/hosted/pub.dartlang.org/camera-0.9.4+5/android/src/main/java/io/flutter/plugins/camera/features/flash/FlashMode.java"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

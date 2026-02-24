@@ -7,7 +7,9 @@ mode = "repo_first"
 allow_roots = ["ai_testgen_core/**", "adapters/**", "tests/**", "docs/**", "cli.py", "README.md"]
 deny_globs = [
   "**/.git/**", "**/node_modules/**", "**/target/**", "**/dist/**", "**/build/**",
+  "**/.next/**", "**/.nuxt/**", "**/.svelte-kit/**", "**/.turbo/**", "**/.dart_tool/**",
   "**/.venv/**", "**/venv/**", "**/__pycache__/**", "**/.cache/**", "**/.idea/**",
+  "**/coverage/**", "**/out/**",
   "**/.DS_Store", "**/Library/**", "**/Trash/**", "**/*.jpg", "**/*.png", "**/*.mp4",
   "**/ai-testgen-demo/**", "**/.github/**", "**/.semanticfs/**",
   "**/*.db", "**/*.db-*", "**/*.sqlite", "**/*.sqlite-*"

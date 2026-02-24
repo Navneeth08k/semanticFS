@@ -1,0 +1,966 @@
+{
+  "schema_version": 1,
+  "dataset_name": "buckit_bootstrap_v2_full",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "AppContent",
+      "expected_paths": [
+        "App.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "clearLargeAuthTokens",
+      "expected_paths": [
+        "clear_large_tokens.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "Circle",
+      "expected_paths": [
+        "components/AppMap.web.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "BasketballLoading",
+      "expected_paths": [
+        "components/BasketballLoading.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "BlockUserModal",
+      "expected_paths": [
+        "components/BlockUserModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "CustomCircularProgress",
+      "expected_paths": [
+        "components/CustomCircularProgress.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "CustomRefreshControl",
+      "expected_paths": [
+        "components/CustomRefreshControl.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "HomeSkeleton",
+      "expected_paths": [
+        "components/HomeSkeleton.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "LocationDisabledPrompt",
+      "expected_paths": [
+        "components/LocationDisabledPrompt.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "handleOpenSettings",
+      "expected_paths": [
+        "components/LocationPermissionPrompt.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "formatGameResult",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "onShare",
+      "expected_paths": [
+        "components/QRCodeGenerator.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "handleClose",
+      "expected_paths": [
+        "components/QRCodeScanner.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ReloadScreen",
+      "expected_paths": [
+        "components/ReloadScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "handleSubmit",
+      "expected_paths": [
+        "components/ReportContentModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ReportUserModal",
+      "expected_paths": [
+        "components/ReportUserModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "SkeletonLoader",
+      "expected_paths": [
+        "components/SkeletonLoader.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "fetchStandings",
+      "expected_paths": [
+        "components/TournamentStandings.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "UpdateRequiredScreen",
+      "expected_paths": [
+        "components/UpdateRequiredScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "checkLocationPermission",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "clearParkPickerTrigger",
+      "expected_paths": [
+        "contexts/ParkContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "fetchProfile",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "handleSignup",
+      "expected_paths": [
+        "debug_signup.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "executePendingAction",
+      "expected_paths": [
+        "navigation/navigationService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "AboutScreen",
+      "expected_paths": [
+        "screens/AboutScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "AccountManagementScreen",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "AdminModerationScreen",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "AuthScreen",
+      "expected_paths": [
+        "screens/AuthScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "BlockedUsersScreen",
+      "expected_paths": [
+        "screens/BlockedUsersScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "ChangePasswordScreen",
+      "expected_paths": [
+        "screens/ChangePasswordScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b31",
+      "query": "CourtPickerScreen",
+      "expected_paths": [
+        "screens/CourtPickerScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b32",
+      "query": "CreateTournamentScreen",
+      "expected_paths": [
+        "screens/CreateTournamentScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b33",
+      "query": "calculateDistance",
+      "expected_paths": [
+        "screens/DiscoverScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b34",
+      "query": "cleanupRealtimeSubscriptions",
+      "expected_paths": [
+        "screens/GameHistoryScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b35",
+      "query": "diffMinutes",
+      "expected_paths": [
+        "screens/GroupChatScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b36",
+      "query": "getGroupMemberCounts",
+      "expected_paths": [
+        "screens/GroupsScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b37",
+      "query": "currentSigmoid",
+      "expected_paths": [
+        "screens/HomeScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b38",
+      "query": "addCustomCourt",
+      "expected_paths": [
+        "screens/LogScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b39",
+      "query": "confirmGame",
+      "expected_paths": [
+        "screens/LogScreen_fixed.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b40",
+      "query": "handleLogin",
+      "expected_paths": [
+        "screens/LoginScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b41",
+      "query": "loadNotificationSettings",
+      "expected_paths": [
+        "screens/NotificationSettingsScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b42",
+      "query": "handlePermissionRequest",
+      "expected_paths": [
+        "screens/OnboardingScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b43",
+      "query": "fetchFollowers",
+      "expected_paths": [
+        "screens/ProfileScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b44",
+      "query": "SettingsScreen",
+      "expected_paths": [
+        "screens/SettingsScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b45",
+      "query": "showTermsOfService",
+      "expected_paths": [
+        "screens/SignupScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b46",
+      "query": "addTextElement",
+      "expected_paths": [
+        "screens/StoryCanvasScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b47",
+      "query": "fetchStoryViews",
+      "expected_paths": [
+        "screens/StoryViewScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b48",
+      "query": "handleAccept",
+      "expected_paths": [
+        "screens/TermsOfServiceScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b49",
+      "query": "advanceMatch",
+      "expected_paths": [
+        "screens/TournamentBracketScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b50",
+      "query": "formatMessageTimestamp",
+      "expected_paths": [
+        "screens/TournamentChatScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b51",
+      "query": "fetchTournamentDetails",
+      "expected_paths": [
+        "screens/TournamentDetailScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b52",
+      "query": "fetchTournaments",
+      "expected_paths": [
+        "screens/TournamentListScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b53",
+      "query": "findCourts",
+      "expected_paths": [
+        "seed_map_data.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b54",
+      "query": "compareVersions",
+      "expected_paths": [
+        "services/appVersionService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b55",
+      "query": "ModerationService",
+      "expected_paths": [
+        "services/moderationService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b56",
+      "query": "distanceMiles",
+      "expected_paths": [
+        "services/userService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b57",
+      "query": "testNotification",
+      "expected_paths": [
+        "test-tournament-notifications.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b58",
+      "query": "testEdgeFunction",
+      "expected_paths": [
+        "test_edge_function.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b59",
+      "query": "testDeviceTokenStorage",
+      "expected_paths": [
+        "test_token_storage.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b60",
+      "query": "capsCount",
+      "expected_paths": [
+        "utils/contentFilter.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b61",
+      "query": "cleanupExpiredStoryImages",
+      "expected_paths": [
+        "utils/fileUpload.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b62",
+      "query": "captureImageWithPermissions",
+      "expected_paths": [
+        "utils/permissions.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b63",
+      "query": "buildUserQrContent",
+      "expected_paths": [
+        "utils/qrCodeUtils.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b64",
+      "query": "getTrackingStatus",
+      "expected_paths": [
+        "utils/trackingTransparency.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b65",
+      "query": "checkVersionStatus",
+      "expected_paths": [
+        "App.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b66",
+      "query": "MainApp",
+      "expected_paths": [
+        "App.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b67",
+      "query": "MainTabs",
+      "expected_paths": [
+        "App.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b68",
+      "query": "MapView",
+      "expected_paths": [
+        "components/AppMap.web.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b69",
+      "query": "Marker",
+      "expected_paths": [
+        "components/AppMap.web.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b70",
+      "query": "handleBlock",
+      "expected_paths": [
+        "components/BlockUserModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b71",
+      "query": "LocationPermissionPrompt",
+      "expected_paths": [
+        "components/LocationPermissionPrompt.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b72",
+      "query": "getLevelColorByName",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b73",
+      "query": "handleBlockUser",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b74",
+      "query": "handleFollowToggle",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b75",
+      "query": "handleReportUser",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b76",
+      "query": "handleSubmitReport",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b77",
+      "query": "loadPlayerData",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b78",
+      "query": "PlayerProfileModal",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b79",
+      "query": "QRCodeGenerator",
+      "expected_paths": [
+        "components/QRCodeGenerator.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b80",
+      "query": "onScanned",
+      "expected_paths": [
+        "components/QRCodeScanner.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b81",
+      "query": "prefillOpponentAndClose",
+      "expected_paths": [
+        "components/QRCodeScanner.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b82",
+      "query": "QRCodeScanner",
+      "expected_paths": [
+        "components/QRCodeScanner.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b83",
+      "query": "reset",
+      "expected_paths": [
+        "components/QRCodeScanner.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b84",
+      "query": "ReportContentModal",
+      "expected_paths": [
+        "components/ReportContentModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b85",
+      "query": "renderItem",
+      "expected_paths": [
+        "components/TournamentStandings.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b86",
+      "query": "TournamentStandings",
+      "expected_paths": [
+        "components/TournamentStandings.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b87",
+      "query": "getCurrentLocation",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b88",
+      "query": "loadLocationPreferences",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b89",
+      "query": "LocationProvider",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b90",
+      "query": "refreshLocation",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b91",
+      "query": "requestLocationPermission",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b92",
+      "query": "saveLocationPreferences",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b93",
+      "query": "toggleLocationServices",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b94",
+      "query": "useLocation",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b95",
+      "query": "ParkProvider",
+      "expected_paths": [
+        "contexts/ParkContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b96",
+      "query": "triggerParkPicker",
+      "expected_paths": [
+        "contexts/ParkContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b97",
+      "query": "usePark",
+      "expected_paths": [
+        "contexts/ParkContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b98",
+      "query": "initializeAuth",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b99",
+      "query": "refreshProfile",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b100",
+      "query": "resetAuth",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b101",
+      "query": "signOut",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b102",
+      "query": "updateProfile",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b103",
+      "query": "UserProvider",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b104",
+      "query": "useUser",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b105",
+      "query": "navigateToTab",
+      "expected_paths": [
+        "navigation/navigationService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b106",
+      "query": "onNavigationReady",
+      "expected_paths": [
+        "navigation/navigationService.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b107",
+      "query": "openLink",
+      "expected_paths": [
+        "screens/AboutScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b108",
+      "query": "confirmDeactivation",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b109",
+      "query": "confirmDeleteAccount",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b110",
+      "query": "handleDeactivateAccount",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b111",
+      "query": "handleDeleteAccount",
+      "expected_paths": [
+        "screens/AccountManagementScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b112",
+      "query": "dismissReport",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b113",
+      "query": "fetchReports",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b114",
+      "query": "getReasonDisplayText",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b115",
+      "query": "handleReportAction",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b116",
+      "query": "renderReportItem",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b117",
+      "query": "renderReportModal",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b118",
+      "query": "showReportDetails",
+      "expected_paths": [
+        "screens/AdminModerationScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b119",
+      "query": "checkAccountStatus",
+      "expected_paths": [
+        "screens/AuthScreen.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b120",
+      "query": "checkBiometrics",
+      "expected_paths": [
+        "screens/AuthScreen.js"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

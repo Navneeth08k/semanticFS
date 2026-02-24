@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "dataset_name": "syntaxless_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "custom_input",
+      "expected_paths": [
+        "api/run.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "fetchProject",
+      "expected_paths": [
+        "app/(protected)/ide/[projectId]/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "handleCompleteTutorial",
+      "expected_paths": [
+        "app/(protected)/learn/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "POST",
+      "expected_paths": [
+        "app/api/explain/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "handleResetPassword",
+      "expected_paths": [
+        "app/auth/reset-password/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "handleGoogleSignUp",
+      "expected_paths": [
+        "app/auth/sign-up/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "testConnection",
+      "expected_paths": [
+        "app/test-connection/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "Footer",
+      "expected_paths": [
+        "components/footer.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "handleResize",
+      "expected_paths": [
+        "components/mobile-sidebar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "PublicNavbar",
+      "expected_paths": [
+        "components/public-navbar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "handleSignOut",
+      "expected_paths": [
+        "components/sidebar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "useCarousel",
+      "expected_paths": [
+        "components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "CommandDialog",
+      "expected_paths": [
+        "components/ui/command.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

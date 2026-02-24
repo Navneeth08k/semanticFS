@@ -1,6 +1,6 @@
 use anyhow::Result;
 use policy_guard::PolicyGuard;
-use rusqlite::{params, Connection};
+use rusqlite::{params, params_from_iter, types::Value, Connection};
 use semanticfs_common::{
     cosine_similarity, embed_text_hash, GroundedHit, HitSource, IndexingStatus, RetrievalConfig,
     TrustLevel,
@@ -199,34 +199,44 @@ impl RetrievalCore {
         query: &str,
         version: u64,
     ) -> Result<Vec<PartialHit>> {
-        let symbol_query = query.replace(' ', "_");
-        let mut stmt = conn.prepare(
+        let variants = lower_dedup_variants(symbol_query_variants(query));
+        if variants.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let placeholders = vec!["?"; variants.len()].join(", ");
+        let sql = format!(
             r#"
             SELECT path, line_start, line_end, symbol_kind, file_hash
             FROM symbols
-            WHERE index_version=?1 AND (symbol_name=?2 OR symbol_name=?3)
+            WHERE index_version=? AND LOWER(symbol_name) IN ({placeholders})
             ORDER BY exported DESC
-            LIMIT ?4
-            "#,
-        )?;
+            LIMIT ?
+            "#
+        );
+        let mut stmt = conn.prepare(&sql)?;
 
-        let rows = stmt.query_map(
-            params![version, query, symbol_query, self.cfg.topn_symbol as i64],
-            |row| {
-                Ok(PartialHit {
-                    path: row.get(0)?,
-                    start_line: row.get::<_, i64>(1)? as u32,
-                    end_line: row.get::<_, i64>(2)? as u32,
-                    symbol_kind: Some(row.get(3)?),
-                    file_hash: row.get(4)?,
-                    source: HitSource::Symbol,
-                    score_symbol: Some(self.cfg.symbol_exact_boost),
-                    score_bm25: None,
-                    score_vector: None,
-                    why_selected: "exact symbol match".to_string(),
-                })
-            },
-        )?;
+        let mut bind = Vec::with_capacity(variants.len() + 2);
+        bind.push(Value::Integer(version as i64));
+        for variant in variants {
+            bind.push(Value::Text(variant));
+        }
+        bind.push(Value::Integer(self.cfg.topn_symbol as i64));
+
+        let rows = stmt.query_map(params_from_iter(bind), |row| {
+            Ok(PartialHit {
+                path: row.get(0)?,
+                start_line: row.get::<_, i64>(1)? as u32,
+                end_line: row.get::<_, i64>(2)? as u32,
+                symbol_kind: Some(row.get(3)?),
+                file_hash: row.get(4)?,
+                source: HitSource::Symbol,
+                score_symbol: Some(self.cfg.symbol_exact_boost),
+                score_bm25: None,
+                score_vector: None,
+                why_selected: "exact symbol match".to_string(),
+            })
+        })?;
 
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
@@ -237,35 +247,44 @@ impl RetrievalCore {
         query: &str,
         version: u64,
     ) -> Result<Vec<PartialHit>> {
-        let like = format!("{}%", query);
-        let symbol_like = format!("{}%", query.replace(' ', "_"));
-        let mut stmt = conn.prepare(
+        let variants = lower_dedup_variants(symbol_query_variants(query));
+        if variants.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let like_clauses = vec!["LOWER(symbol_name) LIKE ?"; variants.len()].join(" OR ");
+        let sql = format!(
             r#"
             SELECT path, line_start, line_end, symbol_kind, file_hash
             FROM symbols
-            WHERE index_version=?1 AND (symbol_name LIKE ?2 OR symbol_name LIKE ?3)
+            WHERE index_version=? AND ({like_clauses})
             ORDER BY exported DESC
-            LIMIT ?4
-            "#,
-        )?;
+            LIMIT ?
+            "#
+        );
+        let mut stmt = conn.prepare(&sql)?;
 
-        let rows = stmt.query_map(
-            params![version, like, symbol_like, self.cfg.topn_symbol as i64],
-            |row| {
-                Ok(PartialHit {
-                    path: row.get(0)?,
-                    start_line: row.get::<_, i64>(1)? as u32,
-                    end_line: row.get::<_, i64>(2)? as u32,
-                    symbol_kind: Some(row.get(3)?),
-                    file_hash: row.get(4)?,
-                    source: HitSource::Symbol,
-                    score_symbol: Some(self.cfg.symbol_prefix_boost),
-                    score_bm25: None,
-                    score_vector: None,
-                    why_selected: "prefix symbol match".to_string(),
-                })
-            },
-        )?;
+        let mut bind = Vec::with_capacity(variants.len() + 2);
+        bind.push(Value::Integer(version as i64));
+        for variant in variants {
+            bind.push(Value::Text(format!("{variant}%")));
+        }
+        bind.push(Value::Integer(self.cfg.topn_symbol as i64));
+
+        let rows = stmt.query_map(params_from_iter(bind), |row| {
+            Ok(PartialHit {
+                path: row.get(0)?,
+                start_line: row.get::<_, i64>(1)? as u32,
+                end_line: row.get::<_, i64>(2)? as u32,
+                symbol_kind: Some(row.get(3)?),
+                file_hash: row.get(4)?,
+                source: HitSource::Symbol,
+                score_symbol: Some(self.cfg.symbol_prefix_boost),
+                score_bm25: None,
+                score_vector: None,
+                why_selected: "prefix symbol match".to_string(),
+            })
+        })?;
 
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
@@ -281,22 +300,45 @@ impl RetrievalCore {
             "#,
         )?;
 
-        let rows = stmt.query_map(params![query, version, self.cfg.topn_bm25 as i64], |row| {
-            Ok(PartialHit {
-                path: row.get(0)?,
-                start_line: row.get::<_, i64>(1)? as u32,
-                end_line: row.get::<_, i64>(2)? as u32,
-                file_hash: row.get(3)?,
-                source: HitSource::BM25,
-                symbol_kind: None,
-                score_symbol: None,
-                score_bm25: Some(1.0),
-                score_vector: None,
-                why_selected: "bm25 keyword match".to_string(),
-            })
-        })?;
+        let mut out = Vec::new();
+        let mut seen = HashSet::new();
+        let per_variant_limit = (self.cfg.topn_bm25 as i64).max(1);
 
-        Ok(rows.filter_map(|r| r.ok()).collect())
+        for variant in bm25_query_variants(query) {
+            if out.len() >= self.cfg.topn_bm25 {
+                break;
+            }
+
+            let rows = match stmt.query_map(params![variant, version, per_variant_limit], |row| {
+                Ok(PartialHit {
+                    path: row.get(0)?,
+                    start_line: row.get::<_, i64>(1)? as u32,
+                    end_line: row.get::<_, i64>(2)? as u32,
+                    file_hash: row.get(3)?,
+                    source: HitSource::BM25,
+                    symbol_kind: None,
+                    score_symbol: None,
+                    score_bm25: Some(1.0),
+                    score_vector: None,
+                    why_selected: "bm25 keyword match".to_string(),
+                })
+            }) {
+                Ok(rows) => rows,
+                Err(_) => continue,
+            };
+
+            for hit in rows.filter_map(|r| r.ok()) {
+                let key = make_key(&hit);
+                if seen.insert(key) {
+                    out.push(hit);
+                }
+                if out.len() >= self.cfg.topn_bm25 {
+                    break;
+                }
+            }
+        }
+
+        Ok(out)
     }
 
     fn vector_search(
@@ -380,6 +422,10 @@ impl RetrievalCore {
         }
         if is_test_path(&lower) {
             mult *= self.cfg.test_path_penalty.max(0.1);
+        }
+        if is_generated_artifact_path(&lower) {
+            // Keep generated artifacts searchable, but prevent them from shadowing source paths.
+            mult *= 0.30;
         }
         mult
     }
@@ -545,6 +591,118 @@ fn is_code_path(path: &str) -> bool {
         || path.ends_with(".cs")
 }
 
+fn is_generated_artifact_path(path: &str) -> bool {
+    path.contains("/.next/")
+        || path.contains("/.nuxt/")
+        || path.contains("/.svelte-kit/")
+        || path.contains("/.turbo/")
+        || path.contains("/.dart_tool/")
+        || path.contains("/__generated__/")
+        || path.contains("/dist/")
+        || path.contains("/build/")
+        || path.contains("/out/")
+        || path.contains("/coverage/")
+        || path.contains("/target/")
+        || path.ends_with(".min.js")
+}
+
+fn symbol_query_variants(query: &str) -> Vec<String> {
+    let mut variants = Vec::new();
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return variants;
+    }
+
+    push_unique_variant(&mut variants, trimmed.to_string());
+
+    let collapsed_ws = trimmed.split_whitespace().collect::<Vec<_>>().join(" ");
+    push_unique_variant(&mut variants, collapsed_ws.clone());
+    push_unique_variant(&mut variants, collapsed_ws.replace(' ', "_"));
+
+    let terms = query_terms(trimmed);
+    if !terms.is_empty() {
+        let snake = terms.join("_");
+        let compact = terms.join("");
+        push_unique_variant(&mut variants, snake.clone());
+        push_unique_variant(&mut variants, format!("_{snake}"));
+        push_unique_variant(&mut variants, compact);
+        push_unique_variant(&mut variants, to_pascal_case(&terms));
+    }
+
+    if let Some(without_prefix) = trimmed.strip_prefix('_') {
+        push_unique_variant(&mut variants, without_prefix.to_string());
+    }
+
+    variants
+}
+
+fn bm25_query_variants(query: &str) -> Vec<String> {
+    let mut variants = Vec::new();
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return variants;
+    }
+
+    push_unique_variant(&mut variants, trimmed.to_string());
+    push_unique_variant(&mut variants, trimmed.replace('_', " "));
+
+    let terms = query_terms(trimmed);
+    if !terms.is_empty() {
+        push_unique_variant(&mut variants, terms.join(" "));
+    }
+
+    variants
+}
+
+fn lower_dedup_variants(variants: Vec<String>) -> Vec<String> {
+    let mut out = Vec::new();
+    for variant in variants {
+        let lowered = variant.to_ascii_lowercase();
+        if !out.iter().any(|v| v == &lowered) {
+            out.push(lowered);
+        }
+    }
+    out
+}
+
+fn query_terms(query: &str) -> Vec<String> {
+    let mut terms = Vec::new();
+    let mut current = String::new();
+    for c in query.chars() {
+        if c.is_ascii_alphanumeric() {
+            current.push(c.to_ascii_lowercase());
+        } else if !current.is_empty() {
+            terms.push(std::mem::take(&mut current));
+        }
+    }
+    if !current.is_empty() {
+        terms.push(current);
+    }
+    terms
+}
+
+fn to_pascal_case(terms: &[String]) -> String {
+    let mut out = String::new();
+    for term in terms {
+        let mut chars = term.chars();
+        if let Some(first) = chars.next() {
+            out.push(first.to_ascii_uppercase());
+            out.push_str(chars.as_str());
+        }
+    }
+    out
+}
+
+fn push_unique_variant(variants: &mut Vec<String>, candidate: String) {
+    let normalized = candidate.trim();
+    if normalized.is_empty() {
+        return;
+    }
+    if !variants.iter().any(|v| v == normalized) {
+        variants.push(normalized.to_string());
+    }
+}
+
 fn rrf_fuse(rank_lists: &[Vec<PartialHit>], k: f32) -> Vec<(String, f32)> {
     let mut scores: HashMap<String, f32> = HashMap::new();
 
@@ -634,5 +792,27 @@ mod tests {
         assert!(is_code_path("src/lib/auth.rs"));
         assert!(is_docs_path("docs/architecture.md"));
         assert!(!is_docs_path("src/lib/auth.rs"));
+    }
+
+    #[test]
+    fn generated_path_detection_flags_transpiled_output() {
+        assert!(is_generated_artifact_path("client/.next/dev/server/chunks/ssr/app_page.js"));
+        assert!(is_generated_artifact_path("web/dist/assets/main.js"));
+        assert!(!is_generated_artifact_path("client/app/page.tsx"));
+    }
+
+    #[test]
+    fn symbol_variants_include_human_and_symbol_forms() {
+        let variants = symbol_query_variants("create bert model");
+        assert!(variants.iter().any(|v| v == "create_bert_model"));
+        assert!(variants.iter().any(|v| v == "_create_bert_model"));
+        assert!(variants.iter().any(|v| v == "CreateBertModel"));
+    }
+
+    #[test]
+    fn bm25_variants_sanitize_symbol_query() {
+        let variants = bm25_query_variants("_add_metrics");
+        assert!(variants.iter().any(|v| v == "_add_metrics"));
+        assert!(variants.iter().any(|v| v == "add metrics"));
     }
 }

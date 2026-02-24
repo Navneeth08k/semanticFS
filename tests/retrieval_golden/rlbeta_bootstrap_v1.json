@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "dataset_name": "rlbeta_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "_build_obs",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "_core_obs",
+      "expected_paths": [
+        "amyloid_env_v1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "align_structures",
+      "expected_paths": [
+        "analyzeDifferences.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "convert_pdb_to_cif",
+      "expected_paths": [
+        "convert_pdb_to_cif.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "delete_pdb_file",
+      "expected_paths": [
+        "delete_pdb_files.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "run_inference",
+      "expected_paths": [
+        "inference.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "_addAtomsToTopology",
+      "expected_paths": [
+        "pdbfixer/pdbfixer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "test_end_caps",
+      "expected_paths": [
+        "pdbfixer/tests/test_add_hydrogens.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "defaultHandler",
+      "expected_paths": [
+        "pdbfixer/tests/test_build_and_simulate.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "test_charge_and_solvate",
+      "expected_paths": [
+        "pdbfixer/tests/test_charge_and_solvate.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "run_cli",
+      "expected_paths": [
+        "pdbfixer/tests/test_cli.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "test_download_template",
+      "expected_paths": [
+        "pdbfixer/tests/test_mutate.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "file_content",
+      "expected_paths": [
+        "pdbfixer/tests/test_removechains.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "addHydrogensPageCallback",
+      "expected_paths": [
+        "pdbfixer/ui.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "_Handler",
+      "expected_paths": [
+        "pdbfixer/uiserver.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "extract_sequence_from_cif",
+      "expected_paths": [
+        "rebuild_structure.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "test_environment",
+      "expected_paths": [
+        "test_env.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "_on_step",
+      "expected_paths": [
+        "train_rl.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "_maybe_recompute_sasa",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "_sasa_per_residue",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "AmyloidEnv",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "apply_action",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "beta_fraction",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "clash_penalty",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "compute_energy",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "compute_rmsd",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "compute_sasa_terms",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "load_structure",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "MetaAmyloidEnv",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "pad_phi_psi",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b31",
+      "query": "render",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b32",
+      "query": "reset",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b33",
+      "query": "reward_func",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b34",
+      "query": "step",
+      "expected_paths": [
+        "amyloid_env_v0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b35",
+      "query": "_rebuild_trimer",
+      "expected_paths": [
+        "amyloid_env_v1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b36",
+      "query": "assemble_models",
+      "expected_paths": [
+        "amyloid_env_v1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b37",
+      "query": "broken_hbonds",
+      "expected_paths": [
+        "amyloid_env_v1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b38",
+      "query": "build_full_chain",
+      "expected_paths": [
+        "amyloid_env_v1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b39",
+      "query": "buried_interface_sasa",
+      "expected_paths": [
+        "amyloid_env_v1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b40",
+      "query": "inter_chain_clash",
+      "expected_paths": [
+        "amyloid_env_v1.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

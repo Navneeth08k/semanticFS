@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "dataset_name": "stockguessr_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "_getRequireWildcardCache",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_239b0d82._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "addUniqueItem",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_707b2790._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "ArrowRight",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_89165022._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "_export",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_bb50fd7b._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "abortAndThrowOnSynchronousRequestDataAccess",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_dist_2b1ab584._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "HTTPAccessErrorFallback",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_dist_client_components_0b976b28._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "Unauthorized",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/0603f_next_dist_client_components_builtin_unauthorized_ff6a7e7c.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "LandingPage",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/Users_mohan_StockGuessr_client_app_page_tsx_f19a1fac._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "endGame",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__1976c6ea._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "API_BASE_URL",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__3cc23398._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "AuthProvider",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__614c52cc._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "LoginPage",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__74470f1c._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "context",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__8dd88ed2._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "CandleStickLayer",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__9d62b857._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "Dashboard",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__c6450238._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b31",
+      "query": "useAuth",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[root-of-the-server]__d29c5a25._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b33",
+      "query": "applyModuleFactoryName",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/[turbopack]_runtime.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b35",
+      "query": "_accept",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_186c80ea._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b37",
+      "query": "_reconstructPacket",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_8233a429._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b39",
+      "query": "binarySubdivide",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_8b1d82f9._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b41",
+      "query": "_getInitialProps",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_c69ae102._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b43",
+      "query": "ChartNoAxesColumn",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_ed1bb5fd._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b45",
+      "query": "addDomEvent",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_framer-motion_dist_es_2ac31c0d._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b47",
+      "query": "angularFreq",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_motion-dom_dist_es_ed19edc4._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b49",
+      "query": "abortOnSynchronousPlatformIOAccess",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_66758405._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b51",
+      "query": "arrayToRegexp",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_179b90d2._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b53",
+      "query": "assertIs",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_65417964._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b55",
+      "query": "BaseNextRequest",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_7cb4945b._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b57",
+      "query": "BaseNextResponse",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_next_dist_eb4ab406._.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b59",
+      "query": "bufferUtil",
+      "expected_paths": [
+        "client/.next/dev/server/chunks/ssr/node_modules_ws_f7c824e2._.js"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

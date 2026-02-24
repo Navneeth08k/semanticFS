@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "dataset_name": "flutter_tools_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "pathJoin",
+      "expected_paths": [
+        "bin/tool_backend.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "LoggerFactory",
+      "expected_paths": [
+        "lib/executable.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "AndroidBuilder",
+      "expected_paths": [
+        "lib/src/android/android_builder.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "_allowHeapCorruptionOnWindows",
+      "expected_paths": [
+        "lib/src/android/android_device.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "_extractEmulatorAvdInfo",
+      "expected_paths": [
+        "lib/src/android/android_emulator.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "_allLinuxOrWindows",
+      "expected_paths": [
+        "lib/src/android/android_studio.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "_canRunSdkManager",
+      "expected_paths": [
+        "lib/src/android/android_workflow.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "validateBuild",
+      "expected_paths": [
+        "lib/src/android/build_validation.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "_DeferredComponentAndroidFiles",
+      "expected_paths": [
+        "lib/src/android/deferred_components_prebuild_validator.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "_apkFilesFor",
+      "expected_paths": [
+        "lib/src/android/gradle.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "changeIfNecessary",
+      "expected_paths": [
+        "lib/src/android/gradle_utils.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "ApplicationPackage",
+      "expected_paths": [
+        "lib/src/application_package.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "_Asset",
+      "expected_paths": [
+        "lib/src/asset.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "handleError",
+      "expected_paths": [
+        "lib/src/base/async_guard.dart"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "_isValidAotPlatform",
+      "expected_paths": [
+        "lib/src/base/build.dart"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

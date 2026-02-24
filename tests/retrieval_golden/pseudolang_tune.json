@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "dataset_name": "pseudolang_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "createProject",
+      "expected_paths": [
+        "app/(protected)/dashboard/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "checkForProjects",
+      "expected_paths": [
+        "app/(protected)/ide/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "handleSaveProfile",
+      "expected_paths": [
+        "app/(protected)/settings/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "handleResetPassword",
+      "expected_paths": [
+        "app/auth/reset-password/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "handleGoogleSignUp",
+      "expected_paths": [
+        "app/auth/sign-up/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "AppHeader",
+      "expected_paths": [
+        "components/app-header.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "GoogleIcon",
+      "expected_paths": [
+        "components/icons.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "ModeToggle",
+      "expected_paths": [
+        "components/mode-toggle.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "createFromSample",
+      "expected_paths": [
+        "components/sample-project.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "ThemeProvider",
+      "expected_paths": [
+        "components/theme-provider.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "Badge",
+      "expected_paths": [
+        "components/ui/badge.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "Calendar",
+      "expected_paths": [
+        "components/ui/calendar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "ChartStyle",
+      "expected_paths": [
+        "components/ui/chart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "ContextMenuShortcut",
+      "expected_paths": [
+        "components/ui/context-menu.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "Drawer",
+      "expected_paths": [
+        "components/ui/drawer.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

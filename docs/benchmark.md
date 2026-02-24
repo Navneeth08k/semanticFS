@@ -88,7 +88,8 @@
 3. `retrieval.test_path_penalty`
 4. `retrieval.recency_half_life_hours`
 5. `retrieval.recency_min_boost` / `retrieval.recency_max_boost`
-6. Tune these against golden suites to reduce verbose-doc shadowing.
+6. Built-in generated-artifact suppression is applied in retrieval prior scoring for paths such as `.next`, `.nuxt`, `.svelte-kit`, `.turbo`, `dist`, `build`, `out`, and `coverage`.
+7. Tune these against golden suites to reduce verbose-doc/build-artifact shadowing.
 
 ## History artifacts (nightly trendline)
 1. Add `--history` to `benchmark run`, `benchmark tune-lancedb`, `benchmark tune-onnx`, `benchmark soak`, or `benchmark relevance`.
@@ -103,19 +104,39 @@
 - Output: `.semanticfs/bench/drift_summary_latest.json`
 
 ## Additional repo bootstrap suites
-1. Generate a bootstrap golden suite from a local repo:
+1. Discover larger local git repos for system-scope exploratory coverage:
+- `powershell -ExecutionPolicy Bypass -File scripts/discover_repo_candidates.ps1 -Roots C:\Users\<user> -MinTrackedFiles 500 -TopN 30`
+- Output: `.semanticfs/bench/filesystem_repo_candidates_latest.json` (or custom `-OutputPath`).
+2. Discovery defaults now reduce duplicate noise:
+- excludes VS Code Java workspace mirror repos by default (`AppData\Roaming\Code\User\workspaceStorage\...`).
+- dedupes mirrored clones by `remote.origin.url` identity by default.
+- disable either behavior explicitly when needed:
+  - include workspace mirrors: `-IncludeWorkspaceMirrors`
+  - disable remote dedupe: `-DisableRemoteDedupe`
+3. Build prioritized filesystem-scope backlog from discovery + strict holdout artifacts:
+- `powershell -ExecutionPolicy Bypass -File scripts/build_filesystem_scope_backlog.ps1 -CandidatesPath .semanticfs/bench/filesystem_repo_candidates_latest.json -OutputPath .semanticfs/bench/filesystem_scope_backlog_latest.json`
+- Output includes `uncovered`, `covered_gap`, `covered_partial`, and `covered_ok` buckets with per-repo next actions.
+4. Generate a bootstrap golden suite from a local repo:
 - `python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20`
-2. Run exploratory head-to-head on that repo:
+- bootstrap generator now skips common generated directories (for example `.next`, `.nuxt`, `.svelte-kit`, `.turbo`, `.cache`, `coverage`, `out`) so suites stay source-focused.
+5. Run exploratory head-to-head on that repo:
 - `cargo run --release -p semanticfs-cli -- --config config/relevance-real.toml benchmark head-to-head --fixture-repo C:\path\repo --golden tests/retrieval_golden/repo_bootstrap.json --history`
-3. Bootstrap suites are exploratory only; curate/lock queries before using them as release evidence.
+6. Bootstrap suites are exploratory only; curate/lock queries before using them as release evidence.
+7. Expanded bootstrap seed for curated suites:
+- `python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --output tests/retrieval_golden/repo_bootstrap_v2_full.json --dataset-name repo_bootstrap_v2_full --max-queries 120`
 
 ## Tune vs holdout protocol (strict)
 1. Split exploratory suite into deterministic tune/holdout:
 - `python scripts/split_golden_suite.py --input tests/retrieval_golden/repo_bootstrap.json --tune-output tests/retrieval_golden/repo_tune.json --holdout-output tests/retrieval_golden/repo_holdout.json --tune-count 10`
-2. Tune only on `*_tune.json`; do not read holdout metrics until selection is complete.
-3. Run selection + one-shot holdout report:
+2. Curate mixed acceptance-grade splits from expanded bootstrap:
+- `python scripts/build_curated_mixed_suites.py --input tests/retrieval_golden/repo_bootstrap_v2_full.json --tune-output tests/retrieval_golden/repo_curated_tune.json --holdout-output tests/retrieval_golden/repo_curated_holdout.json --split-size 40 --non-symbol-per-split 10 --dataset-prefix repo`
+3. Tune only on `*_tune.json`; do not read holdout metrics until selection is complete.
+4. Run selection + one-shot holdout report:
 - `powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label repo -RepoRoot C:\path\repo -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/repo_tune.json -HoldoutGolden tests/retrieval_golden/repo_holdout.json -History`
-4. Artifacts:
+5. `scripts/daytime_tune_holdout.ps1` now always rebuilds `semanticfs-cli` in `--release` at start to prevent stale binary benchmark artifacts.
+6. Optional targeted candidate sweep (for long-running external repos):
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label repo -RepoRoot C:\path\repo -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/repo_tune.json -HoldoutGolden tests/retrieval_golden/repo_holdout.json -History -CandidateIds latency_guard,symbol_latency_guard`
+7. Artifacts:
 - `.semanticfs/bench/tune_holdout_<label>_latest.json`
 - `.semanticfs/bench/history/tune_holdout_<label>_*.json`
 
@@ -128,10 +149,14 @@
 - `powershell -ExecutionPolicy Bypass -File scripts/daytime_smoke.ps1 -IncludeReleaseGate -SoakSeconds 2`
 
 ## Full daytime action runner
-1. Run split + smoke + tune/holdout sweeps + drift summary:
+1. Run expanded bootstrap + curated splits + smoke + tune/holdout sweeps + drift summary:
 - `powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2`
 2. Include strict release gate in the smoke step:
 - `powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2 -IncludeReleaseGate`
+3. Optional filesystem candidate discovery during daytime run:
+- `powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2 -DiscoveryRoots C:\Users\<user> -DiscoveryMinTrackedFiles 500 -DiscoveryTopN 30`
+4. By default, daytime action runner now builds `.semanticfs/bench/filesystem_scope_backlog_latest.json` after discovery. Skip with:
+- `-SkipFilesystemBacklog`
 
 ## What it checks
 1. Search markdown path renders.
@@ -157,3 +182,4 @@
 7. `.semanticfs/bench/head_to_head_latest.json`
 8. `.semanticfs/bench/drift_summary_latest.json`
 9. `.semanticfs/bench/tune_holdout_<label>_latest.json`
+10. `.semanticfs/bench/filesystem_scope_backlog_latest.json`

@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "dataset_name": "tensorflow_models_curated_holdout_v1",
+  "queries": [
+    {
+      "id": "hs001",
+      "query": "_apply_moving",
+      "expected_paths": [
+        "official/modeling/optimization/ema_optimizer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs002",
+      "query": "_make_offset_wrapper",
+      "expected_paths": [
+        "official/modeling/optimization/lr_schedule.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs003",
+      "query": "build_learning_rate",
+      "expected_paths": [
+        "official/modeling/optimization/optimizer_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs004",
+      "query": "configure_optimizer",
+      "expected_paths": [
+        "official/modeling/performance.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs005",
+      "query": "AlbertConfig",
+      "expected_paths": [
+        "official/nlp/albert/configs.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs006",
+      "query": "eval_squad",
+      "expected_paths": [
+        "official/nlp/albert/run_squad.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs007",
+      "query": "BertModelsTest",
+      "expected_paths": [
+        "official/nlp/bert/bert_models_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs008",
+      "query": "BertConfig",
+      "expected_paths": [
+        "official/nlp/bert/configs.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs009",
+      "query": "_dropout_mean_stddev",
+      "expected_paths": [
+        "official/nlp/bert/export_tfhub_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs010",
+      "query": "export_bert_model",
+      "expected_paths": [
+        "official/nlp/bert/model_saving_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs011",
+      "query": "_assign_dtype",
+      "expected_paths": [
+        "official/nlp/bert/model_training_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs012",
+      "query": "_bert_pretrain_loss_fn",
+      "expected_paths": [
+        "official/nlp/bert/run_pretraining.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs013",
+      "query": "_append_feature",
+      "expected_paths": [
+        "official/nlp/bert/run_squad_helper.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs014",
+      "query": "_exact_match_score",
+      "expected_paths": [
+        "official/nlp/bert/squad_evaluate_v1_1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs015",
+      "query": "_bert_name_replacement",
+      "expected_paths": [
+        "official/nlp/bert/tf1_checkpoint_converter_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs016",
+      "query": "_clean_text",
+      "expected_paths": [
+        "official/nlp/bert/tokenization.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs017",
+      "query": "ClsHeadConfig",
+      "expected_paths": [
+        "official/nlp/configs/bert.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs018",
+      "query": "AlbertEncoderConfig",
+      "expected_paths": [
+        "official/nlp/configs/encoders.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs019",
+      "query": "bert_sentence_prediction",
+      "expected_paths": [
+        "official/nlp/configs/finetuning_experiments.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs020",
+      "query": "wmt_transformer_large",
+      "expected_paths": [
+        "official/nlp/configs/wmt_transformer_experiments.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs021",
+      "query": "ContinuousFinetuneTest",
+      "expected_paths": [
+        "official/nlp/continuous_finetune_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs022",
+      "query": "BertClassifierLibTest",
+      "expected_paths": [
+        "official/nlp/data/classifier_data_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs023",
+      "query": "_contiguous",
+      "expected_paths": [
+        "official/nlp/data/create_pretraining_data.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs024",
+      "query": "_convert_tokens_to_instances",
+      "expected_paths": [
+        "official/nlp/data/create_xlnet_pretraining_data.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs025",
+      "query": "DataLoader",
+      "expected_paths": [
+        "official/nlp/data/data_loader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs026",
+      "query": "DataLoaderFactoryTest",
+      "expected_paths": [
+        "official/nlp/data/data_loader_factory_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs027",
+      "query": "_create_fake_dataset",
+      "expected_paths": [
+        "official/nlp/data/dual_encoder_dataloader_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs028",
+      "query": "_create_fake_bert_dataset",
+      "expected_paths": [
+        "official/nlp/data/pretrain_dataloader_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs029",
+      "query": "create_float_feature",
+      "expected_paths": [
+        "official/nlp/data/pretrain_dynamic_dataloader_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hs030",
+      "query": "_collective_communication",
+      "expected_paths": [
+        "official/common/distribute_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "hn001",
+      "query": "apply moving",
+      "expected_paths": [
+        "official/modeling/optimization/ema_optimizer.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn002",
+      "query": "make offset wrapper",
+      "expected_paths": [
+        "official/modeling/optimization/lr_schedule.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn003",
+      "query": "configure optimizer",
+      "expected_paths": [
+        "official/modeling/performance.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn004",
+      "query": "albert config",
+      "expected_paths": [
+        "official/nlp/albert/configs.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn005",
+      "query": "eval squad",
+      "expected_paths": [
+        "official/nlp/albert/run_squad.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn006",
+      "query": "bert config",
+      "expected_paths": [
+        "official/nlp/bert/configs.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn007",
+      "query": "dropout mean stddev",
+      "expected_paths": [
+        "official/nlp/bert/export_tfhub_test.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn008",
+      "query": "export bert model",
+      "expected_paths": [
+        "official/nlp/bert/model_saving_utils.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn009",
+      "query": "assign dtype",
+      "expected_paths": [
+        "official/nlp/bert/model_training_utils_test.py"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "hn010",
+      "query": "bert pretrain loss fn",
+      "expected_paths": [
+        "official/nlp/bert/run_pretraining.py"
+      ],
+      "symbol_query": false
+    }
+  ]
+}

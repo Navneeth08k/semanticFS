@@ -23,6 +23,7 @@ ALLOWED_EXTENSIONS = {
     ".tsx",
     ".js",
     ".jsx",
+    ".dart",
     ".java",
     ".go",
     ".c",
@@ -38,9 +39,19 @@ SKIP_DIR_NAMES = {
     ".svn",
     ".idea",
     ".vscode",
+    ".next",
+    ".nuxt",
+    ".svelte-kit",
+    ".turbo",
+    ".cache",
+    ".dart_tool",
+    ".pytest_cache",
+    ".semanticfs",
     "node_modules",
+    "coverage",
     "dist",
     "build",
+    "out",
     "target",
     ".venv",
     "venv",
@@ -92,6 +103,17 @@ LANG_PATTERNS: Sequence[Tuple[Sequence[str], Sequence[re.Pattern[str]]]] = [
             ),
             re.compile(
                 r"^\s*(?:export\s+)?const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:async\s*)?\("
+            ),
+        ],
+    ),
+    (
+        [".dart"],
+        [
+            re.compile(r"^\s*(?:abstract\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+            re.compile(r"^\s*enum\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+            re.compile(r"^\s*mixin\s+([A-Za-z_][A-Za-z0-9_]*)\b"),
+            re.compile(
+                r"^\s*(?:[A-Za-z_<>\[\]\?,\s]+\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\([^;]*\)\s*\{"
             ),
         ],
     ),

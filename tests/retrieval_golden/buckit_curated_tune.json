@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "dataset_name": "buckit_curated_tune_v1",
+  "queries": [
+    {
+      "id": "ts001",
+      "query": "AppContent",
+      "expected_paths": [
+        "App.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts002",
+      "query": "MainApp",
+      "expected_paths": [
+        "App.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts003",
+      "query": "clearLargeAuthTokens",
+      "expected_paths": [
+        "clear_large_tokens.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts004",
+      "query": "MapView",
+      "expected_paths": [
+        "components/AppMap.web.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts005",
+      "query": "BasketballLoading",
+      "expected_paths": [
+        "components/BasketballLoading.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts006",
+      "query": "handleBlock",
+      "expected_paths": [
+        "components/BlockUserModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts007",
+      "query": "CustomRefreshControl",
+      "expected_paths": [
+        "components/CustomRefreshControl.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts008",
+      "query": "LocationDisabledPrompt",
+      "expected_paths": [
+        "components/LocationDisabledPrompt.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts009",
+      "query": "LocationPermissionPrompt",
+      "expected_paths": [
+        "components/LocationPermissionPrompt.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts010",
+      "query": "getLevelColorByName",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts011",
+      "query": "handleFollowToggle",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts012",
+      "query": "handleSubmitReport",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts013",
+      "query": "PlayerProfileModal",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts014",
+      "query": "QRCodeGenerator",
+      "expected_paths": [
+        "components/QRCodeGenerator.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts015",
+      "query": "onScanned",
+      "expected_paths": [
+        "components/QRCodeScanner.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts016",
+      "query": "QRCodeScanner",
+      "expected_paths": [
+        "components/QRCodeScanner.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts017",
+      "query": "handleSubmit",
+      "expected_paths": [
+        "components/ReportContentModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts018",
+      "query": "ReportUserModal",
+      "expected_paths": [
+        "components/ReportUserModal.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts019",
+      "query": "fetchStandings",
+      "expected_paths": [
+        "components/TournamentStandings.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts020",
+      "query": "TournamentStandings",
+      "expected_paths": [
+        "components/TournamentStandings.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts021",
+      "query": "checkLocationPermission",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts022",
+      "query": "loadLocationPreferences",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts023",
+      "query": "refreshLocation",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts024",
+      "query": "saveLocationPreferences",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts025",
+      "query": "useLocation",
+      "expected_paths": [
+        "contexts/LocationContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts026",
+      "query": "ParkProvider",
+      "expected_paths": [
+        "contexts/ParkContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts027",
+      "query": "usePark",
+      "expected_paths": [
+        "contexts/ParkContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts028",
+      "query": "initializeAuth",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts029",
+      "query": "resetAuth",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "ts030",
+      "query": "updateProfile",
+      "expected_paths": [
+        "contexts/UserContext.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "tn001",
+      "query": "app content",
+      "expected_paths": [
+        "App.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn002",
+      "query": "clear large auth tokens",
+      "expected_paths": [
+        "clear_large_tokens.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn003",
+      "query": "map view",
+      "expected_paths": [
+        "components/AppMap.web.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn004",
+      "query": "basketball loading",
+      "expected_paths": [
+        "components/BasketballLoading.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn005",
+      "query": "handle block",
+      "expected_paths": [
+        "components/BlockUserModal.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn006",
+      "query": "custom refresh control",
+      "expected_paths": [
+        "components/CustomRefreshControl.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn007",
+      "query": "location disabled prompt",
+      "expected_paths": [
+        "components/LocationDisabledPrompt.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn008",
+      "query": "location permission prompt",
+      "expected_paths": [
+        "components/LocationPermissionPrompt.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn009",
+      "query": "get level color by name",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "tn010",
+      "query": "handle follow toggle",
+      "expected_paths": [
+        "components/PlayerProfileModal.js"
+      ],
+      "symbol_query": false
+    }
+  ]
+}

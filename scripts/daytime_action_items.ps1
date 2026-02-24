@@ -3,8 +3,12 @@ param(
   [string]$AiTestgenRepo = (Join-Path (Resolve-Path "..").Path "ai-testgen"),
   [string]$BuckitRepo = "C:\Users\navneeth\Desktop\NavneethThings\Projects\buckit",
   [string]$TensorflowModelsRepo = "C:\Users\navneeth\Desktop\NavneethThings\Projects\Robot\TFODCourse\Tensorflow\models",
+  [string[]]$DiscoveryRoots = @(),
+  [int]$DiscoveryMinTrackedFiles = 500,
+  [int]$DiscoveryTopN = 30,
   [int]$SoakSeconds = 2,
-  [switch]$IncludeReleaseGate
+  [switch]$IncludeReleaseGate,
+  [switch]$SkipFilesystemBacklog
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,16 +34,20 @@ Write-Host "semanticfs repo:       $SemanticFsRepo"
 Write-Host "ai-testgen repo:       $AiTestgenRepo"
 Write-Host "buckit repo:           $BuckitRepo"
 Write-Host "tensorflow/models:     $TensorflowModelsRepo"
+Write-Host "discovery roots:       $($DiscoveryRoots -join ', ')"
 Write-Host "soak seconds:          $SoakSeconds"
 Write-Host "include release gate:  $($IncludeReleaseGate.IsPresent)"
+Write-Host "skip fs backlog:       $($SkipFilesystemBacklog.IsPresent)"
 
 Assert-Path $SemanticFsRepo "semanticfs repo"
 Assert-Path $AiTestgenRepo "ai-testgen repo"
 Assert-Path $BuckitRepo "buckit repo"
 Assert-Path $TensorflowModelsRepo "tensorflow/models repo"
 
-Run-Step "Split buckit bootstrap into tune/holdout" "python scripts/split_golden_suite.py --input tests/retrieval_golden/buckit_bootstrap.json --tune-output tests/retrieval_golden/buckit_tune.json --holdout-output tests/retrieval_golden/buckit_holdout.json --tune-count 10"
-Run-Step "Split tensorflow bootstrap into tune/holdout" "python scripts/split_golden_suite.py --input tests/retrieval_golden/tensorflow_models_bootstrap.json --tune-output tests/retrieval_golden/tensorflow_models_tune.json --holdout-output tests/retrieval_golden/tensorflow_models_holdout.json --tune-count 10"
+Run-Step "Generate buckit bootstrap v2 (expanded)" "python scripts/bootstrap_golden_from_repo.py --repo-root `"$BuckitRepo`" --output tests/retrieval_golden/buckit_bootstrap_v2_full.json --dataset-name buckit_bootstrap_v2_full --max-queries 120"
+Run-Step "Generate tensorflow bootstrap v2 (expanded)" "python scripts/bootstrap_golden_from_repo.py --repo-root `"$TensorflowModelsRepo`" --output tests/retrieval_golden/tensorflow_models_bootstrap_v2_full.json --dataset-name tensorflow_models_bootstrap_v2_full --max-queries 120"
+Run-Step "Curate buckit mixed tune/holdout suites (>=30 each split)" "python scripts/build_curated_mixed_suites.py --input tests/retrieval_golden/buckit_bootstrap_v2_full.json --tune-output tests/retrieval_golden/buckit_curated_tune.json --holdout-output tests/retrieval_golden/buckit_curated_holdout.json --split-size 40 --non-symbol-per-split 10 --dataset-prefix buckit"
+Run-Step "Curate tensorflow mixed tune/holdout suites (>=30 each split)" "python scripts/build_curated_mixed_suites.py --input tests/retrieval_golden/tensorflow_models_bootstrap_v2_full.json --tune-output tests/retrieval_golden/tensorflow_models_curated_tune.json --holdout-output tests/retrieval_golden/tensorflow_models_curated_holdout.json --split-size 40 --non-symbol-per-split 10 --dataset-prefix tensorflow_models --override 'build_losses=official/core/base_task.py;official/core/train_lib_test.py;official/projects/yt8m/tasks/yt8m_task.py'"
 
 $smokeCmd = "powershell -ExecutionPolicy Bypass -File scripts/daytime_smoke.ps1 -SemanticFsRepo `"$SemanticFsRepo`" -AiTestgenRepo `"$AiTestgenRepo`" -SoakSeconds $SoakSeconds"
 if ($IncludeReleaseGate.IsPresent) {
@@ -47,8 +55,17 @@ if ($IncludeReleaseGate.IsPresent) {
 }
 Run-Step "Representative daytime smoke" $smokeCmd
 
-Run-Step "Tune/Holdout sweep - buckit" "powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label buckit -RepoRoot `"$BuckitRepo`" -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/buckit_tune.json -HoldoutGolden tests/retrieval_golden/buckit_holdout.json -History"
-Run-Step "Tune/Holdout sweep - tensorflow_models" "powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label tensorflow_models -RepoRoot `"$TensorflowModelsRepo`" -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/tensorflow_models_tune.json -HoldoutGolden tests/retrieval_golden/tensorflow_models_holdout.json -History"
+Run-Step "Tune/Holdout sweep - buckit curated suites" "powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label buckit_curated -RepoRoot `"$BuckitRepo`" -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/buckit_curated_tune.json -HoldoutGolden tests/retrieval_golden/buckit_curated_holdout.json -History"
+Run-Step "Tune/Holdout sweep - tensorflow curated suites" "powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label tensorflow_models_curated -RepoRoot `"$TensorflowModelsRepo`" -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/tensorflow_models_curated_tune.json -HoldoutGolden tests/retrieval_golden/tensorflow_models_curated_holdout.json -History"
+
+if ($DiscoveryRoots.Count -gt 0) {
+  $quotedRoots = ($DiscoveryRoots | ForEach-Object { "`"$_`"" }) -join " "
+  $discoveryCmd = "powershell -ExecutionPolicy Bypass -File scripts/discover_repo_candidates.ps1 -Roots $quotedRoots -MinTrackedFiles $DiscoveryMinTrackedFiles -TopN $DiscoveryTopN -OutputPath .semanticfs/bench/filesystem_repo_candidates_latest.json"
+  Run-Step "Filesystem candidate discovery" $discoveryCmd
+  if (-not $SkipFilesystemBacklog.IsPresent) {
+    Run-Step "Filesystem scope backlog build" "powershell -ExecutionPolicy Bypass -File scripts/build_filesystem_scope_backlog.ps1 -CandidatesPath .semanticfs/bench/filesystem_repo_candidates_latest.json -OutputPath .semanticfs/bench/filesystem_scope_backlog_latest.json"
+  }
+}
 
 Run-Step "Drift summary refresh" "powershell -ExecutionPolicy Bypass -File scripts/drift_summary.ps1"
 
@@ -57,6 +74,8 @@ Write-Host "Daytime action items complete."
 Write-Host "Key artifacts:"
 Write-Host "  .semanticfs/bench/relevance_latest.json"
 Write-Host "  .semanticfs/bench/head_to_head_latest.json"
-Write-Host "  .semanticfs/bench/tune_holdout_buckit_latest.json"
-Write-Host "  .semanticfs/bench/tune_holdout_tensorflow_models_latest.json"
+Write-Host "  .semanticfs/bench/tune_holdout_buckit_curated_latest.json"
+Write-Host "  .semanticfs/bench/tune_holdout_tensorflow_models_curated_latest.json"
+Write-Host "  .semanticfs/bench/filesystem_repo_candidates_latest.json (if discovery roots were provided)"
+Write-Host "  .semanticfs/bench/filesystem_scope_backlog_latest.json (if discovery roots were provided and backlog not skipped)"
 Write-Host "  .semanticfs/bench/drift_summary_latest.json"

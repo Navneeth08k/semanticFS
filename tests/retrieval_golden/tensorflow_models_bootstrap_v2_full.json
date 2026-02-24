@@ -1,0 +1,966 @@
+{
+  "schema_version": 1,
+  "dataset_name": "tensorflow_models_bootstrap_v2_full",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "pick_dataset_fn",
+      "expected_paths": [
+        "official/common/dataset_fn.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "_collective_communication",
+      "expected_paths": [
+        "official/common/distribute_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "GetDistributionStrategyTest",
+      "expected_paths": [
+        "official/common/distribute_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "define_flags",
+      "expected_paths": [
+        "official/common/flags.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "EMACheckpointing",
+      "expected_paths": [
+        "official/core/actions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "ActionsTest",
+      "expected_paths": [
+        "official/core/actions_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "aggregate_logs",
+      "expected_paths": [
+        "official/core/base_task.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "_async_loop_fn",
+      "expected_paths": [
+        "official/core/base_trainer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "all_strategy_combinations",
+      "expected_paths": [
+        "official/core/base_trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "DataConfig",
+      "expected_paths": [
+        "official/core/config_definitions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "get_exp_config",
+      "expected_paths": [
+        "official/core/exp_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "ExportModule",
+      "expected_paths": [
+        "official/core/export_base.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "_inference_step",
+      "expected_paths": [
+        "official/core/export_base_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "_decode_and_parse_dataset",
+      "expected_paths": [
+        "official/core/input_reader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "lookup",
+      "expected_paths": [
+        "official/core/registry.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ClassRegistryKey",
+      "expected_paths": [
+        "official/core/registry_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "get_task",
+      "expected_paths": [
+        "official/core/task_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "_Dense",
+      "expected_paths": [
+        "official/core/test_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "run_experiment",
+      "expected_paths": [
+        "official/core/train_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "build_losses",
+      "expected_paths": [
+        "official/core/train_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "_get_checkpoint_manager",
+      "expected_paths": [
+        "official/core/train_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "test_cast_leaf_nested_dict",
+      "expected_paths": [
+        "official/core/train_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "gelu",
+      "expected_paths": [
+        "official/modeling/activations/gelu.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "GeluTest",
+      "expected_paths": [
+        "official/modeling/activations/gelu_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "relu6",
+      "expected_paths": [
+        "official/modeling/activations/relu.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "CustomizedReluTest",
+      "expected_paths": [
+        "official/modeling/activations/relu_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "hard_sigmoid",
+      "expected_paths": [
+        "official/modeling/activations/sigmoid.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "_hard_sigmoid_nn",
+      "expected_paths": [
+        "official/modeling/activations/sigmoid_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "hard_swish",
+      "expected_paths": [
+        "official/modeling/activations/swish.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "_hard_swish_np",
+      "expected_paths": [
+        "official/modeling/activations/swish_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b31",
+      "query": "expand_1_axis",
+      "expected_paths": [
+        "official/modeling/fast_training/experimental/tf2_utils_2x_wide.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b32",
+      "query": "test_end_to_end",
+      "expected_paths": [
+        "official/modeling/fast_training/experimental/tf2_utils_2x_wide_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b33",
+      "query": "compute_stage_id",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/policies.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b34",
+      "query": "timeout_fn",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/train_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b35",
+      "query": "get_eval_dataset",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/train_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b36",
+      "query": "_maybe_export_non_progressive_checkpoint",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/trainer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b37",
+      "query": "_build_inputs",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b38",
+      "query": "CheckpointWithHooks",
+      "expected_paths": [
+        "official/modeling/fast_training/progressive/utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b39",
+      "query": "_filter_and_allreduce_gradients",
+      "expected_paths": [
+        "official/modeling/grad_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b40",
+      "query": "_export_config",
+      "expected_paths": [
+        "official/modeling/hyperparams/base_config.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b41",
+      "query": "_test",
+      "expected_paths": [
+        "official/modeling/hyperparams/base_config_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b42",
+      "query": "as_dict",
+      "expected_paths": [
+        "official/modeling/hyperparams/oneof.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b43",
+      "query": "Backbone",
+      "expected_paths": [
+        "official/modeling/hyperparams/oneof_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b44",
+      "query": "_get_kv",
+      "expected_paths": [
+        "official/modeling/hyperparams/params_dict.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b45",
+      "query": "IOTest",
+      "expected_paths": [
+        "official/modeling/hyperparams/params_dict_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b46",
+      "query": "_instantiate_sub_tasks",
+      "expected_paths": [
+        "official/modeling/multitask/base_model.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b47",
+      "query": "checkpoint",
+      "expected_paths": [
+        "official/modeling/multitask/base_trainer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b48",
+      "query": "BaseTrainerTest",
+      "expected_paths": [
+        "official/modeling/multitask/base_trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b49",
+      "query": "AnnealingSampleConfig",
+      "expected_paths": [
+        "official/modeling/multitask/configs.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b50",
+      "query": "eval_step_fn",
+      "expected_paths": [
+        "official/modeling/multitask/evaluator.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b51",
+      "query": "build_inputs",
+      "expected_paths": [
+        "official/modeling/multitask/evaluator_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b52",
+      "query": "_get_task_step",
+      "expected_paths": [
+        "official/modeling/multitask/interleaving_trainer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b53",
+      "query": "InterleavingTrainerTest",
+      "expected_paths": [
+        "official/modeling/multitask/interleaving_trainer_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b54",
+      "query": "create_optimizer",
+      "expected_paths": [
+        "official/modeling/multitask/multitask.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b55",
+      "query": "AnnealingTaskSampler",
+      "expected_paths": [
+        "official/modeling/multitask/task_sampler.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b56",
+      "query": "TaskSamplerTest",
+      "expected_paths": [
+        "official/modeling/multitask/task_sampler_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b57",
+      "query": "_generate_data",
+      "expected_paths": [
+        "official/modeling/multitask/test_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b58",
+      "query": "run_experiment_with_multitask_eval",
+      "expected_paths": [
+        "official/modeling/multitask/train_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b59",
+      "query": "test_end_to_end_multi_eval",
+      "expected_paths": [
+        "official/modeling/multitask/train_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b60",
+      "query": "ConstantLrConfig",
+      "expected_paths": [
+        "official/modeling/optimization/configs/learning_rate_config.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b61",
+      "query": "LrConfig",
+      "expected_paths": [
+        "official/modeling/optimization/configs/optimization_config.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b62",
+      "query": "OptimizerConfigTest",
+      "expected_paths": [
+        "official/modeling/optimization/configs/optimization_config_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b63",
+      "query": "AdafactorConfig",
+      "expected_paths": [
+        "official/modeling/optimization/configs/optimizer_config.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b64",
+      "query": "_apply_moving",
+      "expected_paths": [
+        "official/modeling/optimization/ema_optimizer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b65",
+      "query": "_create_slots",
+      "expected_paths": [
+        "official/modeling/optimization/lars_optimizer.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b66",
+      "query": "_make_offset_wrapper",
+      "expected_paths": [
+        "official/modeling/optimization/lr_schedule.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b67",
+      "query": "OffsetLearningRateTest",
+      "expected_paths": [
+        "official/modeling/optimization/lr_schedule_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b68",
+      "query": "build_learning_rate",
+      "expected_paths": [
+        "official/modeling/optimization/optimizer_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b69",
+      "query": "MyClass",
+      "expected_paths": [
+        "official/modeling/optimization/optimizer_factory_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b70",
+      "query": "configure_optimizer",
+      "expected_paths": [
+        "official/modeling/performance.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b71",
+      "query": "assert_rank",
+      "expected_paths": [
+        "official/modeling/tf_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b72",
+      "query": "AlbertConfig",
+      "expected_paths": [
+        "official/nlp/albert/configs.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b73",
+      "query": "predict",
+      "expected_paths": [
+        "official/nlp/albert/run_classifier.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b74",
+      "query": "eval_squad",
+      "expected_paths": [
+        "official/nlp/albert/run_squad.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b75",
+      "query": "_add_metrics",
+      "expected_paths": [
+        "official/nlp/bert/bert_models.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b76",
+      "query": "BertModelsTest",
+      "expected_paths": [
+        "official/nlp/bert/bert_models_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b77",
+      "query": "define_common_bert_flags",
+      "expected_paths": [
+        "official/nlp/bert/common_flags.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b78",
+      "query": "BertConfig",
+      "expected_paths": [
+        "official/nlp/bert/configs.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b79",
+      "query": "create_bert_model",
+      "expected_paths": [
+        "official/nlp/bert/export_tfhub.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b80",
+      "query": "_dropout_mean_stddev",
+      "expected_paths": [
+        "official/nlp/bert/export_tfhub_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b81",
+      "query": "_pad_to_batch",
+      "expected_paths": [
+        "official/nlp/bert/input_pipeline.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b82",
+      "query": "export_bert_model",
+      "expected_paths": [
+        "official/nlp/bert/model_saving_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b83",
+      "query": "_float_metric_value",
+      "expected_paths": [
+        "official/nlp/bert/model_training_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b84",
+      "query": "_assign_dtype",
+      "expected_paths": [
+        "official/nlp/bert/model_training_utils_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b85",
+      "query": "_dataset_fn",
+      "expected_paths": [
+        "official/nlp/bert/run_classifier.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b86",
+      "query": "_bert_pretrain_loss_fn",
+      "expected_paths": [
+        "official/nlp/bert/run_pretraining.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b87",
+      "query": "export_squad",
+      "expected_paths": [
+        "official/nlp/bert/run_squad.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b88",
+      "query": "_append_feature",
+      "expected_paths": [
+        "official/nlp/bert/run_squad_helper.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b89",
+      "query": "BertServing",
+      "expected_paths": [
+        "official/nlp/bert/serving.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b90",
+      "query": "_exact_match_score",
+      "expected_paths": [
+        "official/nlp/bert/squad_evaluate_v1_1.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b91",
+      "query": "_apply_no_ans_threshold",
+      "expected_paths": [
+        "official/nlp/bert/squad_evaluate_v2_0.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b92",
+      "query": "_bert_name_replacement",
+      "expected_paths": [
+        "official/nlp/bert/tf1_checkpoint_converter_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b93",
+      "query": "_create_bert_model",
+      "expected_paths": [
+        "official/nlp/bert/tf2_encoder_checkpoint_converter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b94",
+      "query": "_clean_text",
+      "expected_paths": [
+        "official/nlp/bert/tokenization.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b95",
+      "query": "test_basic_tokenizer_lower",
+      "expected_paths": [
+        "official/nlp/bert/tokenization_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b96",
+      "query": "ClsHeadConfig",
+      "expected_paths": [
+        "official/nlp/configs/bert.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b97",
+      "query": "ElectraPretrainerConfig",
+      "expected_paths": [
+        "official/nlp/configs/electra.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b98",
+      "query": "AlbertEncoderConfig",
+      "expected_paths": [
+        "official/nlp/configs/encoders.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b99",
+      "query": "EncodersTest",
+      "expected_paths": [
+        "official/nlp/configs/encoders_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b100",
+      "query": "bert_sentence_prediction",
+      "expected_paths": [
+        "official/nlp/configs/finetuning_experiments.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b101",
+      "query": "bert_dynamic",
+      "expected_paths": [
+        "official/nlp/configs/pretraining_experiments.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b102",
+      "query": "wmt_transformer_large",
+      "expected_paths": [
+        "official/nlp/configs/wmt_transformer_experiments.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b103",
+      "query": "_flatten",
+      "expected_paths": [
+        "official/nlp/continuous_finetune_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b104",
+      "query": "ContinuousFinetuneTest",
+      "expected_paths": [
+        "official/nlp/continuous_finetune_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b105",
+      "query": "_create_examples",
+      "expected_paths": [
+        "official/nlp/data/classifier_data_lib.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b106",
+      "query": "BertClassifierLibTest",
+      "expected_paths": [
+        "official/nlp/data/classifier_data_lib_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b107",
+      "query": "generate_classifier_dataset",
+      "expected_paths": [
+        "official/nlp/data/create_finetuning_data.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b108",
+      "query": "_contiguous",
+      "expected_paths": [
+        "official/nlp/data/create_pretraining_data.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b109",
+      "query": "assertTokens",
+      "expected_paths": [
+        "official/nlp/data/create_pretraining_data_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b110",
+      "query": "_convert_tokens_to_instances",
+      "expected_paths": [
+        "official/nlp/data/create_xlnet_pretraining_data.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b111",
+      "query": "_create_files",
+      "expected_paths": [
+        "official/nlp/data/create_xlnet_pretraining_data_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b112",
+      "query": "DataLoader",
+      "expected_paths": [
+        "official/nlp/data/data_loader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b113",
+      "query": "get_data_loader",
+      "expected_paths": [
+        "official/nlp/data/data_loader_factory.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b114",
+      "query": "DataLoaderFactoryTest",
+      "expected_paths": [
+        "official/nlp/data/data_loader_factory_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b115",
+      "query": "_bert_preprocess",
+      "expected_paths": [
+        "official/nlp/data/dual_encoder_dataloader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b116",
+      "query": "_create_fake_dataset",
+      "expected_paths": [
+        "official/nlp/data/dual_encoder_dataloader_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b117",
+      "query": "_decode",
+      "expected_paths": [
+        "official/nlp/data/pretrain_dataloader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b118",
+      "query": "_create_fake_bert_dataset",
+      "expected_paths": [
+        "official/nlp/data/pretrain_dataloader_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b119",
+      "query": "_bucketize_and_batch",
+      "expected_paths": [
+        "official/nlp/data/pretrain_dynamic_dataloader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b120",
+      "query": "create_float_feature",
+      "expected_paths": [
+        "official/nlp/data/pretrain_dynamic_dataloader_test.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

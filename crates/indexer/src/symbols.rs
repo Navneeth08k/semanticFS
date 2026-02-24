@@ -45,13 +45,18 @@ pub fn extract_symbols(
 fn parse_symbol_name(line: &str) -> Option<String> {
     for prefix in [
         "fn ",
+        "async fn ",
         "pub fn ",
+        "pub async fn ",
         "class ",
+        "def ",
+        "async def ",
         "struct ",
         "enum ",
         "trait ",
         "const ",
         "let ",
+        "function ",
         "export function ",
     ] {
         if let Some(rest) = line.strip_prefix(prefix) {
@@ -85,4 +90,37 @@ fn classify_symbol_kind(line: &str) -> &'static str {
         return "const";
     }
     "function"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_symbol_name;
+
+    #[test]
+    fn extracts_python_defs() {
+        assert_eq!(
+            parse_symbol_name("def _add_metrics(self, metrics):"),
+            Some("_add_metrics".to_string())
+        );
+        assert_eq!(
+            parse_symbol_name("async def create_dataset(config):"),
+            Some("create_dataset".to_string())
+        );
+    }
+
+    #[test]
+    fn extracts_rust_async_fns() {
+        assert_eq!(
+            parse_symbol_name("pub async fn run_service() -> Result<()> {"),
+            Some("run_service".to_string())
+        );
+    }
+
+    #[test]
+    fn extracts_function_keyword() {
+        assert_eq!(
+            parse_symbol_name("function buildModel(input) {"),
+            Some("buildModel".to_string())
+        );
+    }
 }

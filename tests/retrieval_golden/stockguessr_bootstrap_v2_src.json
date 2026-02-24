@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "dataset_name": "stockguessr_bootstrap_v2_src",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "aggregateToMonthly",
+      "expected_paths": [
+        "client/app/components/GameChart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "advanceWeek",
+      "expected_paths": [
+        "client/app/components/GameManager.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "progress",
+      "expected_paths": [
+        "client/app/components/GameTimer.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "handleCreateMatch",
+      "expected_paths": [
+        "client/app/components/Lobby.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "handleInputChange",
+      "expected_paths": [
+        "client/app/components/ShareInput.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "handleClose",
+      "expected_paths": [
+        "client/app/components/TutorialOverlay.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "AuthProvider",
+      "expected_paths": [
+        "client/app/context/AuthContext.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "fetchMatches",
+      "expected_paths": [
+        "client/app/dashboard/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "handleSubmit",
+      "expected_paths": [
+        "client/app/login/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "handleBuy",
+      "expected_paths": [
+        "client/app/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "checkDb",
+      "expected_paths": [
+        "server/scripts/checkDbConnection.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "checkUser",
+      "expected_paths": [
+        "server/scripts/checkUser.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "debugScenario",
+      "expected_paths": [
+        "server/scripts/debugScenario.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "generateCandles",
+      "expected_paths": [
+        "server/scripts/seedScenarios.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "testAI",
+      "expected_paths": [
+        "server/scripts/testOpenAI.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "runTest",
+      "expected_paths": [
+        "server/scripts/test_match_api.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "verifyGameFlow",
+      "expected_paths": [
+        "server/scripts/verifyGameFlow.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "loop",
+      "expected_paths": [
+        "server/src/index.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "authMiddleware",
+      "expected_paths": [
+        "server/src/middleware/auth.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "errorHandler",
+      "expected_paths": [
+        "server/src/middleware/errorHandler.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b21",
+      "query": "generateJoinCode",
+      "expected_paths": [
+        "server/src/routes/matches.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b22",
+      "query": "generateTradeAnalysis",
+      "expected_paths": [
+        "server/src/utils/aiAnalysis.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b23",
+      "query": "connectDB",
+      "expected_paths": [
+        "server/src/utils/db.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b24",
+      "query": "calculateEquity",
+      "expected_paths": [
+        "server/src/utils/gameLogic.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b25",
+      "query": "change",
+      "expected_paths": [
+        "server/src/utils/newsData.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b26",
+      "query": "classifyDifficulty",
+      "expected_paths": [
+        "server/src/utils/stockData.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b27",
+      "query": "generateToken",
+      "expected_paths": [
+        "server/src/utils/tokenUtils.js"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b28",
+      "query": "aggregateToWeekly",
+      "expected_paths": [
+        "client/app/components/GameChart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b29",
+      "query": "calculateRSI",
+      "expected_paths": [
+        "client/app/components/GameChart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b30",
+      "query": "handleResize",
+      "expected_paths": [
+        "client/app/components/GameChart.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}
