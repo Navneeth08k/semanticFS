@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_name": "ai_testgen_strict_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "_load_default_signatures",
+      "expected_paths": [
+        "adapters/java_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "_is_ignored",
+      "expected_paths": [
+        "adapters/python_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "_detect_language",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "_build_context_section",
+      "expected_paths": [
+        "ai_testgen_core/prompt_builder.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "detect_language",
+      "expected_paths": [
+        "cli.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "test_generate_junit_snippets_smoke",
+      "expected_paths": [
+        "tests/dummy_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "test_empty_diff",
+      "expected_paths": [
+        "tests/test_diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "test_extract_function_signatures",
+      "expected_paths": [
+        "tests/test_python_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "_type_name",
+      "expected_paths": [
+        "adapters/java_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "extract_java_signatures",
+      "expected_paths": [
+        "adapters/java_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "extract_function_signatures",
+      "expected_paths": [
+        "adapters/python_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "_determine_change_type",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "_parse_hunks",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ChangedFile",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "DiffHunk",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "extract_signatures_java",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "extract_signatures_javascript",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "extract_signatures_python",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "FunctionSignature",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "get_changed_signatures",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

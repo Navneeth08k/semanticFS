@@ -12,8 +12,14 @@ import argparse
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python < 3.11
+    tomllib = None
 
 
 ALLOWED_EXTENSIONS = {
@@ -154,13 +160,127 @@ def parser_for_extension(ext: str) -> Sequence[re.Pattern[str]]:
     return ()
 
 
-def iter_source_files(root: Path) -> Iterable[Path]:
+class PathFilter:
+    def __init__(self, allow_patterns: Sequence[str], deny_patterns: Sequence[str]):
+        self.allow_patterns = [
+            compile_glob_regex(normalize_pattern(p)) for p in allow_patterns if p
+        ]
+        self.deny_patterns = [
+            compile_glob_regex(normalize_pattern(p)) for p in deny_patterns if p
+        ]
+
+    @classmethod
+    def from_config(cls, config_path: Path) -> "PathFilter":
+        try:
+            raw = config_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise SystemExit(f"failed to read config file: {config_path}: {exc}") from exc
+        allow_patterns, deny_patterns = load_filter_patterns(raw, config_path)
+        return cls(allow_patterns, deny_patterns)
+
+    def allows(self, relative_path: str) -> bool:
+        rel = relative_path.strip("/")
+        if not rel:
+            return False
+        if self.allow_patterns and not any(
+            pattern.match(rel) for pattern in self.allow_patterns
+        ):
+            return False
+        if any(pattern.match(rel) for pattern in self.deny_patterns):
+            return False
+        return True
+
+
+def string_list(value: object) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    out: List[str] = []
+    for item in value:
+        if isinstance(item, str):
+            trimmed = item.strip()
+            if trimmed:
+                out.append(trimmed)
+    return out
+
+
+def load_filter_patterns(raw: str, config_path: Path) -> Tuple[List[str], List[str]]:
+    if tomllib is not None:
+        try:
+            parsed = tomllib.loads(raw)
+        except tomllib.TOMLDecodeError as exc:
+            raise SystemExit(f"failed to parse TOML config: {config_path}: {exc}") from exc
+        filter_cfg = parsed.get("filter")
+        if not isinstance(filter_cfg, dict):
+            return [], []
+        return (
+            string_list(filter_cfg.get("allow_roots")),
+            string_list(filter_cfg.get("deny_globs")),
+        )
+    return parse_filter_patterns_fallback(raw)
+
+
+def parse_filter_patterns_fallback(raw: str) -> Tuple[List[str], List[str]]:
+    match = re.search(r"(?ms)^\[filter\]\s*(.*?)(?=^\[|\Z)", raw)
+    if not match:
+        return [], []
+    section = match.group(1)
+    allow_patterns = parse_string_array(section, "allow_roots")
+    deny_patterns = parse_string_array(section, "deny_globs")
+    return allow_patterns, deny_patterns
+
+
+def parse_string_array(section: str, key: str) -> List[str]:
+    match = re.search(rf"(?ms)^{re.escape(key)}\s*=\s*\[(.*?)\]", section)
+    if not match:
+        return []
+    body = match.group(1)
+    out: List[str] = []
+    for raw_value in re.findall(r'"((?:[^"\\]|\\.)*)"', body):
+        out.append(json.loads(f'"{raw_value}"'))
+    return out
+
+
+def normalize_pattern(pattern: str) -> str:
+    return pattern.strip().replace("\\", "/").lstrip("./")
+
+
+def compile_glob_regex(pattern: str) -> re.Pattern[str]:
+    out = ["^"]
+    i = 0
+    while i < len(pattern):
+        char = pattern[i]
+        if char == "*":
+            if i + 1 < len(pattern) and pattern[i + 1] == "*":
+                i += 2
+                if i < len(pattern) and pattern[i] == "/":
+                    out.append("(?:.*/)?")
+                    i += 1
+                else:
+                    out.append(".*")
+                continue
+            out.append("[^/]*")
+            i += 1
+            continue
+        if char == "?":
+            out.append("[^/]")
+            i += 1
+            continue
+        out.append(re.escape(char))
+        i += 1
+    out.append("$")
+    return re.compile("".join(out))
+
+
+def iter_source_files(root: Path, path_filter: PathFilter | None = None) -> Iterable[Path]:
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
         for name in filenames:
             path = Path(dirpath) / name
+            rel = path.relative_to(root).as_posix()
             ext = path.suffix.lower()
             if ext not in ALLOWED_EXTENSIONS:
+                continue
+            if path_filter and not path_filter.allows(rel):
                 continue
             try:
                 size = path.stat().st_size
@@ -169,6 +289,45 @@ def iter_source_files(root: Path) -> Iterable[Path]:
             if size > MAX_FILE_BYTES:
                 continue
             yield path
+
+
+def iter_git_tracked_source_files(
+    root: Path, path_filter: PathFilter | None = None
+) -> Iterable[Path]:
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "ls-files"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or "").strip()
+        detail = f": {stderr}" if stderr else ""
+        raise SystemExit(f"git ls-files failed for {root}{detail}") from exc
+
+    for rel in proc.stdout.splitlines():
+        rel = rel.strip()
+        if not rel:
+            continue
+        norm_rel = rel.replace("\\", "/").strip("/")
+        if not norm_rel:
+            continue
+        ext = Path(norm_rel).suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            continue
+        if path_filter and not path_filter.allows(norm_rel):
+            continue
+        path = root / norm_rel
+        if not path.is_file():
+            continue
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        if size > MAX_FILE_BYTES:
+            continue
+        yield path
 
 
 def extract_symbols(path: Path, repo_root: Path, min_len: int) -> List[Dict[str, str]]:
@@ -272,6 +431,16 @@ def main() -> None:
     ap.add_argument("--output", required=True, help="Output JSON file path")
     ap.add_argument("--dataset-name", default="", help="Dataset name override")
     ap.add_argument(
+        "--config",
+        default="",
+        help="Optional TOML config path; if set, applies filter.allow_roots and filter.deny_globs",
+    )
+    ap.add_argument(
+        "--git-tracked-only",
+        action="store_true",
+        help="Use `git ls-files` instead of walking the full tree (faster for large repos)",
+    )
+    ap.add_argument(
         "--max-queries",
         type=int,
         default=20,
@@ -290,9 +459,18 @@ def main() -> None:
         raise SystemExit(f"repo root not found or not a directory: {repo_root}")
 
     dataset_name = args.dataset_name.strip() or default_dataset_name(repo_root)
+    path_filter: PathFilter | None = None
+    if args.config.strip():
+        config_path = Path(args.config).resolve()
+        path_filter = PathFilter.from_config(config_path)
 
     all_candidates: List[Dict[str, str]] = []
-    for path in iter_source_files(repo_root):
+    iterator = (
+        iter_git_tracked_source_files(repo_root, path_filter)
+        if args.git_tracked_only
+        else iter_source_files(repo_root, path_filter)
+    )
+    for path in iterator:
         all_candidates.extend(extract_symbols(path, repo_root, args.min_symbol_len))
 
     # Stable ordering: file path then symbol name.
@@ -310,6 +488,9 @@ def main() -> None:
 
     print(f"repo_root={repo_root}")
     print(f"dataset_name={dataset_name}")
+    if args.config.strip():
+        print(f"config={Path(args.config).resolve()}")
+    print(f"path_mode={'git_tracked_only' if args.git_tracked_only else 'walk'}")
     print(f"candidates={len(all_candidates)}")
     print(f"queries={len(selected)}")
     print(f"output={out_path.resolve()}")

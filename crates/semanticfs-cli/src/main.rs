@@ -202,8 +202,8 @@ async fn main() -> Result<()> {
 
 fn init_command(args: InitArgs, target_path: &PathBuf) -> Result<()> {
     let sample = format!(
-        "[workspace]\nrepo_root = \"{}\"\nmount_point = \"{}\"\n\n# copy remaining defaults from config/semanticfs.sample.toml\n",
-        args.repo, args.mount
+        "[workspace]\nrepo_root = \"{}\"\nmount_point = \"{}\"\n\n# Optional Phase 3 multi-root example:\n# [[workspace.domains]]\n# id = \"primary\"\n# root = \"{}\"\n# trust_label = \"trusted\"\n# allow_roots = [\"**\"]\n# deny_globs = []\n\n# copy remaining defaults from config/semanticfs.sample.toml\n",
+        args.repo, args.mount, args.repo
     );
     fs::write(target_path, sample)?;
     info!(path = %target_path.display(), "initialized config");
@@ -275,6 +275,24 @@ fn health_command(config_path: &PathBuf) -> Result<()> {
     let cfg = SemanticFsConfig::load(config_path)?;
     println!("repo_root={}", cfg.workspace.repo_root);
     println!("mount_point={}", cfg.workspace.mount_point);
+    let domains = cfg.effective_workspace_domains();
+    println!("workspace_domain_count={}", domains.len());
+    for domain in domains {
+        let allow = if domain.allow_roots.is_empty() {
+            "-".to_string()
+        } else {
+            domain.allow_roots.join(",")
+        };
+        let deny = if domain.deny_globs.is_empty() {
+            "-".to_string()
+        } else {
+            domain.deny_globs.join(",")
+        };
+        println!(
+            "workspace_domain={} root={} trust_label={} allow_roots={} deny_globs={}",
+            domain.id, domain.root, domain.trust_label, allow, deny
+        );
+    }
     println!("status=healthy (static scaffold)");
     Ok(())
 }

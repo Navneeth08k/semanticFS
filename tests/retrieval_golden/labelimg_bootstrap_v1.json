@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_name": "labelimg_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "_save_file",
+      "expected_paths": [
+        "labelImg.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "bounded_move_shape",
+      "expected_paths": [
+        "libs/canvas.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "check_restore",
+      "expected_paths": [
+        "libs/colorDialog.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "ComboBox",
+      "expected_paths": [
+        "libs/combobox.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "add_shape",
+      "expected_paths": [
+        "libs/create_ml_io.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "HashableQListWidgetItem",
+      "expected_paths": [
+        "libs/hashableQListWidgetItem.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "LabelDialog",
+      "expected_paths": [
+        "libs/labelDialog.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "convert_points_to_bnd_box",
+      "expected_paths": [
+        "libs/labelFile.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "add_bnd_box",
+      "expected_paths": [
+        "libs/pascal_voc_io.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "reset",
+      "expected_paths": [
+        "libs/settings.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "add_point",
+      "expected_paths": [
+        "libs/shape.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "__create_lookup_fallback_list",
+      "expected_paths": [
+        "libs/stringBundle.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "addAction",
+      "expected_paths": [
+        "libs/toolBar.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ustr",
+      "expected_paths": [
+        "libs/ustr.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "add_actions",
+      "expected_paths": [
+        "libs/utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "bnd_box_to_yolo_line",
+      "expected_paths": [
+        "libs/yolo_io.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "minimumSizeHint",
+      "expected_paths": [
+        "libs/zoomWidget.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "finalize_options",
+      "expected_paths": [
+        "setup.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "test_a_write",
+      "expected_paths": [
+        "tests/test_io.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "test_noop",
+      "expected_paths": [
+        "tests/test_qt.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

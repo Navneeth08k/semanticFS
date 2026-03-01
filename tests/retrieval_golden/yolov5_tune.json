@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "yolov5_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "parse_opt",
+      "expected_paths": [
+        "detect.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "_create",
+      "expected_paths": [
+        "hubconf.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "attempt_load",
+      "expected_paths": [
+        "models/experimental.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "_clip_augmented",
+      "expected_paths": [
+        "models/yolo.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "notebook_init",
+      "expected_paths": [
+        "utils/__init__.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "Albumentations",
+      "expected_paths": [
+        "utils/augmentations.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "autobatch",
+      "expected_paths": [
+        "utils/autobatch.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "_RepeatSampler",
+      "expected_paths": [
+        "utils/datasets.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "predict",
+      "expected_paths": [
+        "utils/flask_rest_api/restapi.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "Loggers",
+      "expected_paths": [
+        "utils/loggers/__init__.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

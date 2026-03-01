@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "euler_r9_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "handleSignUp",
+      "expected_paths": [
+        "app/(auth)/signup/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "handleSendMessage",
+      "expected_paths": [
+        "app/notebook/[id]/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "handleFileSelect",
+      "expected_paths": [
+        "app/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "clearCanvas",
+      "expected_paths": [
+        "components/CanvasPad.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "handleBack",
+      "expected_paths": [
+        "components/CreateNotebookModal.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "handleSignOut",
+      "expected_paths": [
+        "components/Header.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "handleConfirm",
+      "expected_paths": [
+        "components/QuestionConfirmModal.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "useCarousel",
+      "expected_paths": [
+        "components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "yolov5_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "export_coreml",
+      "expected_paths": [
+        "export.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "_apply",
+      "expected_paths": [
+        "models/common.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "_make_grid",
+      "expected_paths": [
+        "models/tf.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "train",
+      "expected_paths": [
+        "train.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "AconC",
+      "expected_paths": [
+        "utils/activations.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "anchor_fitness",
+      "expected_paths": [
+        "utils/autoanchor.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "Callbacks",
+      "expected_paths": [
+        "utils/callbacks.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "attempt_download",
+      "expected_paths": [
+        "utils/downloads.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "_timeout_handler",
+      "expected_paths": [
+        "utils/general.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "create_dataset_artifact",
+      "expected_paths": [
+        "utils/loggers/wandb/log_dataset.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

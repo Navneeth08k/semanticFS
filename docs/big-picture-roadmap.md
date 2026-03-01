@@ -14,7 +14,7 @@ Core invariant:
 2. Edits are grounded through deterministic source reads.
 
 ## Current Phase
-Phase: `v1.2 reliability and quality hardening` (as of February 18, 2026)
+Phase: `v1.2 reliability and quality hardening` with `Phase 3 bootstrap` running in parallel (as of February 24, 2026)
 
 Current state:
 1. Core architecture is implemented and operational.
@@ -25,6 +25,7 @@ Remaining phase focus:
 1. Nightly trend stability over representative suites.
 2. Threshold hardening from measured data.
 3. FUSE long-lived session semantics parity with MCP session behavior.
+4. Start non-breaking Phase 3 domain-model and system-scope planning scaffolding.
 
 ## Phases
 ## Phase 1: v1.1 Repo-First Foundation
@@ -64,6 +65,11 @@ Required capabilities:
 3. Stronger identity and data-governance boundaries.
 4. Predictable memory/latency behavior across heterogeneous workloads.
 
+Bootstrap status:
+1. Started in parallel with late Phase 2 hardening.
+2. Initial discovery and backlog artifacts are now in place.
+3. First implementation target is non-breaking multi-root config/domain scaffolding.
+
 ## Decision Guardrails
 1. Grounded edits over clever retrieval.
 2. Measured performance over intuition.
@@ -80,5 +86,6 @@ Required capabilities:
 1. `README.md`
 2. `docs/new-chat-handoff.md`
 3. `docs/v1_2_execution_plan.md`
-4. `docs/future-steps-log.md`
-5. `docs/benchmark.md`
+4. `docs/phase3_execution_plan.md`
+5. `docs/future-steps-log.md`
+6. `docs/benchmark.md`

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "robot_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "detect",
+      "expected_paths": [
+        "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/detect.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "autopad",
+      "expected_paths": [
+        "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/common.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "_initialize_biases",
+      "expected_paths": [
+        "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/yolo.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "backward",
+      "expected_paths": [
+        "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/activations.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "_RepeatSampler",
+      "expected_paths": [
+        "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/datasets.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "_collective_communication",
+      "expected_paths": [
+        "TFODCourse/Tensorflow/models/official/common/distribute_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "ActionsTest",
+      "expected_paths": [
+        "TFODCourse/Tensorflow/models/official/core/actions_test.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "DataConfig",
+      "expected_paths": [
+        "TFODCourse/Tensorflow/models/official/core/config_definitions.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "_decode_and_parse_dataset",
+      "expected_paths": [
+        "TFODCourse/Tensorflow/models/official/core/input_reader.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "_Dense",
+      "expected_paths": [
+        "TFODCourse/Tensorflow/models/official/core/test_utils.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

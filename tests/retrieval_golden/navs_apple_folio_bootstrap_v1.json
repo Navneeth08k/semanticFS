@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_name": "navs_apple_folio_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "About",
+      "expected_paths": [
+        "src/components/About.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "Contact",
+      "expected_paths": [
+        "src/components/Contact.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "Experience",
+      "expected_paths": [
+        "src/components/Experience.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "Footer",
+      "expected_paths": [
+        "src/components/Footer.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "Hero",
+      "expected_paths": [
+        "src/components/Hero.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "handleScroll",
+      "expected_paths": [
+        "src/components/Navigation.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "getCategoryColor",
+      "expected_paths": [
+        "src/components/Projects.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "getLevelColor",
+      "expected_paths": [
+        "src/components/Skills.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "src/components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "Badge",
+      "expected_paths": [
+        "src/components/ui/badge.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "src/components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "Calendar",
+      "expected_paths": [
+        "src/components/ui/calendar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "useCarousel",
+      "expected_paths": [
+        "src/components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ChartStyle",
+      "expected_paths": [
+        "src/components/ui/chart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "CommandDialog",
+      "expected_paths": [
+        "src/components/ui/command.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ContextMenuShortcut",
+      "expected_paths": [
+        "src/components/ui/context-menu.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "DialogFooter",
+      "expected_paths": [
+        "src/components/ui/dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "Drawer",
+      "expected_paths": [
+        "src/components/ui/drawer.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "DropdownMenuShortcut",
+      "expected_paths": [
+        "src/components/ui/dropdown-menu.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "useFormField",
+      "expected_paths": [
+        "src/components/ui/form.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

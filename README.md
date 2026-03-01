@@ -40,7 +40,138 @@ Main crates:
 7. `mcp`: minimal MCP-compatible tool/resource server.
 8. `semanticfs-cli`: operational commands and benchmarks.
 
-## Current State (As of February 20, 2026)
+## How retrieval works
+
+Search runs **symbol lookup**, **BM25**, and **vector search** in parallel, then fuses and re-ranks results. The diagrams below render on GitHub and other Mermaid-capable viewers.
+
+### Retrieval pipeline
+
+```mermaid
+graph TB
+    subgraph Input
+        Q[Query string]
+    end
+
+    subgraph Pipelines
+        SE[Symbol exact]
+        SP[Symbol prefix]
+        BM[BM25 chunk text]
+        V[Vector search]
+    end
+
+    subgraph Merge
+        RRF[RRF fuse]
+        Prior[Path and recency priors]
+        Top[Take top N]
+    end
+
+    Q --> SE
+    Q --> SP
+    Q --> BM
+    Q --> V
+    SE --> RRF
+    SP --> RRF
+    BM --> RRF
+    V --> RRF
+    RRF --> Prior
+    Prior --> Top
+    Top --> Hits[path, start_line, end_line]
+```
+
+### Symbol search (e.g. function or class name)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Search
+    participant Sym as Symbol index
+    participant RRF as RRF plus priors
+
+    U->>S: query parse_config
+    S->>Sym: exact symbol lookup
+    Sym-->>S: path, line_start, line_end
+    S->>S: BM25 and vector search
+    S->>RRF: fuse all lists
+    RRF-->>S: fused ranking
+    S->>S: apply priors, take top N
+    S-->>U: path and line ranges
+```
+
+### Semantic search (e.g. natural-language intent)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Search
+    participant BM25 as BM25
+    participant Emb as Embedding and vector DB
+    participant RRF as RRF plus priors
+
+    U->>S: where do we validate user input
+    S->>BM25: full-text on chunk text
+    BM25-->>S: chunks containing validate, user, input
+    S->>Emb: embed query
+    Emb->>Emb: nearest chunk embeddings
+    Emb-->>S: semantically similar chunks
+    S->>RRF: fuse lists
+    RRF-->>S: fused ranking
+    S->>S: path prior, recency prior
+    S-->>U: path and line ranges
+```
+
+### Literal search (e.g. string in file)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Search
+    participant BM25 as BM25
+    participant V as Vector
+    participant RRF as RRF plus priors
+
+    U->>S: TODO fix this
+    S->>BM25: full-text TODO fix this
+    BM25-->>S: chunks with those terms
+    S->>V: vector search
+    V-->>S: vector hits
+    S->>RRF: fuse lists
+    RRF-->>S: fused ranking
+    S->>S: priors, top N
+    S-->>U: path and line ranges
+```
+
+### All query types use the same process
+
+```mermaid
+graph LR
+    subgraph Situations
+        S1[Symbol search]
+        S2[Semantic search]
+        S3[Literal search]
+    end
+
+    subgraph SameProcess
+        A[Symbol exact and prefix]
+        B[BM25]
+        C[Vector search]
+        D[RRF fuse]
+        E[Path prior]
+        F[Recency prior]
+        G[Top N]
+        A --> D
+        B --> D
+        C --> D
+        D --> E
+        E --> F
+        F --> G
+    end
+
+    S1 --> SameProcess
+    S2 --> SameProcess
+    S3 --> SameProcess
+```
+
+## Current State (As of February 28, 2026)
 Implemented:
 1. Core `/raw` + `/search` + `/map` behavior.
 2. Snapshot versioning and two-phase publish.
@@ -54,6 +185,7 @@ Implemented:
 10. Benchmark suite: run/soak/relevance/release-gate/head-to-head.
 11. Mounted Linux FUSE workflow validation for `/.well-known/session.json` and `/.well-known/session.refresh` in WSL long-lived session.
 12. Strict daytime tune-vs-holdout workflow with deterministic suite splitting and holdout-only final reporting.
+13. Phase 3 bootstrap has started in parallel: non-breaking multi-root domain config scaffolding plus filesystem domain-plan artifacts, while v1.x runtime remains single-root.
 
 Known constraints:
 1. Default embedding runtime is `hash` unless ONNX is configured.
@@ -130,13 +262,29 @@ python scripts/split_golden_suite.py --input tests/retrieval_golden/repo_bootstr
 ```bash
 python scripts/build_curated_mixed_suites.py --input tests/retrieval_golden/repo_bootstrap_v2_full.json --tune-output tests/retrieval_golden/repo_curated_tune.json --holdout-output tests/retrieval_golden/repo_curated_holdout.json --split-size 40 --non-symbol-per-split 10 --dataset-prefix repo
 ```
+12. Config-aligned bootstrap generation for a scoped repo:
+```bash
+python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --config config/relevance-ai-testgen.toml --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20
+```
+Optional faster mode for large git repos:
+```bash
+python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --git-tracked-only --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20
+```
 12. Filesystem candidate discovery (workspace mirrors excluded + remote dedupe by default):
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/discover_repo_candidates.ps1 -Roots C:\Users\<user> -MinTrackedFiles 80 -TopN 80 -OutputPath .semanticfs/bench/filesystem_repo_candidates_min80.json
 ```
-13. Filesystem backlog build (prioritized uncovered/gap/partial/ok queue):
+13. Filesystem backlog build (prioritized uncovered/gap/partial/representative/ok queue):
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/build_filesystem_scope_backlog.ps1 -CandidatesPath .semanticfs/bench/filesystem_repo_candidates_min80.json -OutputPath .semanticfs/bench/filesystem_scope_backlog_latest.json
+```
+14. Phase 3 domain-plan build from latest backlog:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build_phase3_domain_plan.ps1 -BacklogPath .semanticfs/bench/filesystem_scope_backlog_latest.json -OutputPath .semanticfs/bench/filesystem_domain_plan_latest.json
+```
+15. Query gap report for targeted hardening:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build_query_gap_report.ps1 -DatasetName repo8872pp_bootstrap_v1_holdout_v1
 ```
 
 ## Documentation Map
@@ -144,18 +292,20 @@ Use these docs by role:
 1. `docs/new-chat-handoff.md`: current status, exact next steps, execution order.
 2. `docs/big-picture-roadmap.md`: multi-phase product direction and guardrails.
 3. `docs/v1_2_execution_plan.md`: v1.2 scope, acceptance criteria, active work items.
-4. `docs/future-steps-log.md`: running backlog/history of discussed future work.
-5. `docs/benchmark.md`: command reference and artifact semantics.
-6. `docs/implemented-v1_1.md`: v1.1 implementation baseline.
-7. `docs/release-v1_1_0-rc1.md`: release gate checklist.
-8. `docs/README.md`: documentation index and read order.
+4. `docs/phase3_execution_plan.md`: parallel Phase 3 bootstrap scope and execution order.
+5. `docs/future-steps-log.md`: running backlog/history of discussed future work.
+6. `docs/benchmark.md`: command reference and artifact semantics.
+7. `docs/implemented-v1_1.md`: v1.1 implementation baseline.
+8. `docs/release-v1_1_0-rc1.md`: release gate checklist.
+9. `docs/README.md`: documentation index and read order.
 
 ## New Chat Bootstrap
 If starting a fresh assistant chat, read in this order:
 1. `README.md`
 2. `docs/new-chat-handoff.md`
 3. `docs/v1_2_execution_plan.md`
-4. `docs/future-steps-log.md`
-5. `docs/benchmark.md`
+4. `docs/phase3_execution_plan.md`
+5. `docs/future-steps-log.md`
+6. `docs/benchmark.md`
 
 This sequence is the source of truth for current priorities.

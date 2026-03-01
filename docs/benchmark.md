@@ -64,7 +64,8 @@
 1. `cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark relevance --fixture-repo tests/fixtures/benchmark_repo --golden tests/retrieval_golden/benchmark_repo.json`
 2. Multi-suite mode:
 - `cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark relevance --fixture-repo /abs/repo --golden-dir tests/retrieval_golden`
-3. Emits:
+3. When the fixture repo is the `semanticFS` repo itself, `config/relevance-real.toml` intentionally excludes benchmark harness paths (`tests/retrieval_golden/**`, `config/relevance-*.toml`) so the evaluation measures product retrieval instead of self-indexed fixtures.
+4. Emits:
 - `recall_at_5`
 - `mrr`
 - `symbol_hit_rate`
@@ -86,10 +87,12 @@
 1. `retrieval.code_path_boost`
 2. `retrieval.docs_path_penalty`
 3. `retrieval.test_path_penalty`
-4. `retrieval.recency_half_life_hours`
-5. `retrieval.recency_min_boost` / `retrieval.recency_max_boost`
-6. Built-in generated-artifact suppression is applied in retrieval prior scoring for paths such as `.next`, `.nuxt`, `.svelte-kit`, `.turbo`, `dist`, `build`, `out`, and `coverage`.
-7. Tune these against golden suites to reduce verbose-doc/build-artifact shadowing.
+4. `retrieval.asset_path_penalty`
+5. `retrieval.recency_half_life_hours`
+6. `retrieval.recency_min_boost` / `retrieval.recency_max_boost`
+7. Built-in generated-artifact suppression is applied in retrieval prior scoring for paths such as `.next`, `.nuxt`, `.svelte-kit`, `.turbo`, `dist`, `build`, `out`, and `coverage`.
+8. Built-in non-code asset suppression is also applied for asset-heavy paths (for example `assets`, `static`, `media`, and extensions such as `.dat`, `.png`, `.jpg`, `.onnx`) so checked-in assets do not shadow likely source hits.
+9. Tune these against golden suites to reduce verbose-doc/build-artifact/asset shadowing.
 
 ## History artifacts (nightly trendline)
 1. Add `--history` to `benchmark run`, `benchmark tune-lancedb`, `benchmark tune-onnx`, `benchmark soak`, or `benchmark relevance`.
@@ -99,6 +102,7 @@
 - `powershell -ExecutionPolicy Bypass -File scripts/nightly_bench.ps1 -ConfigPath config/semanticfs.sample.toml -FixtureRepo tests/fixtures/benchmark_repo -GoldenDir tests/retrieval_golden -SoakSeconds 30`
 5. Representative nightly helper (Windows, real suites + strict gate):
 - `powershell -ExecutionPolicy Bypass -File scripts/nightly_representative.ps1 -SoakSeconds 30`
+ - the script now snapshots the `semanticFS` relevance artifact and restores it before `release-gate` so the strict gate validates the intended suite even after the `ai-testgen` relevance step.
 6. Drift summary helper (counts + last-N deltas + date coverage):
 - `powershell -ExecutionPolicy Bypass -File scripts/drift_summary.ps1`
 - Output: `.semanticfs/bench/drift_summary_latest.json`
@@ -115,18 +119,28 @@
   - disable remote dedupe: `-DisableRemoteDedupe`
 3. Build prioritized filesystem-scope backlog from discovery + strict holdout artifacts:
 - `powershell -ExecutionPolicy Bypass -File scripts/build_filesystem_scope_backlog.ps1 -CandidatesPath .semanticfs/bench/filesystem_repo_candidates_latest.json -OutputPath .semanticfs/bench/filesystem_scope_backlog_latest.json`
-- Output includes `uncovered`, `covered_gap`, `covered_partial`, and `covered_ok` buckets with per-repo next actions.
-4. Generate a bootstrap golden suite from a local repo:
+- Output includes `uncovered`, `covered_gap`, `covered_partial`, `covered_representative`, and `covered_ok` buckets with per-repo next actions.
+4. Build a draft Phase 3 domain plan from the backlog:
+- `powershell -ExecutionPolicy Bypass -File scripts/build_phase3_domain_plan.ps1 -BacklogPath .semanticfs/bench/filesystem_scope_backlog_latest.json -OutputPath .semanticfs/bench/filesystem_domain_plan_latest.json`
+- Output includes promotion buckets (`promote_candidate`, `harden_existing`, `expand_parent_root`, `add_strict_holdout`, `monitor`) plus trust-class guesses.
+5. Build a per-dataset query gap report from the latest head-to-head artifact:
+- `powershell -ExecutionPolicy Bypass -File scripts/build_query_gap_report.ps1 -DatasetName repo8872pp_bootstrap_v1_holdout_v1`
+- Output highlights semantic misses, rank lags, and rank gains for targeted hardening.
+6. Generate a bootstrap golden suite from a local repo:
 - `python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20`
 - bootstrap generator now skips common generated directories (for example `.next`, `.nuxt`, `.svelte-kit`, `.turbo`, `.cache`, `coverage`, `out`) so suites stay source-focused.
-5. Run exploratory head-to-head on that repo:
+ - for large git repos where the tree walk is too slow, add `--git-tracked-only` to enumerate tracked files via `git ls-files` instead of walking the full tree.
+7. For repos with scoped benchmark filters, pass the matching config so bootstrap generation uses the same `filter.allow_roots` / `filter.deny_globs` rules as the benchmark run:
+- `python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --config config\relevance-ai-testgen.toml --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20`
+8. Config-aligned bootstrap generation is now the standard path for scoped repos; use the raw mode only for exploratory suites when no benchmark filter file exists.
+9. Run exploratory head-to-head on that repo:
 - `cargo run --release -p semanticfs-cli -- --config config/relevance-real.toml benchmark head-to-head --fixture-repo C:\path\repo --golden tests/retrieval_golden/repo_bootstrap.json --history`
-6. Bootstrap suites are exploratory only; curate/lock queries before using them as release evidence.
-7. Expanded bootstrap seed for curated suites:
+10. Bootstrap suites are exploratory only; curate/lock queries before using them as release evidence.
+11. Expanded bootstrap seed for curated suites:
 - `python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --output tests/retrieval_golden/repo_bootstrap_v2_full.json --dataset-name repo_bootstrap_v2_full --max-queries 120`
 
 ## Tune vs holdout protocol (strict)
-1. Split exploratory suite into deterministic tune/holdout:
+1. Split a bootstrap or other config-aligned suite into deterministic tune/holdout:
 - `python scripts/split_golden_suite.py --input tests/retrieval_golden/repo_bootstrap.json --tune-output tests/retrieval_golden/repo_tune.json --holdout-output tests/retrieval_golden/repo_holdout.json --tune-count 10`
 2. Curate mixed acceptance-grade splits from expanded bootstrap:
 - `python scripts/build_curated_mixed_suites.py --input tests/retrieval_golden/repo_bootstrap_v2_full.json --tune-output tests/retrieval_golden/repo_curated_tune.json --holdout-output tests/retrieval_golden/repo_curated_holdout.json --split-size 40 --non-symbol-per-split 10 --dataset-prefix repo`
@@ -157,6 +171,8 @@
 - `powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2 -DiscoveryRoots C:\Users\<user> -DiscoveryMinTrackedFiles 500 -DiscoveryTopN 30`
 4. By default, daytime action runner now builds `.semanticfs/bench/filesystem_scope_backlog_latest.json` after discovery. Skip with:
 - `-SkipFilesystemBacklog`
+5. By default, daytime action runner now also builds `.semanticfs/bench/filesystem_domain_plan_latest.json` after discovery/backlog. Skip with:
+- `-SkipDomainPlan`
 
 ## What it checks
 1. Search markdown path renders.
@@ -183,3 +199,5 @@
 8. `.semanticfs/bench/drift_summary_latest.json`
 9. `.semanticfs/bench/tune_holdout_<label>_latest.json`
 10. `.semanticfs/bench/filesystem_scope_backlog_latest.json`
+11. `.semanticfs/bench/filesystem_domain_plan_latest.json`
+12. `.semanticfs/bench/query_gap_<dataset>_latest.json`

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "classifai_blogs_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "detect",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/detect.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "autopad",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/common.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "_initialize_biases",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/yolo.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "backward",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/activations.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "_RepeatSampler",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/datasets.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "apply_classifier",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/general.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "BCEBlurWithLogitsLoss",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/loss.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "butter_lowpass",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/plots.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "create_dataset_artifact",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/wandb_logging/log_dataset.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "parse_opt",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/yolov5/detect.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

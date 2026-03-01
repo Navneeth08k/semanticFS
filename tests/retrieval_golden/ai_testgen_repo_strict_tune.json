@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "dataset_name": "ai_testgen_repo_v1_tune_v1",
+  "queries": [
+    {
+      "id": "a01",
+      "query": "run_git_diff",
+      "expected_paths": [
+        "cli.py"
+      ]
+    },
+    {
+      "id": "a03",
+      "query": "generate_test_for_staged_changes",
+      "expected_paths": [
+        "cli.py"
+      ]
+    },
+    {
+      "id": "a05",
+      "query": "parse_unified_diff",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ]
+    },
+    {
+      "id": "a07",
+      "query": "extract_signatures_java",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ]
+    },
+    {
+      "id": "a09",
+      "query": "extract_signatures_javascript",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ]
+    },
+    {
+      "id": "a11",
+      "query": "_parse_hunks",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ]
+    },
+    {
+      "id": "a13",
+      "query": "PromptConfig",
+      "expected_paths": [
+        "ai_testgen_core/prompt_builder.py"
+      ]
+    },
+    {
+      "id": "a15",
+      "query": "extract_java_signatures",
+      "expected_paths": [
+        "adapters/java_adapter.py"
+      ]
+    },
+    {
+      "id": "a17",
+      "query": "test_parse_python_diff",
+      "expected_paths": [
+        "tests/test_diff_parser.py"
+      ]
+    },
+    {
+      "id": "a19",
+      "query": "GEMINI_API_KEY environment variable",
+      "expected_paths": [
+        "docs/SPECIFICATIONS.md",
+        "docs/contract.md"
+      ]
+    }
+  ]
+}

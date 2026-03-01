@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "mathgame_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "AuthForm",
+      "expected_paths": [
+        "components/auth/auth-form.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "createNewRound",
+      "expected_paths": [
+        "components/game/game-board.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "GradientTextDemo",
+      "expected_paths": [
+        "components/gradient-text-demo.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "fetchLeaderboard",
+      "expected_paths": [
+        "components/leaderboard/leaderboard.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "fetchUserData",
+      "expected_paths": [
+        "components/profile/user-stats.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "ThemeToggle",
+      "expected_paths": [
+        "components/theme-toggle.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "Badge",
+      "expected_paths": [
+        "components/ui/badge.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "Calendar",
+      "expected_paths": [
+        "components/ui/calendar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "ChartStyle",
+      "expected_paths": [
+        "components/ui/chart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "ContextMenuShortcut",
+      "expected_paths": [
+        "components/ui/context-menu.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

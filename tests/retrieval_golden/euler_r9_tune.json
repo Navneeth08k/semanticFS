@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "euler_r9_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "handleLogin",
+      "expected_paths": [
+        "app/(auth)/login/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "POST",
+      "expected_paths": [
+        "app/api/hint/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "handleCreateNotebook",
+      "expected_paths": [
+        "app/notebooks/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "checkAuth",
+      "expected_paths": [
+        "components/AuthGuard.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "handleKeyPress",
+      "expected_paths": [
+        "components/ChatPanel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "clearSelection",
+      "expected_paths": [
+        "components/FileUploader.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "formatDate",
+      "expected_paths": [
+        "components/NotebookCard.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "ThemeProvider",
+      "expected_paths": [
+        "components/theme-provider.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "Badge",
+      "expected_paths": [
+        "components/ui/badge.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "Calendar",
+      "expected_paths": [
+        "components/ui/calendar.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

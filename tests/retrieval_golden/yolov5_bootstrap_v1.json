@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_name": "yolov5_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "parse_opt",
+      "expected_paths": [
+        "detect.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "export_coreml",
+      "expected_paths": [
+        "export.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "_create",
+      "expected_paths": [
+        "hubconf.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "_apply",
+      "expected_paths": [
+        "models/common.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "attempt_load",
+      "expected_paths": [
+        "models/experimental.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "_make_grid",
+      "expected_paths": [
+        "models/tf.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "_clip_augmented",
+      "expected_paths": [
+        "models/yolo.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "train",
+      "expected_paths": [
+        "train.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "notebook_init",
+      "expected_paths": [
+        "utils/__init__.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "AconC",
+      "expected_paths": [
+        "utils/activations.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "Albumentations",
+      "expected_paths": [
+        "utils/augmentations.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "anchor_fitness",
+      "expected_paths": [
+        "utils/autoanchor.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "autobatch",
+      "expected_paths": [
+        "utils/autobatch.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "Callbacks",
+      "expected_paths": [
+        "utils/callbacks.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "_RepeatSampler",
+      "expected_paths": [
+        "utils/datasets.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "attempt_download",
+      "expected_paths": [
+        "utils/downloads.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "predict",
+      "expected_paths": [
+        "utils/flask_rest_api/restapi.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "_timeout_handler",
+      "expected_paths": [
+        "utils/general.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "Loggers",
+      "expected_paths": [
+        "utils/loggers/__init__.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "create_dataset_artifact",
+      "expected_paths": [
+        "utils/loggers/wandb/log_dataset.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

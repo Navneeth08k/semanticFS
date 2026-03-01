@@ -142,7 +142,8 @@
       "id": "hs018",
       "query": "confirmGame",
       "expected_paths": [
-        "screens/LogScreen_fixed.js"
+        "screens/LogScreen_fixed.js",
+        "screens/LogScreen.js"
       ],
       "symbol_query": true
     },

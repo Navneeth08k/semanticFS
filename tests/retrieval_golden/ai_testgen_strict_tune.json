@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "ai_testgen_strict_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "_load_default_signatures",
+      "expected_paths": [
+        "adapters/java_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "_detect_language",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "detect_language",
+      "expected_paths": [
+        "cli.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "test_empty_diff",
+      "expected_paths": [
+        "tests/test_diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "_type_name",
+      "expected_paths": [
+        "adapters/java_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "extract_function_signatures",
+      "expected_paths": [
+        "adapters/python_adapter.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "_parse_hunks",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "DiffHunk",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "extract_signatures_javascript",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "FunctionSignature",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_name": "boilermakexii_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "extract_scores_from_tex",
+      "expected_paths": [
+        "Gemini.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "text_to_speech",
+      "expected_paths": [
+        "Text_To_Speech.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "PATCH",
+      "expected_paths": [
+        "ai-speaking-assistant/app/api/debates/[id]/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "POST",
+      "expected_paths": [
+        "ai-speaking-assistant/app/api/debates/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "fetchDebates",
+      "expected_paths": [
+        "ai-speaking-assistant/app/dashboard/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "fetchDebate",
+      "expected_paths": [
+        "ai-speaking-assistant/app/debate/[id]/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "fetchScores",
+      "expected_paths": [
+        "ai-speaking-assistant/app/debate/[id]/result/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "generateTopic",
+      "expected_paths": [
+        "ai-speaking-assistant/app/debate/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "FeatureCard",
+      "expected_paths": [
+        "ai-speaking-assistant/app/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "handleVideoUpload",
+      "expected_paths": [
+        "ai-speaking-assistant/app/presentation-skills/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "ThemeProvider",
+      "expected_paths": [
+        "ai-speaking-assistant/components/theme-provider.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "Badge",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/badge.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "Calendar",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/calendar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "useCarousel",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "ChartStyle",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/chart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "CommandDialog",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/command.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "ContextMenuShortcut",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/context-menu.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "DialogFooter",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/dialog.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

@@ -11,6 +11,7 @@ deny_globs = [
   "**/.venv/**", "**/venv/**", "**/__pycache__/**", "**/.cache/**", "**/.idea/**",
   "**/coverage/**", "**/out/**",
   "**/.DS_Store", "**/Library/**", "**/Trash/**", "**/*.jpg", "**/*.png", "**/*.mp4",
+  "**/tests/retrieval_golden/**", "**/config/relevance-*.toml",
   "**/.semanticfs/**", "**/target_daytime/**", "**/.github/**",
   "**/*.db", "**/*.db-*", "**/*.sqlite", "**/*.sqlite-*"
 ]
@@ -45,6 +46,7 @@ allow_stale = false
 code_path_boost = 1.15
 docs_path_penalty = 0.85
 test_path_penalty = 0.95
+asset_path_penalty = 0.45
 recency_half_life_hours = 24.0
 recency_min_boost = 0.85
 recency_max_boost = 1.20

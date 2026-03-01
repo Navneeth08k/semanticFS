@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "catapult_project_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "createDatabaseFunctions",
+      "expected_paths": [
+        "app/actions/create-db-functions.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "initializeDatabaseWithSql",
+      "expected_paths": [
+        "app/actions/init-database-sql.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "createSpace",
+      "expected_paths": [
+        "app/actions/space-actions.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "POST",
+      "expected_paths": [
+        "app/api/calendar/connect/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "handleAcceptAll",
+      "expected_paths": [
+        "app/chat/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "handleOpenMentor",
+      "expected_paths": [
+        "app/spaces/[id]/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "handleClick",
+      "expected_paths": [
+        "components/BrightspaceIntegrationButton.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "ChatDrawerProvider",
+      "expected_paths": [
+        "components/chat-drawer-provider.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "DailySchedule",
+      "expected_paths": [
+        "components/daily-schedule.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "HeroSection",
+      "expected_paths": [
+        "components/hero-section.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

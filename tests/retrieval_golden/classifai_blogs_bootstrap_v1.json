@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "dataset_name": "classifai_blogs_bootstrap_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "detect",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/detect.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b02",
+      "query": "create",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/hubconf.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "autopad",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/common.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "attempt_load",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/experimental.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "_initialize_biases",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/yolo.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "train",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/train.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "backward",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/activations.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "anchor_fitness",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/autoanchor.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "_RepeatSampler",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/datasets.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "predict",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/flask_rest_api/restapi.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "apply_classifier",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/general.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "attempt_download",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/google_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "BCEBlurWithLogitsLoss",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/loss.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ap_per_class",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/metrics.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "butter_lowpass",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/plots.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "copy_attr",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/torch_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "create_dataset_artifact",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/wandb_logging/log_dataset.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "check_and_upload_dataset",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/wandb_logging/wandb_utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "parse_opt",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/yolov5/detect.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "export_coreml",
+      "expected_paths": [
+        "0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/yolov5/export.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

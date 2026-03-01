@@ -1,0 +1,168 @@
+{
+    "schema_version":  1,
+    "dataset_name":  "robot_bootstrap_v1",
+    "queries":  [
+                    {
+                        "id":  "b01",
+                        "query":  "detect",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/detect.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b02",
+                        "query":  "create",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/hubconf.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b03",
+                        "query":  "autopad",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/common.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b04",
+                        "query":  "attempt_load",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/experimental.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b05",
+                        "query":  "_initialize_biases",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/models/yolo.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b06",
+                        "query":  "train",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/train.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b07",
+                        "query":  "backward",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/activations.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b08",
+                        "query":  "anchor_fitness",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/autoanchor.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b09",
+                        "query":  "_RepeatSampler",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/datasets.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b10",
+                        "query":  "predict",
+                        "expected_paths":  [
+                                               "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/flask_rest_api/restapi.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b11",
+                        "query":  "_collective_communication",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/common/distribute_utils.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b12",
+                        "query":  "define_flags",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/common/flags.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b13",
+                        "query":  "ActionsTest",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/actions_test.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b14",
+                        "query":  "_async_loop_fn",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/base_trainer.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b15",
+                        "query":  "DataConfig",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/config_definitions.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b16",
+                        "query":  "ExportModule",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/export_base.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b17",
+                        "query":  "_decode_and_parse_dataset",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/input_reader.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b18",
+                        "query":  "ClassRegistryKey",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/registry_test.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b19",
+                        "query":  "_Dense",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/test_utils.py"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "b20",
+                        "query":  "build_losses",
+                        "expected_paths":  [
+                                               "TFODCourse/Tensorflow/models/official/core/base_task.py",
+                                               "TFODCourse/Tensorflow/models/official/core/train_lib_test.py",
+                                               "TFODCourse/Tensorflow/models/official/projects/yt8m/tasks/yt8m_task.py"
+                                           ],
+                        "symbol_query":  true
+                    }
+                ]
+}

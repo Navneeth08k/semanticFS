@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "labelimg_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "_save_file",
+      "expected_paths": [
+        "labelImg.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "check_restore",
+      "expected_paths": [
+        "libs/colorDialog.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "add_shape",
+      "expected_paths": [
+        "libs/create_ml_io.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "LabelDialog",
+      "expected_paths": [
+        "libs/labelDialog.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "add_bnd_box",
+      "expected_paths": [
+        "libs/pascal_voc_io.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "add_point",
+      "expected_paths": [
+        "libs/shape.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "addAction",
+      "expected_paths": [
+        "libs/toolBar.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "add_actions",
+      "expected_paths": [
+        "libs/utils.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "minimumSizeHint",
+      "expected_paths": [
+        "libs/zoomWidget.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "test_a_write",
+      "expected_paths": [
+        "tests/test_io.py"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

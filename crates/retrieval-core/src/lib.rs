@@ -88,7 +88,7 @@ impl RetrievalCore {
                     .iter()
                     .flat_map(|v| v.iter())
                     .find(|h| make_key(h) == *path_key)
-                    .map(|h| self.score_prior(&h.path))
+                    .map(|h| self.score_prior(query, &h.path))
                     .unwrap_or(1.0);
                 (path_key.clone(), *base_score * prior)
             })
@@ -293,9 +293,10 @@ impl RetrievalCore {
         let mut stmt = conn.prepare(
             r#"
             SELECT m.path, m.start_line, m.end_line, m.file_hash
-            FROM chunks_fts f
-            JOIN chunks_meta m ON m.chunk_id = f.chunk_id AND m.path = f.path
-            WHERE f.content MATCH ?1 AND m.index_version=?2
+            FROM chunks_fts
+            JOIN chunks_meta m ON m.chunk_id = chunks_fts.chunk_id AND m.path = chunks_fts.path
+            WHERE chunks_fts.content MATCH ?1 AND m.index_version=?2
+            ORDER BY bm25(chunks_fts)
             LIMIT ?3
             "#,
         )?;
@@ -406,15 +407,19 @@ impl RetrievalCore {
         Ok(hits)
     }
 
-    fn score_prior(&self, path: &str) -> f32 {
-        self.path_prior_multiplier(path) * self.recency_prior_multiplier(path)
+    fn score_prior(&self, query: &str, path: &str) -> f32 {
+        self.path_prior_multiplier(path)
+            * self.query_path_overlap_multiplier(query, path)
+            * self.file_name_query_overlap_multiplier(query, path)
+            * self.recency_prior_multiplier(path)
     }
 
     fn path_prior_multiplier(&self, path: &str) -> f32 {
         let lower = path.to_ascii_lowercase();
         let mut mult = 1.0f32;
+        let is_code = is_code_path(&lower);
 
-        if is_code_path(&lower) {
+        if is_code {
             mult *= self.cfg.code_path_boost.max(0.1);
         }
         if is_docs_path(&lower) {
@@ -423,11 +428,75 @@ impl RetrievalCore {
         if is_test_path(&lower) {
             mult *= self.cfg.test_path_penalty.max(0.1);
         }
+        if !is_code && is_asset_path(&lower) {
+            // Keep non-code assets retrievable without letting them outrank likely source hits.
+            mult *= self.cfg.asset_path_penalty.max(0.1);
+        }
         if is_generated_artifact_path(&lower) {
             // Keep generated artifacts searchable, but prevent them from shadowing source paths.
             mult *= 0.30;
         }
         mult
+    }
+
+    fn query_path_overlap_multiplier(&self, query: &str, path: &str) -> f32 {
+        let q_terms = query_terms(query);
+        if q_terms.is_empty() {
+            return 1.0;
+        }
+
+        let p_terms = query_terms(path);
+        if p_terms.is_empty() {
+            return 1.0;
+        }
+
+        let matched = q_terms
+            .iter()
+            .filter(|q| {
+                p_terms
+                    .iter()
+                    .any(|p| p == *q || p.starts_with(q.as_str()) || q.starts_with(p.as_str()))
+            })
+            .count();
+
+        if matched == 0 {
+            return 1.0;
+        }
+
+        let ratio = matched as f32 / q_terms.len() as f32;
+        1.0 + 0.35 * ratio.clamp(0.0, 1.0)
+    }
+
+    fn file_name_query_overlap_multiplier(&self, query: &str, path: &str) -> f32 {
+        let q_terms = query_terms(query);
+        if q_terms.is_empty() {
+            return 1.0;
+        }
+
+        let file_name = Path::new(path)
+            .file_name()
+            .and_then(|v| v.to_str())
+            .unwrap_or(path);
+        let p_terms = query_terms(file_name);
+        if p_terms.is_empty() {
+            return 1.0;
+        }
+
+        let matched = q_terms
+            .iter()
+            .filter(|q| {
+                p_terms
+                    .iter()
+                    .any(|p| p == *q || p.starts_with(q.as_str()) || q.starts_with(p.as_str()))
+            })
+            .count();
+
+        if matched == 0 {
+            return 1.0;
+        }
+
+        let ratio = matched as f32 / q_terms.len() as f32;
+        1.0 + 0.55 * ratio.clamp(0.0, 1.0)
     }
 
     fn recency_prior_multiplier(&self, path: &str) -> f32 {
@@ -604,6 +673,30 @@ fn is_generated_artifact_path(path: &str) -> bool {
         || path.contains("/coverage/")
         || path.contains("/target/")
         || path.ends_with(".min.js")
+}
+
+fn is_asset_path(path: &str) -> bool {
+    path.contains("/assets/")
+        || path.contains("/static/")
+        || path.contains("/media/")
+        || path.ends_with(".dat")
+        || path.ends_with(".bin")
+        || path.ends_with(".png")
+        || path.ends_with(".jpg")
+        || path.ends_with(".jpeg")
+        || path.ends_with(".gif")
+        || path.ends_with(".svg")
+        || path.ends_with(".ico")
+        || path.ends_with(".mp3")
+        || path.ends_with(".wav")
+        || path.ends_with(".ogg")
+        || path.ends_with(".pdf")
+        || path.ends_with(".zip")
+        || path.ends_with(".onnx")
+        || path.ends_with(".pt")
+        || path.ends_with(".ckpt")
+        || path.ends_with(".pb")
+        || path.ends_with(".tflite")
 }
 
 fn symbol_query_variants(query: &str) -> Vec<String> {
@@ -802,6 +895,13 @@ mod tests {
     }
 
     #[test]
+    fn asset_path_detection_flags_non_code_assets() {
+        assert!(is_asset_path("FtcRobotController/src/main/assets/Skystone.dat"));
+        assert!(is_asset_path("web/static/logo.png"));
+        assert!(!is_asset_path("src/lib/auth.rs"));
+    }
+
+    #[test]
     fn symbol_variants_include_human_and_symbol_forms() {
         let variants = symbol_query_variants("create bert model");
         assert!(variants.iter().any(|v| v == "create_bert_model"));
@@ -814,5 +914,91 @@ mod tests {
         let variants = bm25_query_variants("_add_metrics");
         assert!(variants.iter().any(|v| v == "_add_metrics"));
         assert!(variants.iter().any(|v| v == "add metrics"));
+    }
+
+    #[test]
+    fn query_path_overlap_boosts_exact_filename_terms() {
+        let cfg = RetrievalConfig {
+            rrf_mode: "plain".to_string(),
+            rrf_k: 60,
+            topn_symbol: 10,
+            topn_bm25: 20,
+            topn_vector: 20,
+            topn_final: 5,
+            symbol_exact_boost: 2.0,
+            symbol_prefix_boost: 1.2,
+            allow_stale: false,
+            code_path_boost: 1.15,
+            docs_path_penalty: 0.85,
+            test_path_penalty: 0.95,
+            asset_path_penalty: 0.45,
+            recency_half_life_hours: 24.0,
+            recency_min_boost: 0.85,
+            recency_max_boost: 1.20,
+        };
+        let allow = vec!["**".to_string()];
+        let deny = Vec::new();
+        let guard = PolicyGuard::new(&allow, &deny).unwrap();
+        let core = RetrievalCore::open(
+            Path::new(":memory:"),
+            Path::new("."),
+            cfg,
+            384,
+            guard,
+        )
+        .unwrap();
+
+        let future_steps = core.query_path_overlap_multiplier(
+            "future steps log",
+            "docs/future-steps-log.md",
+        );
+        let unrelated = core.query_path_overlap_multiplier(
+            "future steps log",
+            "config/relevance-real.toml",
+        );
+
+        assert!(future_steps > unrelated);
+        assert!(future_steps > 1.0);
+        assert!((unrelated - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn file_name_overlap_boosts_matching_doc_title() {
+        let cfg = RetrievalConfig {
+            rrf_mode: "plain".to_string(),
+            rrf_k: 60,
+            topn_symbol: 10,
+            topn_bm25: 20,
+            topn_vector: 20,
+            topn_final: 5,
+            symbol_exact_boost: 2.0,
+            symbol_prefix_boost: 1.2,
+            allow_stale: false,
+            code_path_boost: 1.15,
+            docs_path_penalty: 0.85,
+            test_path_penalty: 0.95,
+            asset_path_penalty: 0.45,
+            recency_half_life_hours: 24.0,
+            recency_min_boost: 0.85,
+            recency_max_boost: 1.20,
+        };
+        let allow = vec!["**".to_string()];
+        let deny = Vec::new();
+        let guard = PolicyGuard::new(&allow, &deny).unwrap();
+        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
+            .unwrap();
+
+        let future_steps = core.file_name_query_overlap_multiplier(
+            "future steps log",
+            "docs/future-steps-log.md",
+        );
+        let phase3 = core.file_name_query_overlap_multiplier(
+            "future steps log",
+            "docs/phase3_execution_plan.md",
+        );
+
+        assert!(future_steps > phase3);
+        assert!(future_steps > 1.0);
+        assert!((phase3 - 1.0).abs() < f32::EPSILON);
     }
 }

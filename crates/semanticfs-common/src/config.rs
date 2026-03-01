@@ -30,6 +30,22 @@ pub struct SemanticFsConfig {
 pub struct WorkspaceConfig {
     pub repo_root: String,
     pub mount_point: String,
+    #[serde(default)]
+    pub domains: Vec<WorkspaceDomainConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceDomainConfig {
+    pub id: String,
+    pub root: String,
+    #[serde(default = "default_domain_trust_label")]
+    pub trust_label: String,
+    #[serde(default = "default_domain_enabled")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub allow_roots: Vec<String>,
+    #[serde(default)]
+    pub deny_globs: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +96,8 @@ pub struct RetrievalConfig {
     pub docs_path_penalty: f32,
     #[serde(default = "default_test_path_penalty")]
     pub test_path_penalty: f32,
+    #[serde(default = "default_asset_path_penalty")]
+    pub asset_path_penalty: f32,
     #[serde(default = "default_recency_half_life_hours")]
     pub recency_half_life_hours: f32,
     #[serde(default = "default_recency_min_boost")]
@@ -146,6 +164,35 @@ impl SemanticFsConfig {
         let raw = fs::read_to_string(path).map_err(|e| ConfigError::Read(e.to_string()))?;
         toml::from_str::<SemanticFsConfig>(&raw).map_err(|e| ConfigError::Parse(e.to_string()))
     }
+
+    pub fn effective_workspace_domains(&self) -> Vec<WorkspaceDomainConfig> {
+        self.workspace.effective_domains()
+    }
+}
+
+impl WorkspaceConfig {
+    pub fn effective_domains(&self) -> Vec<WorkspaceDomainConfig> {
+        if !self.domains.is_empty() {
+            let enabled = self
+                .domains
+                .iter()
+                .filter(|d| d.enabled)
+                .cloned()
+                .collect::<Vec<_>>();
+            if !enabled.is_empty() {
+                return enabled;
+            }
+        }
+
+        vec![WorkspaceDomainConfig {
+            id: default_domain_id(),
+            root: self.repo_root.clone(),
+            trust_label: default_domain_trust_label(),
+            enabled: true,
+            allow_roots: vec!["**".to_string()],
+            deny_globs: Vec::new(),
+        }]
+    }
 }
 
 fn default_bulk_event_threshold() -> usize {
@@ -172,6 +219,10 @@ fn default_test_path_penalty() -> f32 {
     0.95
 }
 
+fn default_asset_path_penalty() -> f32 {
+    0.45
+}
+
 fn default_recency_half_life_hours() -> f32 {
     24.0
 }
@@ -190,4 +241,70 @@ fn default_fuse_session_mode() -> String {
 
 fn default_fuse_session_max_entries() -> usize {
     512
+}
+
+fn default_domain_id() -> String {
+    "default".to_string()
+}
+
+fn default_domain_trust_label() -> String {
+    "workspace_default".to_string()
+}
+
+fn default_domain_enabled() -> bool {
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{WorkspaceConfig, WorkspaceDomainConfig};
+
+    #[test]
+    fn falls_back_to_single_root_domain_when_no_explicit_domains_exist() {
+        let cfg = WorkspaceConfig {
+            repo_root: "/repo".to_string(),
+            mount_point: "/mnt/ai".to_string(),
+            domains: Vec::new(),
+        };
+
+        let domains = cfg.effective_domains();
+        assert_eq!(domains.len(), 1);
+        assert_eq!(domains[0].id, "default");
+        assert_eq!(domains[0].root, "/repo");
+        assert_eq!(domains[0].trust_label, "workspace_default");
+        assert!(domains[0].enabled);
+        assert_eq!(domains[0].allow_roots, vec!["**".to_string()]);
+        assert!(domains[0].deny_globs.is_empty());
+    }
+
+    #[test]
+    fn returns_only_enabled_explicit_domains() {
+        let cfg = WorkspaceConfig {
+            repo_root: "/repo".to_string(),
+            mount_point: "/mnt/ai".to_string(),
+            domains: vec![
+                WorkspaceDomainConfig {
+                    id: "code".to_string(),
+                    root: "/repo/code".to_string(),
+                    trust_label: "trusted".to_string(),
+                    enabled: true,
+                    allow_roots: vec!["src/**".to_string()],
+                    deny_globs: vec![],
+                },
+                WorkspaceDomainConfig {
+                    id: "docs".to_string(),
+                    root: "/repo/docs".to_string(),
+                    trust_label: "untrusted".to_string(),
+                    enabled: false,
+                    allow_roots: vec!["**".to_string()],
+                    deny_globs: vec![],
+                },
+            ],
+        };
+
+        let domains = cfg.effective_domains();
+        assert_eq!(domains.len(), 1);
+        assert_eq!(domains[0].id, "code");
+        assert_eq!(domains[0].root, "/repo/code");
+    }
 }

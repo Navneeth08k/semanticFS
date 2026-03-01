@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "semanticfs_strict_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "active_version",
+      "expected_paths": [
+        "crates/fuse-bridge/src/lib.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "chunk_config",
+      "expected_paths": [
+        "crates/indexer/src/chunking.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "Backend",
+      "expected_paths": [
+        "crates/indexer/src/embedding.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "run_async",
+      "expected_paths": [
+        "crates/indexer/src/lancedb_sync.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "build_enrichment_for_dir",
+      "expected_paths": [
+        "crates/indexer/src/map_enrichment.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "classify_symbol_kind",
+      "expected_paths": [
+        "crates/indexer/src/symbols.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "get_directory_map",
+      "expected_paths": [
+        "crates/mcp/src/lib.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "asset_path_detection_flags_non_code_assets",
+      "expected_paths": [
+        "crates/retrieval-core/src/lib.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "benchmark_command",
+      "expected_paths": [
+        "crates/semanticfs-cli/src/main.rs"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "ConfigError",
+      "expected_paths": [
+        "crates/semanticfs-common/src/config.rs"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

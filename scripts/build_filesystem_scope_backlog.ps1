@@ -1,6 +1,7 @@
 param(
   [string]$CandidatesPath = ".semanticfs/bench/filesystem_repo_candidates_latest.json",
   [string]$TuneHoldoutGlob = ".semanticfs/bench/tune_holdout_*_latest.json",
+  [string]$HeadToHeadGlob = ".semanticfs/bench/history/head_to_head_latest_*.json",
   [string]$OutputPath = ".semanticfs/bench/filesystem_scope_backlog_latest.json",
   [int]$TopN = 0
 )
@@ -42,6 +43,15 @@ if ([string]::IsNullOrWhiteSpace($globDir)) {
 $globLeaf = Split-Path $TuneHoldoutGlob -Leaf
 $tuneFiles = @(
   Get-ChildItem -Path $globDir -File -Filter $globLeaf -ErrorAction SilentlyContinue
+)
+
+$h2hDir = Split-Path $HeadToHeadGlob -Parent
+if ([string]::IsNullOrWhiteSpace($h2hDir)) {
+  $h2hDir = "."
+}
+$h2hLeaf = Split-Path $HeadToHeadGlob -Leaf
+$headToHeadFiles = @(
+  Get-ChildItem -Path $h2hDir -File -Filter $h2hLeaf -ErrorAction SilentlyContinue
 )
 
 $latestCoverageByRepo = @{}
@@ -99,15 +109,50 @@ foreach ($f in $tuneFiles) {
 }
 
 $coverageEntries = @($latestCoverageByRepo.Values)
+$latestRepresentativeByRepo = @{}
+foreach ($f in $headToHeadFiles) {
+  $doc = $null
+  try {
+    $doc = Get-Content -Path $f.FullName | ConvertFrom-Json
+  }
+  catch {
+    continue
+  }
+  if ($null -eq $doc -or [string]::IsNullOrWhiteSpace($doc.repo_root)) {
+    continue
+  }
+  $repoKey = Normalize-PathKey $doc.repo_root
+  if ([string]::IsNullOrWhiteSpace($repoKey)) {
+    continue
+  }
+  $entry = [pscustomobject]@{
+    repo_root = $doc.repo_root
+    artifact_path = $f.FullName
+    repo_key = $repoKey
+  }
+  if (-not $latestRepresentativeByRepo.ContainsKey($repoKey)) {
+    $latestRepresentativeByRepo[$repoKey] = $entry
+    continue
+  }
+  $existing = $latestRepresentativeByRepo[$repoKey]
+  if ($f.LastWriteTimeUtc -gt (Get-Item $existing.artifact_path).LastWriteTimeUtc) {
+    $latestRepresentativeByRepo[$repoKey] = $entry
+  }
+}
+
 $items = New-Object System.Collections.Generic.List[object]
 foreach ($repo in $candidatePayload.repos) {
   $repoKey = Normalize-PathKey $repo.repo_root
   $coverage = $null
+  $representativeCoverage = $null
   $partialLabels = @()
   $partialCount = 0
   if ($latestCoverageByRepo.ContainsKey($repoKey)) {
     $coverage = $latestCoverageByRepo[$repoKey]
   } else {
+    if ($latestRepresentativeByRepo.ContainsKey($repoKey)) {
+      $representativeCoverage = $latestRepresentativeByRepo[$repoKey]
+    }
     $prefix = "$repoKey\"
     $partialMatches = @(
       $coverageEntries | Where-Object {
@@ -134,6 +179,10 @@ foreach ($repo in $candidatePayload.repos) {
     $status = "covered_partial"
     $priorityBucket = 2
     $nextAction = "expand_from_subrepo_coverage"
+  } elseif ($null -eq $coverage -and $null -ne $representativeCoverage) {
+    $status = "covered_representative"
+    $priorityBucket = 2
+    $nextAction = "optionally_add_strict_holdout"
   } elseif ($null -ne $coverage) {
     $deltaRecall = $coverage.semantic.recall - $coverage.baseline.recall
     $deltaMrr = $coverage.semantic.mrr - $coverage.baseline.mrr
@@ -184,6 +233,7 @@ if ($TopN -gt 0) {
 $uncoveredCount = @($items | Where-Object { $_.status -eq "uncovered" }).Count
 $coveredGapCount = @($items | Where-Object { $_.status -eq "covered_gap" }).Count
 $coveredPartialCount = @($items | Where-Object { $_.status -eq "covered_partial" }).Count
+$coveredRepresentativeCount = @($items | Where-Object { $_.status -eq "covered_representative" }).Count
 $coveredOkCount = @($items | Where-Object { $_.status -eq "covered_ok" }).Count
 
 $payload = [pscustomobject]@{
@@ -191,12 +241,15 @@ $payload = [pscustomobject]@{
   generated_at_utc = (Get-Date).ToUniversalTime().ToString("o")
   candidates_path = $CandidatesPath
   tune_holdout_glob = $TuneHoldoutGlob
+  head_to_head_glob = $HeadToHeadGlob
   candidate_repo_count = @($candidatePayload.repos).Count
   tune_holdout_artifact_count = $tuneFiles.Count
+  head_to_head_artifact_count = $headToHeadFiles.Count
   counts = [pscustomobject]@{
     uncovered = $uncoveredCount
     covered_gap = $coveredGapCount
     covered_partial = $coveredPartialCount
+    covered_representative = $coveredRepresentativeCount
     covered_ok = $coveredOkCount
   }
   items = $ordered
@@ -211,8 +264,8 @@ Set-Content -Path $OutputPath -Value $json
 
 Write-Host ""
 Write-Host "Filesystem scope backlog complete."
-Write-Host "candidates: $(@($candidatePayload.repos).Count) | tune/holdout artifacts: $($tuneFiles.Count)"
-Write-Host "uncovered: $uncoveredCount | covered_gap: $coveredGapCount | covered_partial: $coveredPartialCount | covered_ok: $coveredOkCount"
+Write-Host "candidates: $(@($candidatePayload.repos).Count) | tune/holdout artifacts: $($tuneFiles.Count) | head-to-head artifacts: $($headToHeadFiles.Count)"
+Write-Host "uncovered: $uncoveredCount | covered_gap: $coveredGapCount | covered_partial: $coveredPartialCount | covered_representative: $coveredRepresentativeCount | covered_ok: $coveredOkCount"
 $ordered |
   Select-Object -First 12 repo_root, status, tracked_files, code_files, latest_label, partial_coverage_count, next_action |
   Format-Table -AutoSize

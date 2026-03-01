@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "boilermakexii_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "extract_scores_from_tex",
+      "expected_paths": [
+        "Gemini.py"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "PATCH",
+      "expected_paths": [
+        "ai-speaking-assistant/app/api/debates/[id]/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "fetchDebates",
+      "expected_paths": [
+        "ai-speaking-assistant/app/dashboard/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "fetchScores",
+      "expected_paths": [
+        "ai-speaking-assistant/app/debate/[id]/result/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "FeatureCard",
+      "expected_paths": [
+        "ai-speaking-assistant/app/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "ThemeProvider",
+      "expected_paths": [
+        "ai-speaking-assistant/components/theme-provider.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "Badge",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/badge.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "Calendar",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/calendar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "ChartStyle",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/chart.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "ContextMenuShortcut",
+      "expected_paths": [
+        "ai-speaking-assistant/components/ui/context-menu.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

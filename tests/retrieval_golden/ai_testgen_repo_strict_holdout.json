@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "dataset_name": "ai_testgen_repo_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "a02",
+      "query": "generate_test_for_file",
+      "expected_paths": [
+        "cli.py"
+      ]
+    },
+    {
+      "id": "a04",
+      "query": "save_test_file",
+      "expected_paths": [
+        "cli.py"
+      ]
+    },
+    {
+      "id": "a06",
+      "query": "get_changed_signatures",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ]
+    },
+    {
+      "id": "a08",
+      "query": "extract_signatures_python",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ]
+    },
+    {
+      "id": "a10",
+      "query": "_detect_language",
+      "expected_paths": [
+        "ai_testgen_core/diff_parser.py"
+      ]
+    },
+    {
+      "id": "a12",
+      "query": "PromptBuilder",
+      "expected_paths": [
+        "ai_testgen_core/prompt_builder.py"
+      ]
+    },
+    {
+      "id": "a14",
+      "query": "extract_function_signatures",
+      "expected_paths": [
+        "adapters/python_adapter.py"
+      ]
+    },
+    {
+      "id": "a16",
+      "query": "test_parse_java_diff",
+      "expected_paths": [
+        "tests/test_diff_parser.py"
+      ]
+    },
+    {
+      "id": "a18",
+      "query": "unified diff format",
+      "expected_paths": [
+        "docs/SPECIFICATIONS.md",
+        "docs/contract.md"
+      ]
+    },
+    {
+      "id": "a20",
+      "query": "python adapter unified git diff hunks",
+      "expected_paths": [
+        "adapters/python_adapter.py"
+      ]
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 # SemanticFS v1.2 Execution Plan
 
-Last updated: February 24, 2026
+Last updated: March 1, 2026
 
 ## Intent
 v1.2 is the reliability and quality release after v1.1 foundation hardening.
 Primary objective: validate and stabilize SemanticFS on representative real-repo workloads.
+This plan remains active while Phase 3 bootstrap starts in parallel; v1.2 is not yet considered closed.
 
 ## In Scope
 1. Retrieval quality hardening and measurable evaluation.
@@ -142,23 +143,120 @@ Primary objective: validate and stabilize SemanticFS on representative real-repo
    - new artifact: `.semanticfs/bench/filesystem_scope_backlog_latest.json`.
    - latest counts: `uncovered=11`, `covered_gap=4`, `covered_partial=2`, `covered_ok=4`.
    - partial-coverage roots identified for expansion: `C:\Users\navneeth\Documents\flutter` (`flutter_tools`) and `C:\Users\navneeth\Desktop\NavneethThings\Projects\Robot` (`tensorflow_models_curated`).
+50. Phase 3 bootstrap is now explicit and parallelized:
+   - new doc: `docs/phase3_execution_plan.md`.
+   - operating mode is now `Phase 2 closeout + Phase 3 bootstrap`.
+51. Filesystem-scope backlog classification was refined to account for representative coverage:
+   - `scripts/build_filesystem_scope_backlog.ps1` now adds `covered_representative` for roots with representative head-to-head evidence but no strict tune/holdout yet.
+   - latest backlog counts are now `uncovered=9`, `covered_gap=4`, `covered_partial=2`, `covered_representative=2`, `covered_ok=4`.
+52. Phase 3 bootstrap tooling landed:
+   - multi-root domain config scaffolding added in shared config (`workspace.domains`) with single-root fallback preserved.
+   - CLI `init` and `health` now expose effective domain shape without changing runtime behavior.
+   - new planner script: `scripts/build_phase3_domain_plan.ps1`.
+   - new artifact: `.semanticfs/bench/filesystem_domain_plan_latest.json` (`promote_candidate=9`, `harden_existing=4`, `expand_parent_root=2`, `add_strict_holdout=2`, `monitor=4`).
+53. Query-level hardening tooling landed:
+   - new script: `scripts/build_query_gap_report.ps1`.
+   - query-gap artifacts now exist for `flutter_tools`, `repo8872pp`, and `syntaxless`.
+54. Asset-shadowing hardening landed and materially improved `repo8872pp`:
+   - `crates/retrieval-core/src/lib.rs` now applies a non-code asset-path prior penalty (for example `assets`, `static`, `.dat`, `.png`, `.onnx`) to reduce checked-in asset shadowing.
+   - retrieval config now exposes `retrieval.asset_path_penalty`.
+   - strict `repo8872pp` holdout rerun improved SemanticFS from MRR `0.7633` / symbol-hit `0.6000` / p95 `13.244 ms` to MRR `0.8722` / symbol-hit `0.8000` / p95 `11.342 ms`; baseline remained MRR `0.9167` / symbol-hit `0.8667` / p95 `37.820 ms`.
+   - `repo8872pp` query-level rank lag dropped from `5` queries to `1` residual lag (`b22`).
+55. Code-language coverage hardening landed for symbol-first retrieval:
+   - `crates/indexer/src/filetype.rs` now classifies `.tsx`, `.jsx`, `.java`, `.c`, `.cpp`, `.h`, `.hpp`, `.cs`, and `.dart` as code.
+   - `crates/indexer/src/symbols.rs` now extracts `export async function`, Java class/interface declarations with access modifiers, and typed method declarations (for example Dart/Java signatures like `void _write(...)`).
+   - new unit coverage added for extended filetype detection and new symbol forms.
+56. Focused strict holdout reruns closed the prior cross-repo ranking gaps:
+   - `repo8872pp_bootstrap_v1_holdout_v1` (`base`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `10.608 ms`; baseline recall `1.0000`, MRR `0.8889`, symbol-hit `0.8000`, p95 `38.283 ms`.
+   - `syntaxless_bootstrap_v1_holdout_v1` (`symbol_latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `19.256 ms`; baseline recall `1.0000`, MRR `0.8889`, symbol-hit `0.8000`, p95 `42.625 ms`.
+   - `flutter_tools_bootstrap_v1_holdout_v1` (`symbol_latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `31.973 ms`; baseline recall `1.0000`, MRR `0.9667`, symbol-hit `0.9333`, p95 `92.349 ms`.
+   - query-gap reruns for all three now show `semantic_miss=0` and `semantic_rank_lag=0`.
+57. First backlog-driven uncovered repo promotion completed:
+   - generated/split suites: `wilcoxrobotics_bootstrap_v1.json`, `wilcoxrobotics_tune.json`, `wilcoxrobotics_holdout.json`.
+   - strict holdout (`wilcoxrobotics_bootstrap_v1_holdout_v1`, selected `symbol_latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `25.085 ms`; baseline recall `1.0000`, MRR `0.9500`, symbol-hit `0.9000`, p95 `40.055 ms`.
+   - backlog/domain-plan refresh after this run moved counts to `uncovered=8`, `covered_gap=2`, `covered_partial=2`, `covered_representative=2`, `covered_ok=7` and `promote_candidate=8`, `harden_existing=2`, `expand_parent_root=2`, `add_strict_holdout=2`, `monitor=7`.
+58. Focused strict holdout reruns closed the remaining strict-gap repos:
+   - `apex_scholars_bootstrap_v1_holdout_v1` (`symbol_latency_guard`): SemanticFS recall `1.0000`, MRR `0.9667`, symbol-hit `0.9333`, p95 `14.742 ms`; baseline recall `1.0000`, MRR `0.7667`, symbol-hit `0.6000`, p95 `28.347 ms`.
+   - `pseudolang_bootstrap_v1_holdout_v1` (`latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `11.838 ms`; baseline recall `1.0000`, MRR `0.8222`, symbol-hit `0.6667`, p95 `34.086 ms`.
+   - latest query-gap reruns for both now show `semantic_miss=0` and `semantic_rank_lag=0`.
+59. Second backlog-driven uncovered repo promotion completed:
+   - generated/split suites: `catapult_project_bootstrap_v1.json`, `catapult_project_tune.json`, `catapult_project_holdout.json`.
+   - strict holdout (`catapult_project_bootstrap_v1_holdout_v1`, selected `symbol_latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `32.136 ms`; baseline recall `1.0000`, MRR `0.9500`, symbol-hit `0.9000`, p95 `33.379 ms`.
+   - latest query-gap rerun shows `semantic_miss=0` and `semantic_rank_lag=0`.
+   - backlog/domain-plan refresh after this run moved counts to `uncovered=7`, `covered_gap=0`, `covered_partial=2`, `covered_representative=2`, `covered_ok=10` and `promote_candidate=7`, `harden_existing=0`, `expand_parent_root=2`, `add_strict_holdout=2`, `monitor=10`.
+60. Representative nightly run executed on February 28, 2026:
+   - date-separated coverage artifacts moved to `6/7`, but the run is not a clean green night.
+   - latest `semanticfs_repo_v1` nightly result fell to recall `0.8000`, MRR `0.8000`, symbol-hit `1.0000`, p95 `41.337 ms`; baseline was recall `0.8000`, MRR `0.7500`, symbol-hit `0.8571`, p95 `37.576 ms`.
+   - latest `ai_testgen_repo_v1` nightly result remained strong: recall `1.0000`, MRR `0.9500`, symbol-hit `1.0000`, p95 `12.001 ms`.
+61. Nightly workflow correctness bug identified and fixed:
+   - `scripts/nightly_representative.ps1` previously let `ai-testgen` overwrite `.semanticfs/bench/relevance_latest.json` before `release-gate`, so the final strict gate could validate the wrong suite.
+   - the script now snapshots the `semanticFS` relevance artifact and restores it before `release-gate`.
+62. SemanticFS representative nightly regression is now query-scoped:
+   - new artifact: `.semanticfs/bench/query_gap_semanticfs_repo_v1_latest.json`.
+   - current misses are `s17` (`vector nearest search lancedb`), `s18` (`policy guard entropy detector`), `s19` (`rc preflight powershell`), and `s20` (`future steps log`).
+   - this is currently a threshold problem, not a head-to-head loss: baseline also missed the same four queries.
+63. Third backlog-driven uncovered repo promotion completed and bounded full-root follow-up succeeded:
+   - generated/split suites: `boilermakexii_bootstrap_v1.json`, `boilermakexii_tune.json`, `boilermakexii_holdout.json`.
+   - strict holdout (`boilermakexii_bootstrap_v1_holdout_v1`, selected `base`): SemanticFS recall `1.0000`, MRR `0.9500`, symbol-hit `0.9000`, p95 `28.824 ms`; baseline recall `1.0000`, MRR `0.7167`, symbol-hit `0.5000`, p95 `35.255 ms`.
+   - bounded `flutter_v2` strict holdout completed using package-scoped allow-roots (`_fe_analyzer_shared`, `battery`, `camera`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `54.260 ms`; baseline recall `0.0000`, MRR `0.0000`, symbol-hit `0.0000`, p95 `583.989 ms`.
+   - post-run backlog/domain-plan counts are now `uncovered=6`, `covered_gap=0`, `covered_partial=1`, `covered_representative=2`, `covered_ok=12` and `promote_candidate=6`, `harden_existing=0`, `expand_parent_root=1`, `add_strict_holdout=2`, `monitor=12`.
+64. Scoped bootstrap generation is now config-aligned when needed:
+   - `scripts/bootstrap_golden_from_repo.py` now accepts `--config` and applies matching `filter.allow_roots` / `filter.deny_globs` rules during file selection.
+   - `tests/retrieval_golden/ai_testgen_strict_bootstrap_v1.json`, `tests/retrieval_golden/ai_testgen_strict_tune.json`, and `tests/retrieval_golden/ai_testgen_strict_holdout.json` were regenerated with `config/relevance-ai-testgen.toml`.
+   - direct holdout validation on `ai_testgen_strict_bootstrap_v1_holdout_v1` now passes at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `23.426 ms`; baseline MRR `0.9500`, p95 `32.525 ms`.
+65. React-style exported symbol extraction hardening landed:
+   - `crates/indexer/src/symbols.rs` now extracts `export const` and `export let` declarations, recovering hook-style JS symbols such as `useUser`.
+   - `cargo test -p indexer` passed after the parser update.
+66. Fifth backlog-driven uncovered repo promotion completed:
+   - generated/split suites: `yolov5_bootstrap_v1.json`, `yolov5_tune.json`, `yolov5_holdout.json`.
+   - strict holdout (`yolov5_bootstrap_v1_holdout_v1`, selected `latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `31.411 ms`; baseline recall `0.9000`, MRR `0.7083`, symbol-hit `0.6000`, p95 `46.559 ms`.
+   - latest query-gap rerun shows `semantic_miss=0` and `semantic_rank_lag=0`.
+67. Curated `buckit` holdout is now clean on current code:
+   - `buckit_curated_holdout_v1` (`symbol_focus` selected): SemanticFS recall `1.0000`, MRR `0.9750`, symbol-hit `0.9333`, p95 `50.475 ms`; baseline recall `0.7500`, MRR `0.6333`, symbol-hit `0.7333`, p95 `42.885 ms`.
+   - this improvement came from the `export const` symbol-indexing fix plus a duplicate-definition ground-truth update for `confirmGame` (`screens/LogScreen_fixed.js` and `screens/LogScreen.js`).
+   - latest `.semanticfs/bench/query_gap_buckit_curated_holdout_v1_latest.json` now reports `semantic_miss=0` and `semantic_rank_lag=0`.
+68. Filesystem backlog and domain plan were refreshed after the latest daytime runs:
+   - backlog counts are now `uncovered=3`, `covered_gap=0`, `covered_partial=2`, `covered_representative=0`, `covered_ok=16`.
+   - domain-plan counts are now `promote_candidate=3`, `harden_existing=0`, `expand_parent_root=2`, `add_strict_holdout=0`, `monitor=16`.
+69. Remaining uncovered-root Phase 3 promotions completed:
+   - `euler_r9_bootstrap_v1_holdout_v1` (`code_focus`): SemanticFS recall `1.0000`, MRR `0.9500`, symbol-hit `0.9000`, p95 `27.533 ms`; baseline recall `1.0000`, MRR `0.9000`, symbol-hit `0.8000`, p95 `32.291 ms`.
+   - `mathgame_bootstrap_v1_holdout_v1` (`latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `31.416 ms`; baseline recall `1.0000`, MRR `0.8333`, symbol-hit `0.7000`, p95 `37.683 ms`.
+   - `navs_apple_folio_bootstrap_v1_holdout_v1` (`symbol_latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `43.750 ms`; baseline recall `1.0000`, MRR `0.8750`, symbol-hit `0.8000`, p95 `38.382 ms`.
+   - latest query-gap reruns for all three now show `semantic_miss=0` and `semantic_rank_lag=0`.
+70. Parent-root expansion started and reduced the partial queue:
+   - generated/split suites: `classifai_blogs_bootstrap_v1.json`, `classifai_blogs_tune.json`, `classifai_blogs_holdout.json`.
+   - strict holdout (`classifai_blogs_bootstrap_v1_holdout_v1`, selected `latency_guard`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `30.423 ms`; baseline recall `0.8000`, MRR `0.4650`, symbol-hit `0.3000`, p95 `49.510 ms`.
+   - latest query-gap rerun shows `semantic_miss=0` and `semantic_rank_lag=0`.
+71. Filesystem backlog and domain plan were refreshed again after clearing the uncovered queue:
+   - backlog counts are now `uncovered=0`, `covered_gap=0`, `covered_partial=1`, `covered_representative=0`, `covered_ok=20`.
+   - domain-plan counts are now `promote_candidate=0`, `harden_existing=0`, `expand_parent_root=1`, `add_strict_holdout=0`, `monitor=20`.
+72. Bootstrap generation now supports a faster large-repo mode:
+   - `scripts/bootstrap_golden_from_repo.py` now supports `--git-tracked-only`, which enumerates candidate files via `git ls-files` instead of walking the full tree.
+   - this is useful for large filesystem-scope roots where the full directory walk is dominated by non-code or asset-heavy trees.
+73. Final parent-root expansion completed and closed the current Phase 3 bootstrap queue:
+   - `Robot` root was validated using a bounded parent-root config (`allow_roots` constrained to `newModelCreate/classifai-blogs/**` and `TFODCourse/Tensorflow/models/**`) plus a composed root-relative suite (`robot_bootstrap_v1`) built from those child subtrees.
+   - strict holdout (`robot_bootstrap_v1_holdout_v1`, selected `latency_guard`): SemanticFS recall `0.8000`, MRR `0.7500`, symbol-hit `0.7000`, p95 `194.556 ms`; baseline recall `0.1000`, MRR `0.0500`, symbol-hit `0.0000`, p95 `2278.461 ms`.
+   - latest query-gap artifact shows `semantic_miss=2`, `baseline_miss=9`, `semantic_rank_lag=0`; the remaining misses are broad generic terms (`train`, `predict`) that still leave the run comfortably ahead of baseline.
+74. Filesystem backlog and domain plan now show the bootstrap slice fully covered:
+   - backlog counts are now `uncovered=0`, `covered_gap=0`, `covered_partial=0`, `covered_representative=0`, `covered_ok=21`.
+   - domain-plan counts are now `promote_candidate=0`, `harden_existing=0`, `expand_parent_root=0`, `add_strict_holdout=0`, `monitor=21`.
 
-## Latest Progress Snapshot (February 24, 2026)
+## Latest Progress Snapshot (March 1, 2026)
 1. Relevance history counts:
-   - `semanticfs_repo_v1=28`
-   - `ai_testgen_repo_v1=28`
+   - `semanticfs_repo_v1=29`
+   - `ai_testgen_repo_v1=29`
 2. Head-to-head history counts:
-   - `semanticfs_repo_v1=13`
-   - `ai_testgen_repo_v1=11`
+   - `semanticfs_repo_v1=14`
+   - `ai_testgen_repo_v1=12`
 3. Last-7 head-to-head delta trend (`SemanticFS - rg`):
-   - `semanticfs_repo_v1`: delta MRR `min/avg=0.1833/0.3244`, delta recall `0.1000/0.1286`, delta symbol-hit `0.1429/0.5408`, delta p95 `-16.608/-9.253 ms`.
-   - `ai_testgen_repo_v1`: delta MRR `min/avg=0.0875/0.1456`, delta recall `0.1000/0.1143`, delta symbol-hit `0.0000/0.0000`, delta p95 `-19.976/-17.105 ms`.
+   - `semanticfs_repo_v1`: delta MRR `min/avg=0.0500/0.2696`, delta recall `0.0000/0.1143`, delta symbol-hit `0.1429/0.4388`, delta p95 `-16.608/-7.384 ms`.
+   - `ai_testgen_repo_v1`: delta MRR `min/avg=0.0875/0.1629`, delta recall `0.1000/0.1143`, delta symbol-hit `0.0000/0.0000`, delta p95 `-28.106/-18.776 ms`.
 4. Mounted Linux FUSE validation:
    - Real mounted workflow now passes end-to-end in WSL (`VALIDATION_OK`) for `/.well-known/session.json` and `/.well-known/session.refresh`.
    - Verified stale detection and refresh behavior across real index version transitions (`136 -> 137`, `138 -> 139`).
 5. Calendar-night representative run status:
-   - Date-separated nightly coverage now includes February 18, February 19, February 21, February 22, and February 24 (`5/7` complete).
-   - Representative nightly runs on covered dates passed relevance, head-to-head, and strict release-gate with no drift trigger observed.
+   - Date-separated nightly coverage is now complete at `7/7`.
+   - Accepted clean-green nights are also `7/7`; representative nightlies should now run on maintenance cadence instead of blocking daytime work.
 6. Additional larger-repo exploratory snapshot (bootstrap suites, daytime):
    - `buckit_bootstrap_v1`: SemanticFS recall `1.00`, MRR `0.9417`, symbol-hit `0.90`, p95 `35.004 ms`; baseline `rg` recall `1.00`, MRR `0.7875`, symbol-hit `0.60`, p95 `52.288 ms`.
    - `tensorflow_models_bootstrap_v1`: SemanticFS recall `0.90`, MRR `0.7542`, symbol-hit `0.65`, p95 `49.465 ms`; baseline `rg` recall `0.95`, MRR `0.7892`, symbol-hit `0.70`, p95 `143.105 ms`.
@@ -171,52 +269,81 @@ Primary objective: validate and stabilize SemanticFS on representative real-repo
      - SemanticFS recall `1.00`, MRR `0.9500`, symbol-hit `0.90`, p95 `45.890 ms`
      - baseline `rg` recall `1.00`, MRR `0.9500`, symbol-hit `0.90`, p95 `157.252 ms`
 8. Expanded curated holdout results (acceptance-grade size target met):
-   - `buckit_curated_holdout_v1` (latest strict holdout): SemanticFS leads baseline on recall/MRR/symbol-hit, with a p95 latency tradeoff (`61.320 ms` vs `52.228 ms`).
+   - `buckit_curated_holdout_v1` (latest strict holdout): SemanticFS recall `1.0000`, MRR `0.9750`, symbol-hit `0.9333`, p95 `50.475 ms`; baseline recall `0.7500`, MRR `0.6333`, symbol-hit `0.7333`, p95 `42.885 ms`.
    - `tensorflow_models_curated_holdout_v1` (latest strict holdout): SemanticFS leads baseline on recall/MRR/symbol-hit and p95 after retrieval + symbol hardening.
 9. External strict holdout expansion:
    - `rlbeta_bootstrap_v1_holdout_v1`: strong quality + major latency win.
    - `stockguessr_bootstrap_v1_holdout_v1`: SemanticFS beats baseline on quality (baseline near-zero) but has higher p95 latency.
    - `stockguessr_bootstrap_v2_src_holdout_v1` (source-focused, latest): SemanticFS now leads baseline on recall/MRR/symbol-hit and p95 after generated-artifact suppression.
-   - `repo8872pp_bootstrap_v1_holdout_v1`: SemanticFS is much faster than baseline but trails on MRR and symbol hit-rate.
-   - `syntaxless_bootstrap_v1_holdout_v1`: SemanticFS matches recall and wins p95 latency, while baseline currently leads on MRR/symbol-hit.
-   - `apex_scholars_bootstrap_v1_holdout_v1`: SemanticFS leads on MRR/symbol-hit and latency, with small recall deficit.
-   - `flutter_tools_bootstrap_v1_holdout_v1`: SemanticFS leads strongly on latency but trails baseline on recall/MRR/symbol-hit.
-   - `pseudolang_bootstrap_v1_holdout_v1`: SemanticFS is faster with near-par quality (small recall/MRR deficit, symbol-hit parity).
+   - `repo8872pp_bootstrap_v1_holdout_v1` (latest): SemanticFS now leads baseline on recall parity, MRR, symbol-hit, and p95 after asset + language-coverage hardening.
+   - `syntaxless_bootstrap_v1_holdout_v1` (latest): SemanticFS now leads baseline on recall parity, MRR, symbol-hit, and p95 after TSX symbol indexing recovery.
+   - `apex_scholars_bootstrap_v1_holdout_v1` (latest): SemanticFS now leads baseline on recall parity, MRR, symbol-hit, and p95.
+   - `flutter_tools_bootstrap_v1_holdout_v1` (latest): SemanticFS now leads baseline on recall parity, MRR, symbol-hit, and p95 after Dart symbol indexing recovery.
+   - `pseudolang_bootstrap_v1_holdout_v1` (latest): SemanticFS now leads baseline on recall parity, MRR, symbol-hit, and p95.
+   - `wilcoxrobotics_bootstrap_v1_holdout_v1`: first backlog-driven uncovered repo completed, with SemanticFS leading on recall parity, MRR, symbol-hit, and p95.
+   - `catapult_project_bootstrap_v1_holdout_v1`: second backlog-driven uncovered repo completed, with SemanticFS leading on recall parity, MRR, symbol-hit, and p95.
+   - `boilermakexii_bootstrap_v1_holdout_v1`: third backlog-driven uncovered repo completed, with SemanticFS leading on recall parity, MRR, symbol-hit, and p95.
+   - `yolov5_bootstrap_v1_holdout_v1`: fifth backlog-driven uncovered repo completed, with SemanticFS leading on recall, MRR, symbol-hit, and p95.
+   - `euler_r9_bootstrap_v1_holdout_v1`, `mathgame_bootstrap_v1_holdout_v1`, and `navs_apple_folio_bootstrap_v1_holdout_v1`: remaining uncovered roots completed, all with zero semantic misses/rank lag on latest query-gap and SemanticFS leading or matching on recall while leading on ranking quality.
+   - `classifai_blogs_bootstrap_v1_holdout_v1`: first parent-root expansion after the uncovered queue, with SemanticFS leading strongly on recall, MRR, symbol-hit, and p95.
+   - `flutter_bootstrap_v2_src_holdout_v1` (bounded package-scoped run): SemanticFS leads baseline massively on recall, MRR, symbol-hit, and p95.
 10. `build_losses` disambiguation check:
    - previous TensorFlow holdout miss was due ambiguous ground truth (`build_losses` appears across many files).
    - after expected-path disambiguation, both engines hit and SemanticFS keeps strong latency advantage (`p95 45.890 ms` vs `157.252 ms`).
 11. Interpretation:
    - Same-day reliability trend is favorable.
    - Mounted Linux session semantics are now validated in a real long-lived session.
-   - Date-separated overnight trend evidence is in progress (`5/7` complete).
+   - Date-separated overnight artifact coverage is now `7/7`, and accepted clean-green nightly evidence is now also `7/7` after the overnight run recorded in `relevance_latest_20260301T002336Z.json` / `head_to_head_latest_20260301T002405Z.json`.
    - Curated TensorFlow holdout quality objective is now met with preserved latency advantage in latest strict run.
    - Holdout protocol remains in place, reducing overfit risk for daytime tuning.
    - Generated-artifact suppression closed the stockguessr_v2 external source gap.
-   - Remaining external quality gaps are now concentrated in `repo8872pp`, `syntaxless`, and `flutter_tools`, while `flutter_v2` still needs bounded completion.
+   - The prior `repo8872pp`, `syntaxless`, `flutter_tools`, `apex_scholars`, and `pseudolang` gaps are now closed.
+   - There are currently no `covered_gap` repos in the latest filesystem backlog; the active daytime focus should stay on uncovered-root promotion and parent-root expansion.
+   - The bounded `flutter_v2` completion moved the full `flutter` root from partial to `covered_ok`.
+   - `buckit_curated_holdout_v1` is now clean on latest query-gap (`semantic_miss=0`, `semantic_rank_lag=0`).
 12. Filesystem-scope planning status:
    - discovery noise is reduced (workspace mirrors + mirrored clone dedupe).
-   - backlog now separates repos into `uncovered`, `covered_gap`, `covered_partial`, and `covered_ok`, enabling deterministic daytime queueing.
-   - immediate backlog focus should be: highest-size `uncovered` repos, then `covered_gap` repos.
+   - backlog now separates repos into `uncovered`, `covered_gap`, `covered_partial`, `covered_representative`, and `covered_ok`, enabling deterministic daytime queueing.
+   - current backlog counts: `uncovered=0`, `covered_gap=0`, `covered_partial=0`, `covered_representative=0`, `covered_ok=21`.
+   - the current discovered-root promotion queue is fully cleared; the backlog now moves to monitor mode.
+13. Phase 3 bootstrap status:
+   - non-breaking multi-root domain config scaffolding is now landed.
+   - domain-plan artifact is live at `.semanticfs/bench/filesystem_domain_plan_latest.json`.
+   - current domain-plan counts: `promote_candidate=0`, `harden_existing=0`, `expand_parent_root=0`, `add_strict_holdout=0`, `monitor=21`.
+14. Current hardening status:
+   - `repo8872pp`, `syntaxless`, `flutter_tools`, `apex_scholars`, and `pseudolang` now have zero semantic misses and zero semantic rank lag in their latest query-gap artifacts.
+   - the latest filesystem backlog now has `covered_gap=0`.
+   - `semanticfs_repo_v1` is back above threshold after representative retrieval hardening (`relevance recall=1.0000`, `MRR=0.9267`, `symbol-hit=1.0000`; latest daytime head-to-head polish improved this to `MRR=0.9375`, p95 `20.338 ms` vs baseline `47.690 ms`).
+   - the representative hardening change set was: order FTS results by `bm25(chunks_fts)`, add a query-to-path overlap prior in `retrieval-core`, and exclude benchmark harness self-shadowing paths (`tests/retrieval_golden/**`, `config/relevance-*.toml`) from `config/relevance-real.toml`.
+   - the latest `semanticfs_repo_v1` query-gap artifact now shows `semantic_miss=0`; the only residual issue is one non-blocking rank-lag query (`s20`, `future steps log`, SemanticFS rank `2` vs baseline rank `1`).
+   - new strict coverage landed for `labelimg`, `semanticFS`, and `ai-testgen`; `covered_representative` is now cleared in the backlog.
+   - `crates/indexer/src/symbols.rs` now indexes `export const` / `export let`, which recovered React hook-style symbols and closed the prior `buckit` `useUser` miss.
+   - config-aligned bootstrap generation is now available for scoped repos; the regenerated `ai_testgen_strict_*` fixtures validate cleanly.
 
 ## Active Remaining Work
-1. Calendar-night stability confirmation: continue one representative run per night for 7 date-separated nights, then triage relevance/latency/RSS drift (`2 additional nights required`).
-2. Larger-repo validation hardening: keep curated suite quality improving (reduce ambiguous/easy queries and add stronger non-symbol intent coverage) before using these suites as release-gate evidence.
-3. Filesystem-scope prep track: external strict coverage now includes `rlbeta`, `stockguessr_v1`, `stockguessr_v2`, `repo8872pp`, `syntaxless`, `apex_scholars`, `flutter_tools`, and `pseudolang`; backlog artifact now tracks `uncovered/gap/partial/ok` state. Next step is backlog-driven expansion on top uncovered repos plus quality recovery on `repo8872pp`/`syntaxless`/`flutter_tools`, and bounded completion for `flutter_v2`.
+1. Calendar-night stability confirmation: the `7/7` clean-green night target is now closed; shift representative nightlies from gating cadence to maintenance cadence unless a regression or major retrieval change lands.
+2. Larger-repo validation hardening: `buckit_curated_holdout_v1` is now clean on the latest query-gap artifact; keep `buckit_curated_*` and `tensorflow_models_curated_*` in monitor mode unless later retrieval changes introduce drift.
+3. Filesystem-scope prep track: external strict coverage now includes `rlbeta`, `stockguessr_v1`, `stockguessr_v2`, `repo8872pp`, `syntaxless`, `apex_scholars`, `flutter_tools`, `pseudolang`, `wilcoxrobotics`, `catapult_project`, `boilermakexii`, `labelimg`, `yolov5`, `euler_r9`, `mathgame`, `navs_apple_folio`, `classifai_blogs`, `robot`, bounded `flutter_v2`, plus strict representative-root conversions for `semanticFS` and `ai-testgen`; backlog artifact now tracks `uncovered/gap/partial/representative/ok` state. The current discovered-root bootstrap queue is closed, so this track now shifts to monitor-mode reruns and new-root discovery.
+4. Representative polish: improve the residual `semanticfs_repo_v1` rank lag on `s20` (`future steps log`) without regressing the now-green nightly gate.
+5. Phase 3 bootstrap track: the current root-promotion queue is closed; next step is expanding policy-boundary and scheduler contracts while preserving v1.x single-root behavior.
+6. Strict-suite generation alignment: config-aware bootstrap generation is now implemented; standardize on `scripts/bootstrap_golden_from_repo.py --config ...` for scoped repos so future strict suites stay benchmark-aligned.
 
 ## Current Risk Register
 1. Observer-effect write loop: mitigated on MCP and FUSE pinning paths; mounted Linux refresh semantics are now validated, continue overnight soak watch.
 2. Branch-swap blackout: queue planning is implemented, now needs continued soak validation at scale.
-3. Semantic shadowing: priors are implemented, with positive same-day trend; still requires date-separated nightly evidence.
+3. Semantic shadowing: priors are implemented, and the `7/7` date-separated nightly target is now satisfied; keep maintenance-night monitoring for regressions.
 4. Determinism vs probability: architecture is grounded by `/raw`; continue enforcing search-then-raw-verify loop in docs/tests/prompts.
 5. Latency regression risk from richer symbol matching: mitigated by batched symbol-variant SQL (`IN` / `LIKE OR`) and revalidated on curated holdout.
+6. Nightly validation coupling: the `relevance_latest.json` overwrite bug is fixed in `scripts/nightly_representative.ps1`, and the `7/7` calendar-night target is now closed; keep monitoring for regressions on maintenance cadence.
+7. Scoped-suite bootstrap mismatch: raw bootstrap generation can select paths excluded by repo-specific configs (confirmed on `ai-testgen-demo` vs `config/relevance-ai-testgen.toml`); generated suites must be aligned with benchmark filters before they are interpreted as product regressions.
 
 ## Execution Order (Next Sessions)
-1. Run exactly one representative nightly sequence per calendar night and collect 7 date-separated trend artifacts.
-2. Triage drift and regressions from `relevance/head_to_head/release_gate` history.
-3. Refine curated larger-repo suites (`buckit`, `tensorflow/models`) and rerun strict holdout evaluations when query sets are updated.
-4. Use `.semanticfs/bench/filesystem_scope_backlog_latest.json` as daytime queue source: run top uncovered repos first, then covered-gap repos.
-5. Prioritize external-gap triage on `repo8872pp` and `syntaxless`, and complete one bounded `flutter_v2` strict run (narrowed scope) before adding further external suites.
-6. Add targeted triage pass for `flutter_tools` holdout misses (query-level root cause and candidate/profile refinement) while preserving latency advantage.
+1. Move representative nightlies to maintenance cadence now that the `7/7` calendar-night confirmation gap is closed; rerun promptly after major retrieval/ranking changes or when drift needs reconfirmation.
+2. Optionally tighten the residual `semanticfs_repo_v1` rank lag from `.semanticfs/bench/query_gap_semanticfs_repo_v1_latest.json` (`s20`, `future steps log`) if it can be done without destabilizing the now-green nightly gate.
+3. Keep `buckit_curated_*` and `tensorflow_models_curated_*` in monitor mode; rerun only after retrieval/indexing changes or if query-gap drift reappears.
+4. Use config-aligned bootstrap generation (`--config`) for any scoped repo strict-suite work so benchmark filters and fixture generation stay consistent.
+5. Use `.semanticfs/bench/filesystem_scope_backlog_latest.json` and `.semanticfs/bench/filesystem_domain_plan_latest.json` as monitor artifacts now that the current discovered-root queue is fully covered; only rerun promotion flows when new roots are discovered or a monitor rerun regresses.
+6. Shift daytime Phase 3 work from root promotion to architecture: define and harden the multi-root scheduler, trust boundaries, and policy contracts on top of the now-complete bootstrap coverage set.
 7. If Linux FUSE session code changes, rerun mounted validation for `session.json` / `session.refresh`.
 
 ## Primary Commands

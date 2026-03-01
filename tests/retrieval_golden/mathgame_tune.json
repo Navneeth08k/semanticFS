@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "mathgame_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "updateEloRatings",
+      "expected_paths": [
+        "app/game/[id]/results/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "CreateGame",
+      "expected_paths": [
+        "components/game/create-game.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "cancelSearch",
+      "expected_paths": [
+        "components/game/matchmaking.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "getInitials",
+      "expected_paths": [
+        "components/layout/navbar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "handleFileSelect",
+      "expected_paths": [
+        "components/profile/profile-editor.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "ThemeProvider",
+      "expected_paths": [
+        "components/theme-provider.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "useCarousel",
+      "expected_paths": [
+        "components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "CommandDialog",
+      "expected_paths": [
+        "components/ui/command.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

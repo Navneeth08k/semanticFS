@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "catapult_project_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "executeSqlWithFallback",
+      "expected_paths": [
+        "app/actions/db-utils.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "createScheduleItem",
+      "expected_paths": [
+        "app/actions/schedule-actions.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "batchCreateTasks",
+      "expected_paths": [
+        "app/actions/task-actions.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "fetchGmailMessages",
+      "expected_paths": [
+        "app/auth/callback/route.ts"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "checkInitialStatus",
+      "expected_paths": [
+        "app/settings/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "handleCreateSpace",
+      "expected_paths": [
+        "app/spaces/page.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "AppSidebar",
+      "expected_paths": [
+        "components/app-sidebar.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ChatDrawer",
+      "expected_paths": [
+        "components/chat-drawer.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "FeaturesSection",
+      "expected_paths": [
+        "components/features-section.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "handleDialogClose",
+      "expected_paths": [
+        "components/new-space-dialog.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

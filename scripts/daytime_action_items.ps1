@@ -8,7 +8,8 @@ param(
   [int]$DiscoveryTopN = 30,
   [int]$SoakSeconds = 2,
   [switch]$IncludeReleaseGate,
-  [switch]$SkipFilesystemBacklog
+  [switch]$SkipFilesystemBacklog,
+  [switch]$SkipDomainPlan
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,6 +39,7 @@ Write-Host "discovery roots:       $($DiscoveryRoots -join ', ')"
 Write-Host "soak seconds:          $SoakSeconds"
 Write-Host "include release gate:  $($IncludeReleaseGate.IsPresent)"
 Write-Host "skip fs backlog:       $($SkipFilesystemBacklog.IsPresent)"
+Write-Host "skip domain plan:      $($SkipDomainPlan.IsPresent)"
 
 Assert-Path $SemanticFsRepo "semanticfs repo"
 Assert-Path $AiTestgenRepo "ai-testgen repo"
@@ -64,6 +66,9 @@ if ($DiscoveryRoots.Count -gt 0) {
   Run-Step "Filesystem candidate discovery" $discoveryCmd
   if (-not $SkipFilesystemBacklog.IsPresent) {
     Run-Step "Filesystem scope backlog build" "powershell -ExecutionPolicy Bypass -File scripts/build_filesystem_scope_backlog.ps1 -CandidatesPath .semanticfs/bench/filesystem_repo_candidates_latest.json -OutputPath .semanticfs/bench/filesystem_scope_backlog_latest.json"
+    if (-not $SkipDomainPlan.IsPresent) {
+      Run-Step "Phase 3 domain plan build" "powershell -ExecutionPolicy Bypass -File scripts/build_phase3_domain_plan.ps1 -BacklogPath .semanticfs/bench/filesystem_scope_backlog_latest.json -OutputPath .semanticfs/bench/filesystem_domain_plan_latest.json"
+    }
   }
 }
 
@@ -78,4 +83,5 @@ Write-Host "  .semanticfs/bench/tune_holdout_buckit_curated_latest.json"
 Write-Host "  .semanticfs/bench/tune_holdout_tensorflow_models_curated_latest.json"
 Write-Host "  .semanticfs/bench/filesystem_repo_candidates_latest.json (if discovery roots were provided)"
 Write-Host "  .semanticfs/bench/filesystem_scope_backlog_latest.json (if discovery roots were provided and backlog not skipped)"
+Write-Host "  .semanticfs/bench/filesystem_domain_plan_latest.json (if discovery roots were provided and domain plan not skipped)"
 Write-Host "  .semanticfs/bench/drift_summary_latest.json"

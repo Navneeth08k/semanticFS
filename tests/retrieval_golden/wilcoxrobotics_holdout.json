@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "wilcoxrobotics_bootstrap_v1_holdout_v1",
+  "queries": [
+    {
+      "id": "b02",
+      "query": "BasicOpMode_Iterative",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/BasicOpMode_Iterative.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b04",
+      "query": "ConceptCompassCalibration",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptCompassCalibration.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b06",
+      "query": "ConceptGamepadRumble",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptGamepadRumble.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b08",
+      "query": "ConceptMotorBulkRead",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b10",
+      "query": "ConceptRampMotorSpeed",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptRampMotorSpeed.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b12",
+      "query": "ConceptScanServo",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptScanServo.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b14",
+      "query": "ConceptSoundsOnBotJava",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptSoundsOnBotJava.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b16",
+      "query": "ConceptTelemetry",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptTelemetry.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b18",
+      "query": "ConceptTensorFlowObjectDetectionSwitchableCameras",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptTensorFlowObjectDetectionSwitchableCameras.java"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b20",
+      "query": "ConceptVuMarkIdentification",
+      "expected_paths": [
+        "FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuMarkIdentification.java"
+      ],
+      "symbol_query": true
+    }
+  ]
+}

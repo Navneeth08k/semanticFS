@@ -10,7 +10,7 @@ pub use audit::AuditEvent;
 pub use config::{
     EmbeddingConfig, FilterConfig, FuseCacheConfig, FuseSessionConfig, IndexConfig, MapConfig,
     McpConfig, ObservabilityConfig, PolicyConfig, RetrievalConfig, SemanticFsConfig,
-    WorkspaceConfig,
+    WorkspaceConfig, WorkspaceDomainConfig,
 };
 pub use embedding::{cosine_similarity, embed_text_hash};
 pub use health::{HealthIndex, HealthReport};

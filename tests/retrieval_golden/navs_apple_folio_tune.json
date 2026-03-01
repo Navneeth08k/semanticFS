@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "dataset_name": "navs_apple_folio_bootstrap_v1_tune_v1",
+  "queries": [
+    {
+      "id": "b01",
+      "query": "About",
+      "expected_paths": [
+        "src/components/About.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b03",
+      "query": "Experience",
+      "expected_paths": [
+        "src/components/Experience.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b05",
+      "query": "Hero",
+      "expected_paths": [
+        "src/components/Hero.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b07",
+      "query": "getCategoryColor",
+      "expected_paths": [
+        "src/components/Projects.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b09",
+      "query": "AlertDialogFooter",
+      "expected_paths": [
+        "src/components/ui/alert-dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b11",
+      "query": "BreadcrumbEllipsis",
+      "expected_paths": [
+        "src/components/ui/breadcrumb.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b13",
+      "query": "useCarousel",
+      "expected_paths": [
+        "src/components/ui/carousel.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b15",
+      "query": "CommandDialog",
+      "expected_paths": [
+        "src/components/ui/command.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b17",
+      "query": "DialogFooter",
+      "expected_paths": [
+        "src/components/ui/dialog.tsx"
+      ],
+      "symbol_query": true
+    },
+    {
+      "id": "b19",
+      "query": "DropdownMenuShortcut",
+      "expected_paths": [
+        "src/components/ui/dropdown-menu.tsx"
+      ],
+      "symbol_query": true
+    }
+  ]
+}
