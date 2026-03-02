@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::{fs, path::Path};
+use std::{
+    collections::HashMap,
+    fs,
+    path::Path,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -8,6 +12,12 @@ pub enum ConfigError {
     Read(String),
     #[error("invalid config format: {0}")]
     Parse(String),
+}
+
+#[derive(Debug, Error)]
+pub enum DomainContractError {
+    #[error("workspace domain policy contract invalid: {0}")]
+    Invalid(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -159,6 +169,42 @@ pub struct McpConfig {
     pub mode: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct WorkspaceDomainPlan {
+    pub schedule_rank: usize,
+    pub id: String,
+    pub root: String,
+    pub trust_label: String,
+    pub trust_label_registered: bool,
+    pub priority_class: String,
+    pub root_depth: usize,
+    pub effective_allow_roots: Vec<String>,
+    pub effective_deny_globs: Vec<String>,
+    pub inherits_global_allow_roots: bool,
+    pub inherits_global_deny_globs: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WorkspaceDomainReport {
+    pub plan_mode: String,
+    pub plans: Vec<WorkspaceDomainPlan>,
+    pub warnings: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+impl WorkspaceDomainReport {
+    pub fn is_valid(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    pub fn ensure_valid(&self) -> Result<(), DomainContractError> {
+        if self.is_valid() {
+            return Ok(());
+        }
+        Err(DomainContractError::Invalid(self.errors.join("; ")))
+    }
+}
+
 impl SemanticFsConfig {
     pub fn load(path: &Path) -> Result<Self, ConfigError> {
         let raw = fs::read_to_string(path).map_err(|e| ConfigError::Read(e.to_string()))?;
@@ -167,6 +213,132 @@ impl SemanticFsConfig {
 
     pub fn effective_workspace_domains(&self) -> Vec<WorkspaceDomainConfig> {
         self.workspace.effective_domains()
+    }
+
+    pub fn workspace_domain_report(&self) -> WorkspaceDomainReport {
+        let explicit_mode = self.workspace.has_explicit_enabled_domains();
+        let mut warnings = Vec::new();
+        let mut errors = Vec::new();
+        let trust_rank = self
+            .policy
+            .trust_labels
+            .iter()
+            .enumerate()
+            .map(|(idx, label)| (label.as_str(), idx))
+            .collect::<HashMap<_, _>>();
+        let mut id_index = HashMap::<String, String>::new();
+        let mut root_index = HashMap::<String, String>::new();
+        let mut plans = Vec::new();
+
+        for domain in self.effective_workspace_domains() {
+            let domain_id = domain.id.trim().to_string();
+            let domain_root = normalize_domain_root(&domain.root);
+
+            if domain_id.is_empty() {
+                errors.push("workspace domain id must not be empty".to_string());
+            } else if let Some(prev_root) = id_index.insert(domain_id.clone(), domain.root.clone()) {
+                errors.push(format!(
+                    "workspace domain id `{}` is duplicated across roots `{}` and `{}`",
+                    domain_id, prev_root, domain.root
+                ));
+            }
+
+            if domain_root.is_empty() {
+                errors.push(format!("workspace domain `{}` has an empty root", domain.id));
+            } else if let Some(prev_id) = root_index.insert(domain_root.clone(), domain_id.clone()) {
+                errors.push(format!(
+                    "workspace domain roots `{}` and `{}` normalize to the same root `{}`",
+                    prev_id, domain_id, domain_root
+                ));
+            }
+
+            let trust_label_registered = !explicit_mode
+                || trust_rank.contains_key(domain.trust_label.as_str());
+            if !trust_label_registered {
+                errors.push(format!(
+                    "workspace domain `{}` uses trust_label `{}` which is not listed in policy.trust_labels",
+                    domain_id, domain.trust_label
+                ));
+            }
+
+            let inherits_global_allow_roots = !explicit_mode || domain.allow_roots.is_empty();
+            let inherits_global_deny_globs = domain.deny_globs.is_empty();
+            let effective_allow_roots =
+                effective_allow_roots(&self.filter, &domain, explicit_mode);
+            let effective_deny_globs = merge_globs(&self.filter.deny_globs, &domain.deny_globs);
+
+            validate_policy_patterns(
+                &domain_id,
+                "allow_roots",
+                &effective_allow_roots,
+                &mut errors,
+            );
+            validate_policy_patterns(
+                &domain_id,
+                "deny_globs",
+                &effective_deny_globs,
+                &mut errors,
+            );
+
+            plans.push(WorkspaceDomainPlan {
+                schedule_rank: 0,
+                id: domain_id,
+                root: domain_root.clone(),
+                trust_label: domain.trust_label,
+                trust_label_registered,
+                priority_class: String::new(),
+                root_depth: root_depth(&domain_root),
+                effective_allow_roots,
+                effective_deny_globs,
+                inherits_global_allow_roots,
+                inherits_global_deny_globs,
+            });
+        }
+
+        for left_idx in 0..plans.len() {
+            for right_idx in (left_idx + 1)..plans.len() {
+                let left = &plans[left_idx];
+                let right = &plans[right_idx];
+                if roots_overlap(&left.root, &right.root) {
+                    warnings.push(format!(
+                        "workspace domains `{}` and `{}` overlap (`{}` vs `{}`); scheduler will prefer the more specific root first",
+                        left.id, right.id, left.root, right.root
+                    ));
+                }
+            }
+        }
+
+        plans.sort_by(|left, right| {
+            domain_trust_sort_key(explicit_mode, &trust_rank, left)
+                .cmp(&domain_trust_sort_key(explicit_mode, &trust_rank, right))
+                .then_with(|| right.root_depth.cmp(&left.root_depth))
+                .then_with(|| left.root.cmp(&right.root))
+                .then_with(|| left.id.cmp(&right.id))
+        });
+
+        for (idx, plan) in plans.iter_mut().enumerate() {
+            plan.schedule_rank = idx + 1;
+            plan.priority_class = domain_priority_class(explicit_mode, &trust_rank, plan);
+        }
+
+        WorkspaceDomainReport {
+            plan_mode: if explicit_mode {
+                "explicit_multi_root".to_string()
+            } else {
+                "fallback_single_root".to_string()
+            },
+            plans,
+            warnings,
+            errors,
+        }
+    }
+
+    pub fn enforce_workspace_domain_contract(
+        &self,
+    ) -> Result<WorkspaceDomainReport, DomainContractError> {
+        let report = self.workspace_domain_report();
+        report.ensure_valid()?;
+        Ok(report)
     }
 }
 
@@ -193,6 +365,159 @@ impl WorkspaceConfig {
             deny_globs: Vec::new(),
         }]
     }
+
+    fn has_explicit_enabled_domains(&self) -> bool {
+        !self.domains.is_empty() && self.domains.iter().any(|d| d.enabled)
+    }
+}
+
+fn effective_allow_roots(
+    filter: &FilterConfig,
+    domain: &WorkspaceDomainConfig,
+    explicit_mode: bool,
+) -> Vec<String> {
+    if explicit_mode && !domain.allow_roots.is_empty() {
+        return dedupe_patterns(&domain.allow_roots);
+    }
+    if filter.allow_roots.is_empty() {
+        return vec!["**".to_string()];
+    }
+    dedupe_patterns(&filter.allow_roots)
+}
+
+fn merge_globs(base: &[String], extra: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for pattern in base.iter().chain(extra.iter()) {
+        let trimmed = pattern.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if !out.iter().any(|existing: &String| existing == trimmed) {
+            out.push(trimmed.to_string());
+        }
+    }
+    out
+}
+
+fn dedupe_patterns(patterns: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for pattern in patterns {
+        let trimmed = pattern.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if !out.iter().any(|existing: &String| existing == trimmed) {
+            out.push(trimmed.to_string());
+        }
+    }
+    out
+}
+
+fn validate_policy_patterns(
+    domain_id: &str,
+    field_name: &str,
+    patterns: &[String],
+    errors: &mut Vec<String>,
+) {
+    if patterns.is_empty() {
+        errors.push(format!(
+            "workspace domain `{}` resolved `{}` to an empty pattern set",
+            domain_id, field_name
+        ));
+        return;
+    }
+
+    for pattern in patterns {
+        if pattern.trim().is_empty() {
+            errors.push(format!(
+                "workspace domain `{}` contains an empty `{}` entry",
+                domain_id, field_name
+            ));
+            continue;
+        }
+        if looks_absolute_pattern(pattern) {
+            errors.push(format!(
+                "workspace domain `{}` contains absolute `{}` entry `{}`; patterns must stay root-relative",
+                domain_id, field_name, pattern
+            ));
+        }
+        if has_parent_traversal(pattern) {
+            errors.push(format!(
+                "workspace domain `{}` contains traversal in `{}` entry `{}`; patterns must stay inside the domain root",
+                domain_id, field_name, pattern
+            ));
+        }
+    }
+}
+
+fn domain_trust_sort_key(
+    explicit_mode: bool,
+    trust_rank: &HashMap<&str, usize>,
+    plan: &WorkspaceDomainPlan,
+) -> usize {
+    if !explicit_mode {
+        return 0;
+    }
+    trust_rank
+        .get(plan.trust_label.as_str())
+        .copied()
+        .unwrap_or(usize::MAX / 2)
+}
+
+fn domain_priority_class(
+    explicit_mode: bool,
+    trust_rank: &HashMap<&str, usize>,
+    plan: &WorkspaceDomainPlan,
+) -> String {
+    if !explicit_mode {
+        return "fallback_single_root".to_string();
+    }
+    match trust_rank.get(plan.trust_label.as_str()).copied() {
+        Some(rank) => format!("{}:tier_{}", plan.trust_label, rank + 1),
+        None => format!("{}:invalid_trust", plan.trust_label),
+    }
+}
+
+fn normalize_domain_root(raw: &str) -> String {
+    let mut root = raw.trim().replace('\\', "/");
+    while root.ends_with('/')
+        && root.len() > 1
+        && !root.ends_with(":/")
+    {
+        root.pop();
+    }
+    root
+}
+
+fn root_depth(root: &str) -> usize {
+    root.split('/')
+        .filter(|segment| !segment.is_empty())
+        .count()
+}
+
+fn roots_overlap(left: &str, right: &str) -> bool {
+    if left == right {
+        return true;
+    }
+    let left_prefix = format!("{}/", left);
+    let right_prefix = format!("{}/", right);
+    left.starts_with(&right_prefix) || right.starts_with(&left_prefix)
+}
+
+fn looks_absolute_pattern(pattern: &str) -> bool {
+    let raw = pattern.trim();
+    if raw.starts_with('/') || raw.starts_with("\\\\") {
+        return true;
+    }
+    let bytes = raw.as_bytes();
+    bytes.len() >= 3 && bytes[1] == b':' && (bytes[2] == b'/' || bytes[2] == b'\\')
+}
+
+fn has_parent_traversal(pattern: &str) -> bool {
+    pattern
+        .replace('\\', "/")
+        .split('/')
+        .any(|segment| segment == "..")
 }
 
 fn default_bulk_event_threshold() -> usize {
@@ -257,7 +582,88 @@ fn default_domain_enabled() -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{WorkspaceConfig, WorkspaceDomainConfig};
+    use super::{
+        EmbeddingConfig, FilterConfig, FuseCacheConfig, FuseSessionConfig, IndexConfig, MapConfig,
+        McpConfig, ObservabilityConfig, PolicyConfig, RetrievalConfig, SemanticFsConfig,
+        WorkspaceConfig, WorkspaceDomainConfig,
+    };
+
+    fn sample_config(domains: Vec<WorkspaceDomainConfig>) -> SemanticFsConfig {
+        SemanticFsConfig {
+            workspace: WorkspaceConfig {
+                repo_root: "/repo".to_string(),
+                mount_point: "/mnt/ai".to_string(),
+                domains,
+            },
+            filter: FilterConfig {
+                mode: "repo_first".to_string(),
+                allow_roots: vec!["src/**".to_string(), "docs/**".to_string()],
+                deny_globs: vec!["**/.git/**".to_string()],
+                max_file_mb: 10,
+            },
+            index: IndexConfig {
+                debounce_ms: 500,
+                publish_mode: "two_phase".to_string(),
+                chunk_max_lines: 120,
+                chunk_overlap_lines: 20,
+                bulk_event_threshold: 80,
+                hotset_max_paths: 32,
+                pending_path_report_limit: 20,
+            },
+            embedding: EmbeddingConfig {
+                model: "hash".to_string(),
+                runtime: "hash".to_string(),
+                quantization: "int8".to_string(),
+                dimension: 384,
+                batch_size: 64,
+            },
+            retrieval: RetrievalConfig {
+                rrf_mode: "plain".to_string(),
+                rrf_k: 60,
+                topn_symbol: 10,
+                topn_bm25: 20,
+                topn_vector: 20,
+                topn_final: 5,
+                symbol_exact_boost: 2.0,
+                symbol_prefix_boost: 1.2,
+                allow_stale: false,
+                code_path_boost: 1.15,
+                docs_path_penalty: 0.85,
+                test_path_penalty: 0.95,
+                asset_path_penalty: 0.45,
+                recency_half_life_hours: 24.0,
+                recency_min_boost: 0.85,
+                recency_max_boost: 1.20,
+            },
+            fuse_cache: FuseCacheConfig {
+                max_virtual_inodes: 50_000,
+                max_cached_mb: 256,
+                entry_ttl_ms: 300,
+                attr_ttl_ms: 300,
+            },
+            fuse_session: FuseSessionConfig::default(),
+            map: MapConfig {
+                base_summary_mode: "deterministic_precompute".to_string(),
+                llm_enrichment: "async_optional".to_string(),
+                cache_ttl_sec: 3600,
+            },
+            policy: PolicyConfig {
+                read_only: true,
+                deny_secret_paths: true,
+                search_result_redaction: true,
+                trust_labels: vec!["trusted".to_string(), "untrusted".to_string()],
+            },
+            observability: ObservabilityConfig {
+                metrics_bind: "127.0.0.1:9464".to_string(),
+                health_bind: "127.0.0.1:9465".to_string(),
+                log_level: "info".to_string(),
+            },
+            mcp: McpConfig {
+                enabled: true,
+                mode: "minimal".to_string(),
+            },
+        }
+    }
 
     #[test]
     fn falls_back_to_single_root_domain_when_no_explicit_domains_exist() {
@@ -306,5 +712,120 @@ mod tests {
         assert_eq!(domains.len(), 1);
         assert_eq!(domains[0].id, "code");
         assert_eq!(domains[0].root, "/repo/code");
+    }
+
+    #[test]
+    fn fallback_domain_report_is_valid_even_without_registered_default_trust_label() {
+        let cfg = sample_config(Vec::new());
+
+        let report = cfg.workspace_domain_report();
+
+        assert!(report.is_valid());
+        assert_eq!(report.plan_mode, "fallback_single_root");
+        assert_eq!(report.plans.len(), 1);
+        assert_eq!(report.plans[0].priority_class, "fallback_single_root");
+        assert!(report.plans[0].trust_label_registered);
+        assert_eq!(
+            report.plans[0].effective_allow_roots,
+            vec!["src/**".to_string(), "docs/**".to_string()]
+        );
+        assert_eq!(
+            report.plans[0].effective_deny_globs,
+            vec!["**/.git/**".to_string()]
+        );
+    }
+
+    #[test]
+    fn explicit_domain_report_rejects_unknown_trust_and_duplicate_ids() {
+        let cfg = sample_config(vec![
+            WorkspaceDomainConfig {
+                id: "code".to_string(),
+                root: "/repo/code".to_string(),
+                trust_label: "trusted".to_string(),
+                enabled: true,
+                allow_roots: vec!["src/**".to_string()],
+                deny_globs: vec![],
+            },
+            WorkspaceDomainConfig {
+                id: "code".to_string(),
+                root: "/repo/docs".to_string(),
+                trust_label: "partner".to_string(),
+                enabled: true,
+                allow_roots: vec!["/abs/**".to_string()],
+                deny_globs: vec!["../secret/**".to_string()],
+            },
+        ]);
+
+        let report = cfg.workspace_domain_report();
+
+        assert!(!report.is_valid());
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|msg| msg.contains("workspace domain id `code` is duplicated"))
+        );
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|msg| msg.contains("trust_label `partner`"))
+        );
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|msg| msg.contains("absolute `allow_roots` entry `/abs/**`"))
+        );
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|msg| msg.contains("traversal in `deny_globs` entry `../secret/**`"))
+        );
+    }
+
+    #[test]
+    fn explicit_domain_report_sorts_more_specific_roots_first_and_warns_on_overlap() {
+        let cfg = sample_config(vec![
+            WorkspaceDomainConfig {
+                id: "primary".to_string(),
+                root: "/repo".to_string(),
+                trust_label: "trusted".to_string(),
+                enabled: true,
+                allow_roots: vec![],
+                deny_globs: vec![],
+            },
+            WorkspaceDomainConfig {
+                id: "apps".to_string(),
+                root: "/repo/apps".to_string(),
+                trust_label: "trusted".to_string(),
+                enabled: true,
+                allow_roots: vec!["apps/**".to_string()],
+                deny_globs: vec!["apps/generated/**".to_string()],
+            },
+        ]);
+
+        let report = cfg.enforce_workspace_domain_contract().unwrap();
+
+        assert_eq!(report.plan_mode, "explicit_multi_root");
+        assert_eq!(report.plans.len(), 2);
+        assert_eq!(report.plans[0].id, "apps");
+        assert_eq!(report.plans[0].schedule_rank, 1);
+        assert_eq!(report.plans[0].priority_class, "trusted:tier_1");
+        assert_eq!(
+            report.plans[0].effective_deny_globs,
+            vec![
+                "**/.git/**".to_string(),
+                "apps/generated/**".to_string()
+            ]
+        );
+        assert_eq!(report.plans[1].id, "primary");
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|msg| msg.contains("overlap"))
+        );
     }
 }

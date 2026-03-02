@@ -4976,6 +4976,7 @@ dependencies = [
  "fuse-bridge",
  "indexer",
  "mcp",
+ "policy-guard",
  "semanticfs-common",
  "serde",
  "serde_json",

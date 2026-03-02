@@ -14,18 +14,20 @@ Core invariant:
 2. Edits are grounded through deterministic source reads.
 
 ## Current Phase
-Phase: `v1.2 reliability and quality hardening` with `Phase 3 bootstrap` running in parallel (as of February 24, 2026)
+Phase: `v1.2 reliability and quality hardening` with `Phase 3 bootstrap` running in parallel (as of March 1, 2026)
 
 Current state:
 1. Core architecture is implemented and operational.
 2. Reliability/quality features are active (session pinning, queue planning, anti-shadowing priors).
 3. Benchmark + gate tooling is in place, including head-to-head comparisons.
+4. Representative nightly stability evidence is now closed at `7/7`, so Phase 2 no longer blocks daytime architecture work.
+5. Phase 3 runtime has moved from config-only scaffolding into real explicit multi-root behavior (persisted domain metadata, domain-aware `/raw` and `/map`, tracked multi-root benchmarks).
 
 Remaining phase focus:
-1. Nightly trend stability over representative suites.
-2. Threshold hardening from measured data.
-3. FUSE long-lived session semantics parity with MCP session behavior.
-4. Start non-breaking Phase 3 domain-model and system-scope planning scaffolding.
+1. Keep representative quality green on maintenance cadence instead of gating cadence.
+2. Tighten remaining measured ranking inefficiencies rather than broad repo-level viability.
+3. Continue Phase 3 runtime hardening from bootstrap behavior into broader multi-root/system-scope contracts.
+4. Preserve deterministic verification boundaries while multi-root scope expands.
 
 ## Phases
 ## Phase 1: v1.1 Repo-First Foundation
@@ -51,9 +53,9 @@ Delivered so far:
 6. Anti-shadowing priors.
 
 Still open in this phase:
-1. 7-night trend stability sequence.
-2. Release-gate threshold tightening based on representative trend data.
-3. FUSE long-lived session pin semantics.
+1. Keep representative nightlies on maintenance cadence and watch for drift after retrieval/ranking changes.
+2. Keep release-gate thresholds stable while Phase 3 runtime changes continue landing.
+3. Re-run FUSE long-lived session validation only when the session/mount path changes.
 
 ## Phase 3: System-Scope Expansion (Major Re-scope)
 Goal:
@@ -68,7 +70,9 @@ Required capabilities:
 Bootstrap status:
 1. Started in parallel with late Phase 2 hardening.
 2. Initial discovery and backlog artifacts are now in place.
-3. First implementation target is non-breaking multi-root config/domain scaffolding.
+3. Non-breaking multi-root config/domain scaffolding is landed.
+4. Explicit multi-root runtime ownership is now active across indexing, retrieval, `/raw`, and `/map`.
+5. A tracked explicit multi-root benchmark suite is now in the repo and green on the current `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` contract fixture, with SemanticFS ahead on recall, MRR, symbol-hit, and p95 on the latest head-to-head run.
 
 ## Decision Guardrails
 1. Grounded edits over clever retrieval.

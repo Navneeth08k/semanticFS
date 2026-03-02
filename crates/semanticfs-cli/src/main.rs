@@ -5,7 +5,7 @@ use fuse_bridge::FuseBridge;
 use indexer::embedding::onnx_metrics_snapshot;
 use indexer::Indexer;
 use mcp::McpServer;
-use semanticfs_common::SemanticFsConfig;
+use semanticfs_common::{SemanticFsConfig, WorkspaceDomainReport};
 use serde_json::json;
 use std::{fs, net::SocketAddr, path::PathBuf, process::Command, sync::Arc, time::Instant};
 use sysinfo::{Pid, ProcessesToUpdate, System};
@@ -211,8 +211,7 @@ fn init_command(args: InitArgs, target_path: &PathBuf) -> Result<()> {
 }
 
 fn index_command(cmd: IndexCommand, config_path: &PathBuf) -> Result<()> {
-    let cfg = SemanticFsConfig::load(config_path)
-        .with_context(|| format!("load config from {}", config_path.display()))?;
+    let cfg = load_validated_config(config_path)?;
     let enable_async_map_enrichment = cfg
         .map
         .llm_enrichment
@@ -246,7 +245,7 @@ fn index_command(cmd: IndexCommand, config_path: &PathBuf) -> Result<()> {
 }
 
 async fn serve_command(cmd: ServeCommand, config_path: &PathBuf) -> Result<()> {
-    let cfg = SemanticFsConfig::load(config_path)?;
+    let cfg = load_validated_config(config_path)?;
     let db_path = resolve_db_path();
 
     match cmd {
@@ -264,7 +263,8 @@ async fn serve_command(cmd: ServeCommand, config_path: &PathBuf) -> Result<()> {
         ServeCommand::Observability => {
             let bridge = FuseBridge::new(cfg.clone(), &db_path)?;
             let bind = cfg.observability.health_bind.clone();
-            serve_observability(bridge, &db_path, &bind).await?;
+            let domain_report = cfg.workspace_domain_report();
+            serve_observability(bridge, &db_path, &bind, domain_report).await?;
         }
     }
 
@@ -272,28 +272,19 @@ async fn serve_command(cmd: ServeCommand, config_path: &PathBuf) -> Result<()> {
 }
 
 fn health_command(config_path: &PathBuf) -> Result<()> {
-    let cfg = SemanticFsConfig::load(config_path)?;
+    let cfg = SemanticFsConfig::load(config_path)
+        .with_context(|| format!("load config from {}", config_path.display()))?;
     println!("repo_root={}", cfg.workspace.repo_root);
     println!("mount_point={}", cfg.workspace.mount_point);
-    let domains = cfg.effective_workspace_domains();
-    println!("workspace_domain_count={}", domains.len());
-    for domain in domains {
-        let allow = if domain.allow_roots.is_empty() {
-            "-".to_string()
-        } else {
-            domain.allow_roots.join(",")
-        };
-        let deny = if domain.deny_globs.is_empty() {
-            "-".to_string()
-        } else {
-            domain.deny_globs.join(",")
-        };
-        println!(
-            "workspace_domain={} root={} trust_label={} allow_roots={} deny_globs={}",
-            domain.id, domain.root, domain.trust_label, allow, deny
-        );
-    }
-    println!("status=healthy (static scaffold)");
+    let report = cfg.workspace_domain_report();
+    print_domain_report(&report);
+    let status = if report.is_valid() {
+        "healthy (phase3 contract active)"
+    } else {
+        "degraded (phase3 contract invalid)"
+    };
+    println!("status={}", status);
+    report.ensure_valid().map_err(anyhow::Error::from)?;
     Ok(())
 }
 
@@ -483,17 +474,71 @@ fn resolve_db_path() -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from("semanticfs.db"))
 }
 
+fn load_validated_config(config_path: &PathBuf) -> Result<SemanticFsConfig> {
+    let cfg = SemanticFsConfig::load(config_path)
+        .with_context(|| format!("load config from {}", config_path.display()))?;
+    cfg.enforce_workspace_domain_contract()
+        .map_err(anyhow::Error::from)?;
+    Ok(cfg)
+}
+
+fn print_domain_report(report: &WorkspaceDomainReport) {
+    println!("workspace_domain_plan_mode={}", report.plan_mode);
+    println!("workspace_domain_count={}", report.plans.len());
+    println!("workspace_domain_warning_count={}", report.warnings.len());
+    println!("workspace_domain_error_count={}", report.errors.len());
+    for plan in &report.plans {
+        let allow = if plan.effective_allow_roots.is_empty() {
+            "-".to_string()
+        } else {
+            plan.effective_allow_roots.join(",")
+        };
+        let deny = if plan.effective_deny_globs.is_empty() {
+            "-".to_string()
+        } else {
+            plan.effective_deny_globs.join(",")
+        };
+        println!(
+            "workspace_domain_schedule=rank:{} id={} root={} trust_label={} trust_registered={} priority_class={} depth={} allow_roots={} deny_globs={} inherits_global_allow_roots={} inherits_global_deny_globs={}",
+            plan.schedule_rank,
+            plan.id,
+            plan.root,
+            plan.trust_label,
+            plan.trust_label_registered,
+            plan.priority_class,
+            plan.root_depth,
+            allow,
+            deny,
+            plan.inherits_global_allow_roots,
+            plan.inherits_global_deny_globs
+        );
+    }
+    for warning in &report.warnings {
+        println!("workspace_domain_warning={}", warning);
+    }
+    for error in &report.errors {
+        println!("workspace_domain_error={}", error);
+    }
+}
+
 #[derive(Clone)]
 struct ObservabilityState {
     bridge: Arc<FuseBridge>,
     db_path: PathBuf,
+    domain_report: WorkspaceDomainReport,
     started_at: Instant,
 }
 
-async fn serve_observability(bridge: FuseBridge, db_path: &PathBuf, bind: &str) -> Result<()> {
+async fn serve_observability(
+    bridge: FuseBridge,
+    db_path: &PathBuf,
+    bind: &str,
+    domain_report: WorkspaceDomainReport,
+) -> Result<()> {
     let state = ObservabilityState {
         bridge: Arc::new(bridge),
         db_path: db_path.clone(),
+        domain_report,
         started_at: Instant::now(),
     };
 
@@ -501,6 +546,7 @@ async fn serve_observability(bridge: FuseBridge, db_path: &PathBuf, bind: &str) 
         .route("/health/live", get(health_live))
         .route("/health/ready", get(health_ready))
         .route("/health/index", get(health_index))
+        .route("/health/domains", get(health_domains))
         .route("/metrics", get(metrics_prometheus))
         .with_state(state);
 
@@ -524,7 +570,10 @@ async fn health_ready(State(state): State<ObservabilityState>) -> Json<serde_jso
     Json(json!({
         "ready": ready,
         "db_exists": db_exists,
-        "active_version": active_version
+        "active_version": active_version,
+        "domain_contract_valid": state.domain_report.is_valid(),
+        "domain_warning_count": state.domain_report.warnings.len(),
+        "domain_error_count": state.domain_report.errors.len()
     }))
 }
 
@@ -532,11 +581,17 @@ async fn health_index(State(state): State<ObservabilityState>) -> Json<serde_jso
     let active_version = state.bridge.active_version().unwrap_or(0);
     let (inode_entries, content_entries) = state.bridge.cache_stats();
     let onnx = onnx_metrics_snapshot();
+    let domain_plan_mode = state.domain_report.plan_mode.clone();
+    let domain_count = state.domain_report.plans.len();
     Json(json!({
         "active_version": active_version,
         "staging_version": serde_json::Value::Null,
         "queue_depth": onnx.queue_depth_current,
         "lag_ms": 0,
+        "workspace_domains": {
+            "plan_mode": domain_plan_mode,
+            "count": domain_count
+        },
         "cache": {
             "inode_entries": inode_entries,
             "content_entries": content_entries
@@ -546,6 +601,27 @@ async fn health_index(State(state): State<ObservabilityState>) -> Json<serde_jso
             "failures_total": onnx.failures_total,
             "queue_depth_max": onnx.queue_depth_max
         }
+    }))
+}
+
+async fn health_domains(State(state): State<ObservabilityState>) -> Json<serde_json::Value> {
+    let plan_mode = state.domain_report.plan_mode.clone();
+    let domain_count = state.domain_report.plans.len();
+    let warning_count = state.domain_report.warnings.len();
+    let error_count = state.domain_report.errors.len();
+    let valid = state.domain_report.is_valid();
+    let warnings = state.domain_report.warnings.clone();
+    let errors = state.domain_report.errors.clone();
+    let domains = state.domain_report.plans.clone();
+    Json(json!({
+        "plan_mode": plan_mode,
+        "domain_count": domain_count,
+        "warning_count": warning_count,
+        "error_count": error_count,
+        "valid": valid,
+        "warnings": warnings,
+        "errors": errors,
+        "domains": domains
     }))
 }
 

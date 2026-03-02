@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use fuse_bridge::FuseBridge;
 use indexer::embedding::{onnx_metrics_snapshot, reset_onnx_metrics, Embedder};
 use indexer::Indexer;
+use policy_guard::PolicyGuard;
 use semanticfs_common::SemanticFsConfig;
 use serde::Deserialize;
 use serde_json::json;
@@ -83,11 +84,18 @@ pub struct HeadToHeadOptions {
     pub history: bool,
 }
 
+fn load_validated_benchmark_config(config_path: &PathBuf) -> Result<SemanticFsConfig> {
+    let cfg = SemanticFsConfig::load(config_path)
+        .with_context(|| format!("load config from {}", config_path.display()))?;
+    cfg.enforce_workspace_domain_contract()
+        .map_err(anyhow::Error::from)?;
+    Ok(cfg)
+}
+
 pub fn run(options: BenchmarkRunOptions) -> Result<()> {
     reset_onnx_metrics();
 
-    let mut cfg = SemanticFsConfig::load(&options.config_path)
-        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    let mut cfg = load_validated_benchmark_config(&options.config_path)?;
 
     if let Some(fixture) = options.fixture_repo {
         cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
@@ -169,8 +177,7 @@ pub fn run(options: BenchmarkRunOptions) -> Result<()> {
 pub fn tune_lancedb(options: LanceDbTuneOptions) -> Result<()> {
     reset_onnx_metrics();
 
-    let mut base_cfg = SemanticFsConfig::load(&options.config_path)
-        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    let mut base_cfg = load_validated_benchmark_config(&options.config_path)?;
     if let Some(fixture) = options.fixture_repo {
         base_cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
     }
@@ -244,8 +251,7 @@ pub fn tune_lancedb(options: LanceDbTuneOptions) -> Result<()> {
 pub fn soak(options: SoakOptions) -> Result<()> {
     reset_onnx_metrics();
 
-    let mut cfg = SemanticFsConfig::load(&options.config_path)
-        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    let mut cfg = load_validated_benchmark_config(&options.config_path)?;
     if let Some(fixture) = options.fixture_repo {
         cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
     }
@@ -359,8 +365,7 @@ pub fn tune_onnx(options: OnnxTuneOptions) -> Result<()> {
         anyhow::bail!("batch_sizes, max_lengths, and providers must be non-empty");
     }
 
-    let mut cfg = SemanticFsConfig::load(&options.config_path)
-        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    let mut cfg = load_validated_benchmark_config(&options.config_path)?;
     if let Some(fixture) = options.fixture_repo {
         cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
     }
@@ -458,8 +463,7 @@ pub fn tune_onnx(options: OnnxTuneOptions) -> Result<()> {
 }
 
 pub fn relevance(options: RelevanceOptions) -> Result<()> {
-    let mut cfg = SemanticFsConfig::load(&options.config_path)
-        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    let mut cfg = load_validated_benchmark_config(&options.config_path)?;
     if let Some(fixture) = options.fixture_repo {
         cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
     }
@@ -552,8 +556,7 @@ pub fn relevance(options: RelevanceOptions) -> Result<()> {
 }
 
 pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
-    let mut cfg = SemanticFsConfig::load(&options.config_path)
-        .with_context(|| format!("load config from {}", options.config_path.display()))?;
+    let mut cfg = load_validated_benchmark_config(&options.config_path)?;
     if let Some(fixture) = options.fixture_repo {
         cfg.workspace.repo_root = fixture.to_string_lossy().to_string();
     }
@@ -576,6 +579,7 @@ pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
         anyhow::bail!("no golden fixtures provided; pass --golden or --golden-dir");
     }
 
+    let guard = PolicyGuard::from_config(&cfg)?;
     let mut datasets = Vec::new();
     let mut total_queries = 0u64;
 
@@ -604,18 +608,38 @@ pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
 
         for q in &fixture.queries {
             total_queries += 1;
-            let query_path = format!("/search/{}.md", q.query.replace(' ', "_"));
 
-            let sem_started = Instant::now();
-            let sem_bytes = bridge.read_virtual(&query_path, active, active)?;
-            let sem_elapsed = sem_started.elapsed().as_micros() as u64;
+            bridge.warm_search(&q.query, active, active)?;
+            let mut sem_elapsed_samples = Vec::with_capacity(3);
+            let mut sem_paths = Vec::new();
+            for sample_idx in 0..3 {
+                let sem_started = Instant::now();
+                let sem_hits = bridge.search_hits(&q.query, active, active)?;
+                let elapsed = sem_started.elapsed().as_micros() as u64;
+                if sample_idx == 0 {
+                    sem_paths = sem_hits
+                        .iter()
+                        .map(|hit| hit.path.clone())
+                        .collect::<Vec<_>>();
+                }
+                sem_elapsed_samples.push(elapsed);
+            }
+            let sem_elapsed = median_u64(&mut sem_elapsed_samples);
             semantic_latencies_us.push(sem_elapsed);
-            let sem_paths = parse_search_paths(&String::from_utf8_lossy(&sem_bytes));
 
-            let base_started = Instant::now();
-            let base_paths =
-                baseline_rg_search(&cfg.workspace.repo_root, &q.query, options.baseline_topn)?;
-            let base_elapsed = base_started.elapsed().as_micros() as u64;
+            let _ = baseline_rg_search(&cfg, &guard, &q.query, options.baseline_topn)?;
+            let mut base_elapsed_samples = Vec::with_capacity(3);
+            let mut base_paths = Vec::new();
+            for sample_idx in 0..3 {
+                let base_started = Instant::now();
+                let paths = baseline_rg_search(&cfg, &guard, &q.query, options.baseline_topn)?;
+                let elapsed = base_started.elapsed().as_micros() as u64;
+                if sample_idx == 0 {
+                    base_paths = paths;
+                }
+                base_elapsed_samples.push(elapsed);
+            }
+            let base_elapsed = median_u64(&mut base_elapsed_samples);
             baseline_latencies_us.push(base_elapsed);
 
             let sem_rank = first_relevant_rank(&sem_paths, &q.expected_paths);
@@ -1219,6 +1243,19 @@ fn percentile(samples: &[u64], p: f64) -> u64 {
     samples[idx.min(samples.len() - 1)]
 }
 
+fn median_u64(samples: &mut [u64]) -> u64 {
+    if samples.is_empty() {
+        return 0;
+    }
+    samples.sort_unstable();
+    let mid = samples.len() / 2;
+    if samples.len() % 2 == 1 {
+        samples[mid]
+    } else {
+        (samples[mid - 1] + samples[mid]) / 2
+    }
+}
+
 fn micros_to_ms(us: u64) -> f64 {
     (us as f64) / 1000.0
 }
@@ -1514,17 +1551,23 @@ fn first_relevant_rank(retrieved_paths: &[String], expected_paths: &[String]) ->
     None
 }
 
-fn baseline_rg_search(repo_root: &str, query: &str, topn: usize) -> Result<Vec<String>> {
+fn baseline_rg_search(
+    cfg: &SemanticFsConfig,
+    guard: &PolicyGuard,
+    query: &str,
+    topn: usize,
+) -> Result<Vec<String>> {
     let topn = topn.max(1);
     let rg = Command::new("rg")
         .arg("--json")
         .arg("-F")
+        .arg("--")
         .arg(query)
-        .arg(repo_root)
+        .arg(&cfg.workspace.repo_root)
         .output();
 
     let Ok(output) = rg else {
-        return Ok(fallback_text_search(repo_root, query, topn));
+        return Ok(fallback_text_search(cfg, guard, query, topn));
     };
 
     if !output.status.success() && output.status.code() != Some(1) {
@@ -1555,7 +1598,9 @@ fn baseline_rg_search(repo_root: &str, query: &str, topn: usize) -> Result<Vec<S
             continue;
         };
 
-        let normalized = normalize_repo_relative(path, repo_root);
+        let Some(normalized) = normalize_result_path(path, cfg, guard) else {
+            continue;
+        };
         if seen.insert(normalized.clone()) {
             out.push(normalized);
         }
@@ -1567,8 +1612,13 @@ fn baseline_rg_search(repo_root: &str, query: &str, topn: usize) -> Result<Vec<S
     Ok(out)
 }
 
-fn fallback_text_search(repo_root: &str, query: &str, topn: usize) -> Vec<String> {
-    let root = PathBuf::from(repo_root);
+fn fallback_text_search(
+    cfg: &SemanticFsConfig,
+    guard: &PolicyGuard,
+    query: &str,
+    topn: usize,
+) -> Vec<String> {
+    let root = PathBuf::from(&cfg.workspace.repo_root);
     let query_lower = query.to_ascii_lowercase();
     let mut out = Vec::new();
     for entry in WalkDir::new(&root).into_iter().filter_map(|e| e.ok()) {
@@ -1605,13 +1655,32 @@ fn fallback_text_search(repo_root: &str, query: &str, topn: usize) -> Vec<String
             continue;
         };
         if raw.to_ascii_lowercase().contains(&query_lower) {
-            out.push(normalize_repo_relative(&path.to_string_lossy(), repo_root));
+            let Some(normalized) = normalize_result_path(&path.to_string_lossy(), cfg, guard)
+            else {
+                continue;
+            };
+            out.push(normalized);
             if out.len() >= topn {
                 break;
             }
         }
     }
     out
+}
+
+fn normalize_result_path(path: &str, cfg: &SemanticFsConfig, guard: &PolicyGuard) -> Option<String> {
+    let normalized = normalize_repo_relative(path, &cfg.workspace.repo_root);
+    if !guard.is_explicit_multi_root() {
+        return Some(normalized);
+    }
+
+    let joined = PathBuf::from(&cfg.workspace.repo_root).join(&normalized);
+    let disk_path = joined.canonicalize().unwrap_or(joined);
+    let resolved = guard.resolve_disk_path(&disk_path)?;
+    if !guard.should_index_resolved(&resolved).allow {
+        return None;
+    }
+    Some(resolved.virtual_path)
 }
 
 fn normalize_repo_relative(path: &str, repo_root: &str) -> String {
@@ -1624,4 +1693,65 @@ fn normalize_repo_relative(path: &str, repo_root: &str) -> String {
         return rest.replace('\\', "/");
     }
     normalized
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use policy_guard::PolicyGuard;
+    use semanticfs_common::SemanticFsConfig;
+    use std::path::Path;
+
+    #[test]
+    fn normalize_result_path_respects_top_level_domain_allow_roots() {
+        let cfg_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("config")
+            .join("relevance-multiroot.toml");
+        let mut cfg = SemanticFsConfig::load(&cfg_path).expect("load relevance-multiroot config");
+        let repo_root = cfg_path
+            .parent()
+            .and_then(|p| p.parent())
+            .expect("resolve repo root")
+            .canonicalize()
+            .expect("canonicalize repo root");
+        cfg.workspace.repo_root = repo_root.to_string_lossy().to_string();
+        for domain in &mut cfg.workspace.domains {
+            let root = Path::new(&domain.root);
+            if root.is_absolute() {
+                continue;
+            }
+            let absolute_root = repo_root.join(root);
+            domain.root = absolute_root.to_string_lossy().to_string();
+        }
+        let guard = PolicyGuard::from_config(&cfg).expect("build policy guard");
+
+        let readme_path = repo_root.join("README.md");
+        let readme = normalize_result_path(&readme_path.to_string_lossy(), &cfg, &guard);
+        assert_eq!(readme.as_deref(), Some("workspace_meta/README.md"));
+
+        let fixture_path = repo_root
+            .join("tests")
+            .join("retrieval_golden")
+            .join("semanticfs_multiroot_explicit.json");
+        let leaked_fixture = normalize_result_path(
+            &fixture_path.to_string_lossy(),
+            &cfg,
+            &guard,
+        );
+        assert!(leaked_fixture.is_none());
+    }
+
+    #[test]
+    fn median_u64_returns_middle_sample() {
+        let mut odd = vec![71, 42, 53];
+        assert_eq!(median_u64(&mut odd), 53);
+
+        let mut even = vec![80, 20, 40, 60];
+        assert_eq!(median_u64(&mut even), 50);
+
+        let mut empty = Vec::new();
+        assert_eq!(median_u64(&mut empty), 0);
+    }
 }

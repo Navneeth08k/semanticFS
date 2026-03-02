@@ -56,9 +56,11 @@ fn sync_lancedb(db: &IndexerDb, version: u64) -> Result<()> {
         let schema = Arc::new(Schema::new(vec![
             Field::new("chunk_id", DataType::Utf8, false),
             Field::new("path", DataType::Utf8, false),
+            Field::new("domain_id", DataType::Utf8, false),
             Field::new("start_line", DataType::Int32, false),
             Field::new("end_line", DataType::Int32, false),
             Field::new("file_hash", DataType::Utf8, false),
+            Field::new("trust_label", DataType::Utf8, false),
             Field::new(
                 "vector",
                 DataType::FixedSizeList(
@@ -88,6 +90,9 @@ fn sync_lancedb(db: &IndexerDb, version: u64) -> Result<()> {
                 Arc::new(StringArray::from_iter_values(
                     rows.iter().map(|r| r.path.clone()),
                 )),
+                Arc::new(StringArray::from_iter_values(
+                    rows.iter().map(|r| r.domain_id.clone()),
+                )),
                 Arc::new(Int32Array::from_iter_values(
                     rows.iter().map(|r| r.start_line as i32),
                 )),
@@ -96,6 +101,9 @@ fn sync_lancedb(db: &IndexerDb, version: u64) -> Result<()> {
                 )),
                 Arc::new(StringArray::from_iter_values(
                     rows.iter().map(|r| r.file_hash.clone()),
+                )),
+                Arc::new(StringArray::from_iter_values(
+                    rows.iter().map(|r| r.trust_label.clone()),
                 )),
                 Arc::new(
                     FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(

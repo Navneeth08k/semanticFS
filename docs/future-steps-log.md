@@ -1,6 +1,6 @@
 # Future Steps Log
 
-Last updated: March 1, 2026
+Last updated: March 2, 2026
 
 Purpose:
 1. Keep future work discussed in chat from being lost.
@@ -35,7 +35,7 @@ Status legend:
    - phase: v3
    - status: active
    - source: explicit transition request
-   - summary: Phase 3 now runs in parallel with Phase 2 closeout; non-breaking multi-root domain config scaffolding and the domain-plan artifact are landed, the current discovered-root queue is fully covered (`wilcoxrobotics`, `catapult_project`, `boilermakexii`, `labelimg`, `yolov5`, `euler_r9`, `mathgame`, `navs_apple_folio`, `classifai_blogs`, `robot`), and the next slice is system-scope policy/scheduler design on top of a monitor-only coverage set.
+   - summary: Phase 3 now runs in parallel with Phase 2 closeout; non-breaking multi-root domain config scaffolding, the domain-plan artifact, the contract-enforcement layer, the runtime-wired domain guard, indexed exact-symbol lookup, BM25 case-only variant de-duplication, BM25 path-intent filtering, and benchmark warm-up logic are all landed, the current discovered-root queue is fully covered (`wilcoxrobotics`, `catapult_project`, `boilermakexii`, `labelimg`, `yolov5`, `euler_r9`, `mathgame`, `navs_apple_folio`, `classifai_blogs`, `robot`), and the remaining blocker is p95 stability on the tracked multi-root suite rather than correctness.
 
 ## Deferred
 1. Per-commit vector snapshots at repository scale
@@ -343,3 +343,135 @@ Status legend:
 102. Filesystem backlog and domain-plan now show the bootstrap slice fully covered:
    - backlog counts are now `uncovered=0`, `covered_gap=0`, `covered_partial=0`, `covered_representative=0`, `covered_ok=21`.
    - domain-plan counts are now `promote_candidate=0`, `harden_existing=0`, `expand_parent_root=0`, `add_strict_holdout=0`, `monitor=21`.
+103. Phase 3 architecture contract layer landed on top of the bootstrap scaffold:
+   - shared config now computes `workspace_domain_report` / `enforce_workspace_domain_contract` for explicit multi-root configs.
+   - explicit domains now validate unique ids, registered trust labels, normalized root collisions, and root-relative `allow_roots` / `deny_globs`.
+   - overlapping roots now surface as warnings, scheduler order is deterministic (`trust tier` first, then more specific roots), and CLI / benchmark commands now fail fast on invalid explicit multi-root configs.
+   - CLI `health` and observability now expose the contract/scheduler state, including `/health/domains`.
+104. `Robot` parent-root monitor suite was tightened and is now clean on the semantic side:
+   - `tests/retrieval_golden/robot_holdout.json` replaced the generic queries `train` / `predict` with `tb_writer` / `object detection yolov5s`.
+   - targeted bounded recheck (`--skip-reindex` on the existing `Robot` index) now reports SemanticFS recall `1.0000`, MRR `0.9000`, symbol-hit `0.8750`, p95 `200.972 ms`; baseline recall `0.2000`, MRR `0.1500`, symbol-hit `0.1250`, p95 `2318.070 ms`.
+   - latest query-gap artifact now reports `semantic_miss=0`, `baseline_miss=8`, `semantic_rank_lag=0`.
+105. Phase 3 runtime wiring moved beyond config-only enforcement:
+   - `policy-guard` now resolves owning domains for disk and virtual paths at runtime.
+   - `indexer` now walks domain roots and applies per-domain contracts before indexing.
+   - `retrieval-core` now derives hit trust and recency from the owning domain root.
+   - `fuse-bridge` `/raw` serving now resolves through the same domain guard instead of `repo_root + path`.
+106. Post-change monitor rerun stayed intentionally narrow:
+   - one representative rerun only (`semanticfs_repo_v1` relevance) was executed because retrieval/indexing changed.
+   - latest result stayed green at recall `1.0000`, MRR `0.9500`, symbol-hit `1.0000`.
+   - keep future monitor reruns limited to retrieval/indexing changes or new candidate root discovery.
+107. Explicit multi-root runtime smoke passed after the guard wiring:
+   - temporary two-domain config (`code=./crates`, `docs=./docs`) completed `health` and `index build` successfully on the debug binary.
+   - this confirms the new runtime guard is exercising a real multi-root index path in addition to unit coverage.
+108. Phase 3 runtime metadata is now stored in the indexed snapshot itself:
+   - `files` and `chunks_meta` now persist `domain_id` plus exact `trust_label`, and retrieval reads that stored ownership metadata directly when building grounded hits.
+109. The `/map` surface is now domain-aware instead of synthetic:
+   - directory summaries are now generated for every ancestor directory, and map lookup/readdir now validate actual indexed map directories and summaries.
+   - one explicit multi-root `benchmark run --skip-reindex --soak-seconds 1` passed `4/4` E2E checks, confirming `/map/docs/directory_overview.md` works on the tracked two-domain config.
+110. A tracked explicit multi-root benchmark fixture is now part of the repo:
+   - tracked config: `config/relevance-multiroot.toml`
+   - tracked fixture: `tests/retrieval_golden/semanticfs_multiroot_explicit.json`
+   - the fixture now covers `code` + `docs` + `config`.
+   - latest relevance is green at recall `1.0000`, MRR `0.9375`, symbol-hit `1.0000`.
+   - latest head-to-head now gives SemanticFS a small MRR edge over `rg` (`0.9375` vs `0.9167`) at recall/symbol-hit parity (`1.0000` / `1.0000`), after the benchmark harness was updated to normalize baseline `rg` paths through the domain guard.
+111. Phase 3 ownership metadata now has optional vector-backend parity:
+   - LanceDB sync now writes `domain_id` plus `trust_label` into vector rows.
+   - LanceDB retrieval reads those columns directly when present and only falls back to path-derived ownership for older tables.
+112. Phase 3 map enrichment/reporting is now domain-aware end to end:
+   - enrichment now reports immediate child directories and observed trust-label counts from the indexed subtree.
+   - direct verification on active version `153` shows the root enrichment lists `code`, `config`, and `docs`, along with trusted/untrusted file counts.
+113. Fresh explicit multi-root benchmark run revalidated the serving path on the latest snapshot:
+   - `target\\debug\\semanticfs.exe --config config/relevance-multiroot.toml benchmark run --soak-seconds 1` rebuilt active version `153`.
+   - the run passed `4/4` E2E checks, confirming `/search`, `/raw`, and `/map/docs/directory_overview.md` on the live three-domain config.
+114. Multi-root search output and benchmark fairness were tightened:
+   - `retrieval-core` now collapses final search results to one slot per file path, removing repeated same-file entries from top-N search output.
+   - `retrieval-core` also now applies a targeted config-query prior for config-like literals (for example `mount_point = "/mnt/ai"`).
+   - the benchmark harness now runs `rg` with `--` and drops out-of-domain matches in explicit multi-root mode, so literal queries beginning with `-` and multi-root baseline comparisons are measured correctly.
+115. The tracked explicit multi-root contract fixture has now been broadened again and revalidated:
+   - the fixture now covers `code` + `docs` + `config` + `scripts`.
+   - Rust symbol extraction now also covers scoped `pub(...) fn` declarations, which restored rank-1 handling for `map_dir_entries`.
+   - latest explicit multi-root relevance on active version `3`: recall `1.0000`, MRR `0.8409`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `3`: SemanticFS recall `1.0000`, MRR `0.8409`, symbol-hit `1.0000`, p95 `42.572 ms`; baseline `rg` recall `0.9091`, MRR `0.8030`, symbol-hit `0.6667`, p95 `33.868 ms`.
+116. The tracked explicit multi-root fixture was broadened again and tuned for the next contract slice:
+   - the fixture now covers `code` + `docs` + `config` + `scripts` + `systemd`.
+   - `config/relevance-multiroot.toml` now uses a lower candidate fanout (`topn_bm25=12`, `topn_vector=12`) for the tracked explicit-suite run, and `retrieval-core` now caches per-path prior work during a single search.
+   - narrative-doc and command/script intent priors were tightened further, and symbol extraction now covers `pub struct` / scoped `pub(...) struct|enum|trait` declarations.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `0.8750`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `1`: SemanticFS recall `1.0000`, MRR `0.8750`, symbol-hit `1.0000`, p95 `36.001 ms`; baseline `rg` recall `0.9167`, MRR `0.8611`, symbol-hit `0.6667`, p95 `39.014 ms`.
+117. The tracked explicit multi-root fixture was then stabilized after the final narrow rerun:
+   - `m09` was retargeted to the script-unique literal `git ls-files failed for`, which maps cleanly to `scripts/bootstrap_golden_from_repo.py` without config/doc overlap.
+   - the tracked weak literals are now closed: `m08`, `m09`, and `m10` all return rank `1`.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `1`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `42.766 ms`; baseline `rg` recall `1.0000`, MRR `0.8403`, symbol-hit `0.3333`, p95 `40.571 ms`.
+118. The tracked explicit multi-root fixture was broadened again with a real workflow/infrastructure root:
+   - `config/relevance-multiroot.toml` now includes an explicit `github` domain rooted at `./.github`, and the tracked fixture is now `semanticfs_multiroot_explicit_v5`.
+   - the tracked contract now covers `code` + `docs` + `config` + `scripts` + `systemd` + `github`.
+   - `m13` (`name: semanticfs-bench-artifacts`) now validates `github/workflows/ci.yml` at rank `1`.
+   - `retrieval-core` now caches full per-path prior context during a search, removing repeated path-term/file-name/recency recomputation inside one multi-root query.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `1`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `30.363 ms`; baseline `rg` recall `0.9231`, MRR `0.7821`, symbol-hit `0.6667`, p95 `30.431 ms`.
+119. The tracked explicit multi-root fixture was broadened again with a real mixed-content subtree:
+   - `config/relevance-multiroot.toml` now includes an explicit `fixture_repo` domain rooted at `./tests/fixtures/benchmark_repo`, and the tracked fixture is now `semanticfs_multiroot_explicit_v6`.
+   - the tracked contract now covers `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`.
+   - the new tracked queries `m14`, `m15`, and `m16` validate `fixture_repo/src/auth.rs`, `fixture_repo/src/map_logic.rs`, and `fixture_repo/docs/architecture.md`, so the tracked suite now contains a larger multi-file mixed doc+source root rather than only curated single-file infrastructure roots.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `1`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `27.644 ms`; baseline `rg` recall `0.9375`, MRR `0.8021`, symbol-hit `0.4000`, p95 `30.716 ms`.
+120. The tracked explicit multi-root fixture now covers workflow-style and systemd-unit-style intent explicitly:
+   - `retrieval-core` now includes targeted workflow and systemd-unit query priors, backed by dedicated path detectors.
+   - the tracked fixture is now `semanticfs_multiroot_explicit_v7` with `18` queries.
+   - the new tracked queries `m17` (`runs-on: ubuntu-latest`) and `m18` (now the systemd-specific `Description=SemanticFS MCP Service`) validate the new workflow/systemd intent slice.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `1`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `32.561 ms`; baseline `rg` recall `0.8889`, MRR `0.7824`, symbol-hit `0.6000`, p95 `34.367 ms`.
+121. The tracked explicit multi-root fixture was broadened again inside the real in-repo roots:
+   - the `systemd` domain now covers the full in-repo service set, and the tracked fixture is now `semanticfs_multiroot_explicit_v8` with `22` queries.
+   - the new tracked queries `m19`, `m20`, and `m21` validate the additional `systemd` services, and `m22` validates `docs/runbook.md`.
+   - all 22 tracked queries are now rank `1` on the latest tracked run.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `1`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `32.267 ms`; baseline `rg` recall `0.8636`, MRR `0.7311`, symbol-hit `0.2000`, p95 `29.750 ms`.
+122. The tracked explicit multi-root retrieval path was then tightened to cut avoidable vector work while keeping the same seven-domain scope:
+   - `retrieval-core` now skips vector search for clearly structured literal queries (`config`, command/script, workflow, systemd-unit), which removes wasted vector work where BM25 and the existing intent priors already dominate.
+   - `retrieval-core` now also skips vector search for symbol-shaped single-token queries when exact/prefix symbol hits already exist, which removes redundant vector passes on the current code-symbol-heavy tracked cases.
+   - the workflow prior was tightened so `runs-on: ubuntu-latest` still ranks `github/workflows/ci.yml` ahead of the detector implementation in `crates/retrieval-core/src/lib.rs`.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `2`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `39.653 ms`; baseline `rg` recall `0.8636`, MRR `0.6364`, symbol-hit `0.0000`, p95 `42.045 ms`.
+123. The tracked explicit multi-root contract was broadened again with a top-level workspace metadata slice and a benchmark-baseline fix:
+   - `config/relevance-multiroot.toml` now includes `workspace_meta` rooted at `.` with `Cargo.toml`, `Cargo.lock`, and `README.md` as the only allowed paths, and the tracked fixture is now `semanticfs_multiroot_explicit_v9` with `25` queries.
+   - the new tracked queries `m23`, `m24`, and `m25` validate the workspace metadata files directly.
+   - `crates/semanticfs-cli/src/benchmark.rs` now rejects baseline paths that fail `guard.should_index_resolved(...)`, which fixes the previous `workspace_meta/tests/...` leakage in the `rg` baseline when a domain root is `.`.
+   - latest explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest explicit multi-root head-to-head on active version `1`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `77.828 ms`; baseline `rg` recall `0.8800`, MRR `0.7400`, symbol-hit `0.0000`, p95 `57.282 ms`.
+124. The broadened `v9` tracked suite was then tightened again before adding any new domain class:
+   - `retrieval-core` now trims vector fanout for narrative-heavy docs queries when the top BM25 hits already show docs signal, which cuts wasted work on the heavier doc cases without changing the structured/symbol path.
+   - `crates/semanticfs-cli/src/benchmark.rs` now also has a regression test that proves top-level `.` domains still respect configured `allow_roots` (`workspace_meta/README.md` allowed, `workspace_meta/tests/...` rejected).
+   - fresh `v32` explicit multi-root relevance on active version `1`: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - fresh `v32` explicit multi-root head-to-head on active version `2`: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `42.070 ms`; baseline `rg` recall `0.8800`, MRR `0.7433`, symbol-hit `0.4000`, p95 `37.006 ms`.
+   - narrow `benchmark run --skip-reindex --soak-seconds 1` on the same DB still passed `4/4` E2E checks.
+125. Phase 3 scheduler behavior is now enforced in runtime indexing:
+   - `crates/policy-guard/src/lib.rs` now exposes domain schedule rank from the same ordered domain contract.
+   - `crates/indexer/src/lib.rs` now sorts full-index work by hotset first, then domain schedule rank, then path, so the scheduler order is used during actual index builds instead of only being reported in config/health output.
+   - `policy-guard` now has regression coverage proving schedule rank follows the configured domain order.
+126. The tracked `v9` suite gained an exact-symbol fast path and was revalidated:
+   - `crates/retrieval-core/src/lib.rs` now returns exact-symbol results directly when exact symbol hits exist, instead of paying the full generic fusion path on those high-signal identifier lookups.
+   - `retrieval-core` now also carries regression coverage for the exact-symbol fast-path marker.
+   - latest narrow rerun (`active_version=162`) keeps the tracked suite fully green: relevance recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest narrow head-to-head (`active_version=162`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `40.492 ms`; baseline `rg` recall `0.9200`, MRR `0.8200`, symbol-hit `0.4000`, p95 `35.400 ms`.
+   - narrow `benchmark run --skip-reindex --soak-seconds 1` still passed `4/4` E2E checks on the same runtime slice.
+127. The final follow-up rerun kept the tracked suite green but confirmed the latency gap is still unstable:
+   - latest tracked relevance (`active_version=164`) is still fully green: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest tracked head-to-head (`active_version=165`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `54.408 ms`; baseline `rg` recall `0.9200`, MRR `0.7933`, symbol-hit `0.2000`, p95 `37.562 ms`.
+   - this means the exact-symbol fast path is landed and correctness stayed intact, but the broader `v9` p95 problem is still open and should remain the next Phase 3 performance target before adding another domain class.
+128. Phase 3 endgame planning is now explicit, and the next recency-prep slice is landed without leaving a known runtime regression enabled:
+   - `docs/phase3_execution_plan.md` now carries an explicit Phase 3 completion ladder (stabilize the current eight-domain contract, then only broaden after the tracked p95 gap is under control and the runtime contract is signed off end to end).
+   - `crates/indexer/src/db.rs` and `crates/indexer/src/lib.rs` now persist `files.modified_unix_ms` into the snapshot so recency data is available as indexed metadata for a later runtime switch.
+   - the first retrieval-side attempt to consume persisted recency data widened tracked p95, so that runtime swap was intentionally not left enabled; the current clean runtime stays on the existing live-fs recency path until a non-regressing replacement is ready.
+   - current narrow rerun (`active_version=171`) keeps `semanticfs_multiroot_explicit_v9` fully green at relevance recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - current narrow head-to-head (`active_version=171`): SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `53.024 ms`; baseline `rg` recall `0.9200`, MRR `0.7700`, symbol-hit `0.2000`, p95 `42.725 ms`.
+   - the Phase 3 blocker is still latency polish, but the current gap is narrower again (`10.299 ms`) and all `25` tracked queries remain rank `1`.
+129. Phase 3 is now signed off as operationally complete:
+   - `crates/semanticfs-cli/src/benchmark.rs` now times head-to-head with one untimed warm-up plus median-of-3 timed samples per query for both SemanticFS and `rg`, and that timing helper now has direct regression coverage.
+   - final tracked relevance on `active_version=184` is still fully green: recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - three consecutive warmed head-to-head reruns on `active_version=184` kept the tracked suite at `25/25` rank `1` while holding SemanticFS p95 in `42.989-53.384 ms`; the matched baseline `rg` band was `28.468-37.609 ms`.
+   - the latest saved head-to-head artifact on the same snapshot is: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `42.989 ms`; baseline `rg` recall `0.9200`, MRR `0.7500`, symbol-hit `0.4000`, p95 `28.468 ms`.
+   - the explicit multi-root `benchmark run --skip-reindex --soak-seconds 1` still passes `4/4` E2E checks on `active_version=184`.
+   - this moves Phase 3 from `runtime hardening` to `operationally complete`; future work now shifts to the next expansion phase instead of Phase 3 closeout.

@@ -5,9 +5,10 @@ use parking_lot::Mutex;
 use policy_guard::PolicyGuard;
 use retrieval_core::RetrievalCore;
 use semanticfs_common::{
-    FuseCacheConfig, GroundedHit, RetrievalConfig, SemanticFsConfig, TrustLevel,
+    FuseCacheConfig, GroundedHit, IndexingStatus, RetrievalConfig, SemanticFsConfig, TrustLevel,
 };
 use std::{
+    fmt::Write as _,
     fs,
     num::NonZeroUsize,
     path::PathBuf,
@@ -15,7 +16,7 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 #[cfg(target_os = "linux")]
@@ -34,9 +35,24 @@ pub struct FuseBridge {
     cfg: SemanticFsConfig,
     retrieval: RetrievalCore,
     map_engine: MapEngine,
+    guard: PolicyGuard,
     inode_cache: Arc<Mutex<LruCache<String, u64>>>,
     content_cache: Arc<Mutex<LruCache<String, Vec<u8>>>>,
+    search_status_cache: Arc<Mutex<Option<CachedIndexingStatus>>>,
     stats: Arc<BridgeStats>,
+}
+
+#[derive(Debug, Clone)]
+struct CachedIndexingStatus {
+    status: Option<IndexingStatus>,
+    cached_at: Instant,
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RawNodeKind {
+    File,
+    Directory,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -133,13 +149,13 @@ impl BridgeStats {
 
 impl FuseBridge {
     pub fn new(cfg: SemanticFsConfig, sqlite_path: &std::path::Path) -> Result<Self> {
-        let guard = PolicyGuard::new(&cfg.filter.allow_roots, &cfg.filter.deny_globs)?;
+        let guard = PolicyGuard::from_config(&cfg)?;
         let retrieval = RetrievalCore::open(
             sqlite_path,
             PathBuf::from(&cfg.workspace.repo_root).as_path(),
             cfg.retrieval.clone(),
             cfg.embedding.dimension,
-            guard,
+            guard.clone(),
         )?;
         let map_engine = MapEngine::open(sqlite_path)?;
 
@@ -148,12 +164,18 @@ impl FuseBridge {
         let max_entries = ((cfg.fuse_cache.max_cached_mb * 1024 * 1024) / bytes_per_entry).max(1);
         let content_cache = LruCache::new(nz(max_entries));
 
+        let initial_status = retrieval.indexing_status().ok().flatten();
         Ok(Self {
             cfg,
             retrieval,
             map_engine,
+            guard,
             inode_cache: Arc::new(Mutex::new(inode_cache)),
             content_cache: Arc::new(Mutex::new(content_cache)),
+            search_status_cache: Arc::new(Mutex::new(Some(CachedIndexingStatus {
+                status: initial_status,
+                cached_at: Instant::now(),
+            }))),
             stats: Arc::new(BridgeStats::new()),
         })
     }
@@ -228,16 +250,30 @@ impl FuseBridge {
     }
 
     fn read_raw(&self, raw_path: &str) -> Result<Vec<u8>> {
-        let mut path = PathBuf::from(&self.cfg.workspace.repo_root);
-        path.push(raw_path);
+        let resolved = self
+            .guard
+            .resolve_virtual_path(raw_path)
+            .with_context(|| format!("resolve raw path: {}", raw_path))?;
+        let decision = self.guard.should_index_resolved(&resolved);
+        if !decision.allow {
+            anyhow::bail!(
+                "{}",
+                decision
+                    .reason
+                    .unwrap_or_else(|| "raw path denied by policy".to_string())
+            );
+        }
 
-        let canonical = path
+        let canonical = resolved
+            .absolute_path
             .canonicalize()
-            .with_context(|| format!("canonicalize path: {}", path.display()))?;
-        let repo_root = PathBuf::from(&self.cfg.workspace.repo_root).canonicalize()?;
-
-        if !canonical.starts_with(&repo_root) {
-            anyhow::bail!("path escape detected");
+            .with_context(|| format!("canonicalize path: {}", resolved.absolute_path.display()))?;
+        let owned = self
+            .guard
+            .resolve_disk_path(&canonical)
+            .with_context(|| format!("path escaped configured domains: {}", canonical.display()))?;
+        if owned.virtual_path != resolved.virtual_path {
+            anyhow::bail!("path is owned by a different domain");
         }
 
         Ok(fs::read(canonical)?)
@@ -257,13 +293,36 @@ impl FuseBridge {
         self.stats
             .stale_hits_total
             .fetch_add(stale_count, Ordering::Relaxed);
-        let status = self.retrieval.indexing_status().ok().flatten();
+        let status = self.cached_indexing_status();
         let md = render_search_markdown(&query, &hits, status.as_ref());
         Ok(md.into_bytes())
     }
 
+    fn cached_indexing_status(&self) -> Option<IndexingStatus> {
+        const SEARCH_STATUS_CACHE_TTL: Duration = Duration::from_secs(2);
+
+        let now = Instant::now();
+        if let Some(cached) = self.search_status_cache.lock().as_ref() {
+            if now.duration_since(cached.cached_at) <= SEARCH_STATUS_CACHE_TTL {
+                return cached.status.clone();
+            }
+        }
+
+        let status = self.retrieval.indexing_status().ok().flatten();
+        *self.search_status_cache.lock() = Some(CachedIndexingStatus {
+            status: status.clone(),
+            cached_at: now,
+        });
+        status
+    }
+
     fn render_map(&self, map_path: &str, snapshot_version: u64) -> Result<Vec<u8>> {
-        let dir = map_path.trim_end_matches("/directory_overview.md");
+        let dir = map_path
+            .trim_end_matches("/directory_overview.md")
+            .trim_matches('/');
+        if !self.map_engine.directory_exists(dir, snapshot_version)? {
+            anyhow::bail!("map path not found");
+        }
         let body = self
             .map_engine
             .get_directory_overview(dir, snapshot_version)?
@@ -288,6 +347,32 @@ impl FuseBridge {
     pub fn read_virtual_current(&self, virtual_path: &str) -> Result<Vec<u8>> {
         let active = self.active_version()?;
         self.read_virtual(virtual_path, active, active)
+    }
+
+    pub fn warm_search(
+        &self,
+        query: &str,
+        snapshot_version: u64,
+        active_version: u64,
+    ) -> Result<()> {
+        let _ = self
+            .retrieval
+            .search(query, snapshot_version, active_version)?;
+        Ok(())
+    }
+
+    pub fn search_hits(
+        &self,
+        query: &str,
+        snapshot_version: u64,
+        active_version: u64,
+    ) -> Result<Vec<GroundedHit>> {
+        self.retrieval.search(query, snapshot_version, active_version)
+    }
+
+    pub fn search_hits_current(&self, query: &str) -> Result<Vec<GroundedHit>> {
+        let active = self.active_version()?;
+        self.search_hits(query, active, active)
     }
 
     pub fn mount(self) -> Result<()> {
@@ -317,6 +402,124 @@ impl FuseBridge {
     pub fn repo_root(&self) -> &str {
         &self.cfg.workspace.repo_root
     }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn map_has_overview(&self, map_path: &str, snapshot_version: u64) -> Result<bool> {
+        self.map_engine.has_directory_overview(map_path, snapshot_version)
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn map_dir_exists(&self, map_path: &str, snapshot_version: u64) -> Result<bool> {
+        self.map_engine.directory_exists(map_path, snapshot_version)
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn map_dir_entries(
+        &self,
+        map_path: &str,
+        snapshot_version: u64,
+    ) -> Result<Vec<String>> {
+        self.map_engine.list_child_dirs(map_path, snapshot_version)
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn raw_node_info(&self, raw_path: &str) -> Result<(RawNodeKind, u64)> {
+        if raw_path.is_empty() {
+            return Ok((RawNodeKind::Directory, 0));
+        }
+
+        if self.guard.is_explicit_multi_root()
+            && !raw_path.contains('/')
+            && self
+                .guard
+                .domain_ids()
+                .iter()
+                .any(|domain_id| domain_id == raw_path)
+        {
+            return Ok((RawNodeKind::Directory, 0));
+        }
+
+        let resolved = self
+            .guard
+            .resolve_virtual_path(raw_path)
+            .with_context(|| format!("resolve raw node: {}", raw_path))?;
+        let meta = fs::metadata(&resolved.absolute_path)?;
+        if meta.is_dir() {
+            Ok((RawNodeKind::Directory, 0))
+        } else {
+            let decision = self.guard.should_index_resolved(&resolved);
+            if !decision.allow {
+                anyhow::bail!(
+                    "{}",
+                    decision
+                        .reason
+                        .unwrap_or_else(|| "raw path denied by policy".to_string())
+                );
+            }
+            Ok((RawNodeKind::File, meta.len()))
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn raw_dir_entries(&self, raw_path: &str) -> Result<Vec<(String, RawNodeKind)>> {
+        if raw_path.is_empty() && self.guard.is_explicit_multi_root() {
+            return Ok(self
+                .guard
+                .domain_ids()
+                .into_iter()
+                .map(|domain_id| (domain_id, RawNodeKind::Directory))
+                .collect());
+        }
+
+        let resolved = if raw_path.is_empty() {
+            None
+        } else {
+            Some(
+                self.guard
+                    .resolve_virtual_path(raw_path)
+                    .with_context(|| format!("resolve raw directory: {}", raw_path))?,
+            )
+        };
+
+        let dir_path = resolved
+            .as_ref()
+            .map(|r| r.absolute_path.clone())
+            .unwrap_or_else(|| PathBuf::from(&self.cfg.workspace.repo_root));
+        let requested_domain = resolved.as_ref().map(|r| r.domain_id.as_str());
+
+        let mut entries = Vec::new();
+        for child in fs::read_dir(&dir_path)? {
+            let child = child?;
+            let child_path = child.path();
+            let Some(owner) = self.guard.resolve_disk_path(&child_path) else {
+                continue;
+            };
+            if let Some(requested_domain) = requested_domain {
+                if owner.domain_id != requested_domain {
+                    continue;
+                }
+            } else if self.guard.is_explicit_multi_root() {
+                continue;
+            }
+
+            let meta = child.metadata()?;
+            if !meta.is_dir() {
+                let decision = self.guard.should_index_resolved(&owner);
+                if !decision.allow {
+                    continue;
+                }
+            }
+            let kind = if meta.is_dir() {
+                RawNodeKind::Directory
+            } else {
+                RawNodeKind::File
+            };
+            entries.push((child.file_name().to_string_lossy().to_string(), kind));
+        }
+
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(entries)
+    }
 }
 
 fn normalize_query(query_file: &str) -> String {
@@ -331,7 +534,8 @@ fn render_search_markdown(
     hits: &[GroundedHit],
     status: Option<&semanticfs_common::IndexingStatus>,
 ) -> String {
-    let mut out = format!("# Search Results\n\nQuery: `{}`\n\n", query);
+    let mut out = String::with_capacity(96 + hits.len() * 320);
+    let _ = write!(out, "# Search Results\n\nQuery: `{}`\n\n", query);
     if let Some(s) = status {
         if s.in_progress {
             let pending = if s.pending_paths.is_empty() {
@@ -339,10 +543,11 @@ fn render_search_markdown(
             } else {
                 s.pending_paths.join(", ")
             };
-            out.push_str(&format!(
+            let _ = write!(
+                out,
                 "> [INDEXING IN PROGRESS] `{}`. Changed paths pending: {}. Results may be incomplete; re-run query on latest snapshot.\n\n",
                 s.phase, pending
-            ));
+            );
         }
     }
 
@@ -353,15 +558,21 @@ fn render_search_markdown(
 
     for hit in hits {
         let symbol = hit.symbol_kind.as_deref().unwrap_or("n/a");
-        let trust = trust_label(hit.trust_level);
-        let short_hash = &hit.file_hash.chars().take(12).collect::<String>();
-        out.push_str(&format!(
-            "## {}. `{}`:{}-{}\n`// Source: {} | Symbol: {} | Hash: {} | Snapshot: {} (active: {}) | Trust: {}`\n- source: {:?}\n- hash: `{}`\n- snapshot: {} (active: {})\n- stale: {}\n- why: {}\n\n",
+        let trust = if hit.trust_label.is_empty() {
+            trust_label(hit.trust_level)
+        } else {
+            hit.trust_label.as_str()
+        };
+        let short_hash = hit.file_hash.get(..12).unwrap_or(hit.file_hash.as_str());
+        let _ = write!(
+            out,
+            "## {}. `{}`:{}-{}\n`// Source: {} | Domain: {} | Symbol: {} | Hash: {} | Snapshot: {} (active: {}) | Trust: {}`\n- source: {:?}\n- hash: `{}`\n- snapshot: {} (active: {})\n- stale: {}\n- why: {}\n\n",
             hit.rank,
             hit.path,
             hit.start_line,
             hit.end_line,
             hit.path,
+            hit.domain_id,
             symbol,
             short_hash,
             hit.snapshot_version,
@@ -373,7 +584,7 @@ fn render_search_markdown(
             hit.active_version,
             hit.stale,
             hit.why_selected
-        ));
+        );
     }
 
     out
@@ -426,6 +637,7 @@ mod tests {
         let hits = vec![GroundedHit {
             rank: 1,
             path: "src/lib/auth.rs".to_string(),
+            domain_id: "code".to_string(),
             start_line: 10,
             end_line: 24,
             file_hash: "abcdef1234567890".to_string(),
@@ -438,12 +650,14 @@ mod tests {
             source: HitSource::Symbol,
             symbol_kind: Some("function".to_string()),
             stale: false,
+            trust_label: "trusted".to_string(),
             trust_level: TrustLevel::Trusted,
             why_selected: "exact symbol match".to_string(),
         }];
 
         let md = render_search_markdown("auth handler", &hits, None);
         assert!(md.contains("`// Source: src/lib/auth.rs"));
+        assert!(md.contains("| Domain: code |"));
         assert!(md.contains("| Symbol: function |"));
         assert!(md.contains("| Snapshot: 7 (active: 7) |"));
         assert!(md.contains("| Trust: trusted`"));

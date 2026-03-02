@@ -28,3 +28,4 @@ semanticfs-common = { path = "../semanticfs-common" }
 indexer = { path = "../indexer" }
 fuse-bridge = { path = "../fuse-bridge" }
 mcp = { path = "../mcp" }
+policy-guard = { path = "../policy-guard" }

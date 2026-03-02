@@ -1,6 +1,6 @@
 # New Chat Handoff
 
-Last updated: March 1, 2026
+Last updated: March 2, 2026
 
 This file is the fastest way to restore full working context in a new chat.
 
@@ -125,6 +125,55 @@ Recent v1.2 reliability/quality work completed:
    - `classifai_blogs_bootstrap_v1` was generated, split, and validated in strict holdout, reducing the partial-root queue further.
 45. The final parent-root expansion is complete:
    - `robot_bootstrap_v1` was validated against the `Robot` root using a bounded parent-root config over the code-bearing child subtrees, closing the last remaining partial root in the current queue.
+46. Phase 3 architecture contract layer is now active:
+   - shared config now computes `workspace_domain_report` / `enforce_workspace_domain_contract` for explicit multi-root configs.
+   - explicit domains now validate unique ids, registered trust labels, normalized root collisions, and root-relative `allow_roots` / `deny_globs`, while overlapping roots surface as warnings.
+   - scheduler order is now deterministic (`trust tier` first, then more specific roots before broader roots).
+   - CLI and benchmark commands now fail fast on invalid explicit multi-root configs, and observability now exposes `/health/domains`.
+47. The bounded `Robot` monitor suite is now tightened:
+   - `tests/retrieval_golden/robot_holdout.json` replaces the generic queries `train` / `predict` with `tb_writer` / `object detection yolov5s`.
+   - the latest Robot query-gap is now `semantic_miss=0`, `baseline_miss=8`, `rank_lag=0`.
+48. Phase 3 runtime wiring is now active:
+   - `policy-guard` now resolves domain ownership at runtime (`resolve_disk_path`, `resolve_virtual_path`) instead of only validating config shape.
+   - `indexer` now walks domain-owned roots and applies per-domain policy contracts before indexing.
+   - `retrieval-core` now derives search-hit trust and recency against the owning domain root.
+   - `fuse-bridge` `/raw` serving now resolves through the same domain guard instead of `repo_root + path`.
+49. Post-change monitor rerun stayed intentionally narrow:
+   - one representative rerun only (`semanticfs_repo_v1` relevance) because retrieval/indexing changed.
+   - latest result: recall `1.0000`, MRR `0.9500`, symbol-hit `1.0000`.
+   - no broad monitor sweep was run; keep reruns limited to retrieval/indexing changes or new root discovery.
+50. Explicit multi-root runtime smoke is now confirmed:
+   - temporary two-domain config (`code=./crates`, `docs=./docs`) completed `health` and `index build` successfully.
+   - this validates a real multi-root indexing path, not just config validation.
+51. Runtime domain ownership is now persisted in indexed metadata:
+   - `files` and `chunks_meta` now store `domain_id` plus exact `trust_label`, and retrieval reads that stored ownership metadata directly when building hits.
+52. `/map` is now domain-aware in the runtime path:
+   - directory summaries are now precomputed for every ancestor directory, and map lookup/readdir now validate actual indexed map directories instead of synthesizing arbitrary subdirectories.
+   - one explicit multi-root `benchmark run --skip-reindex --soak-seconds 1` passed all `4/4` E2E checks, including `/map/docs/directory_overview.md`.
+53. A tracked explicit multi-root benchmark fixture is now the Phase 3 sign-off fixture:
+   - tracked config: `config/relevance-multiroot.toml`
+   - tracked fixture: `tests/retrieval_golden/semanticfs_multiroot_explicit.json`
+   - the tracked fixture now covers `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`.
+   - latest relevance is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000` on `active_version=184`.
+   - the final Phase 3 sign-off now uses one untimed warm-up plus median-of-3 timed samples per query for both engines; three consecutive warmed reruns on `active_version=184` held SemanticFS p95 in `42.989-53.384 ms` vs baseline `rg` `28.468-37.609 ms`.
+   - the latest saved head-to-head artifact on the same snapshot keeps SemanticFS ahead on quality (`recall 1.0000` vs `0.9200`, `MRR 1.0000` vs `0.7500`, `symbol-hit 1.0000` vs `0.4000`), while `rg` remains faster on p95 on the broader fixture (`28.468 ms` vs SemanticFS `42.989 ms`).
+   - `files.modified_unix_ms` is now persisted in the snapshot, but retrieval-side use is intentionally not left on yet because the first search-time attempt widened p95.
+   - all `25` tracked queries are now rank `1`.
+   - the tracked suite explicitly covers workflow-style literals, a full multi-file `systemd` root, the real operational doc `docs/runbook.md`, and top-level workspace metadata (`Cargo.toml`, `Cargo.lock`, `README.md`).
+   - `semanticfs-cli` now includes regression coverage for both top-level `.` baseline normalization and the median-of-3 timing helper.
+   - Phase 3 is now operationally complete; further domain-class broadening moves to the next expansion phase rather than this closeout track.
+54. Optional vector-backend parity is now live for Phase 3 ownership metadata:
+   - LanceDB sync now writes `domain_id` plus `trust_label` into vector rows.
+   - LanceDB retrieval reads those columns directly when present.
+55. Domain-aware map enrichment/reporting now uses the same directory model:
+   - enrichment now reports immediate child directories and observed trust-label counts from the indexed subtree.
+   - a direct DB check on active version `153` confirms the root enrichment now lists `code`, `config`, and `docs` with trust-label counts.
+56. Explicit multi-root benchmark run is green on the latest active version:
+   - `benchmark run --soak-seconds 1` on `config/relevance-multiroot.toml` rebuilt version `1` and passed `4/4` E2E checks, including `/map/docs/directory_overview.md`.
+57. Phase 3 runtime scheduling is now wired into actual index builds:
+   - `indexer` now sorts full-index work by hotset first, then domain schedule rank, then path, so the multi-root scheduler is no longer only a config/health report.
+58. Exact symbol-like queries now have a direct retrieval fast path:
+   - `retrieval-core` now returns exact-symbol results directly when exact symbol hits exist, instead of paying the full generic fusion path for those high-signal identifier lookups.
 
 ## 3) Latest Measured Snapshot
 Head-to-head runs on real suites (release mode, February 24, 2026):
@@ -202,6 +251,7 @@ Head-to-head runs on real suites (release mode, February 24, 2026):
 24. Phase 3 domain-plan snapshot (March 1, 2026):
    - artifact: `.semanticfs/bench/filesystem_domain_plan_latest.json`
    - counts: `promote_candidate=0`, `harden_existing=0`, `expand_parent_root=0`, `add_strict_holdout=0`, `monitor=21`
+   - implementation status: root promotion is done; the config/health contract layer and first runtime-wired guard layer are landed.
 25. Fresh hardening + expansion runs (March 1, 2026):
    - `repo8872pp`, `syntaxless`, `flutter_tools`, `pseudolang`, and bounded `flutter_v2` now all validate at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000` on their latest strict holdouts.
    - `apex_scholars` now validates at recall `1.0000`, MRR `0.9667`, symbol-hit `0.9333`, p95 `14.742 ms`.
@@ -211,8 +261,8 @@ Head-to-head runs on real suites (release mode, February 24, 2026):
    - `mathgame_bootstrap_v1_holdout_v1` now validates at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `31.416 ms`; baseline recall `1.0000`, MRR `0.8333`, symbol-hit `0.7000`, p95 `37.683 ms`.
    - `navs_apple_folio_bootstrap_v1_holdout_v1` now validates at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `43.750 ms`; baseline recall `1.0000`, MRR `0.8750`, symbol-hit `0.8000`, p95 `38.382 ms`.
    - `classifai_blogs_bootstrap_v1_holdout_v1` now validates at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `30.423 ms`; baseline recall `0.8000`, MRR `0.4650`, symbol-hit `0.3000`, p95 `49.510 ms`.
-   - `robot_bootstrap_v1_holdout_v1` now validates on the bounded parent-root run at recall `0.8000`, MRR `0.7500`, symbol-hit `0.7000`, p95 `194.556 ms`; baseline recall `0.1000`, MRR `0.0500`, symbol-hit `0.0000`, p95 `2278.461 ms`.
-   - latest Robot query-gap shows `semantic_miss=2`, `baseline_miss=9`, `rank_lag=0`; the remaining misses are broad generic terms (`train`, `predict`), not rank-lag defects.
+   - `robot_bootstrap_v1_holdout_v1` now validates on the tightened bounded parent-root monitor suite at recall `1.0000`, MRR `0.9000`, symbol-hit `0.8750`, p95 `200.972 ms`; baseline recall `0.2000`, MRR `0.1500`, symbol-hit `0.1250`, p95 `2318.070 ms`.
+   - latest Robot query-gap is now clean on the semantic side (`semantic_miss=0`, `rank_lag=0`); only baseline misses remain.
    - `buckit_curated_holdout_v1` is now clean again at recall `1.0000`, MRR `0.9750`, symbol-hit `0.9333`, p95 `50.475 ms`.
    - `semanticfs_strict_bootstrap_v1_holdout_v1` now validates at recall `1.0000`, MRR `0.8833`, symbol-hit `0.8000`, p95 `41.684 ms`; baseline recall `0.9000`, MRR `0.6833`, symbol-hit `0.5000`, p95 `64.698 ms`.
    - `ai_testgen_repo_v1_holdout_v1` now validates under strict split at recall `1.0000`, MRR `0.9500`, symbol-hit `1.0000`, p95 `35.838 ms`; baseline recall `0.8000`, MRR `0.7500`, symbol-hit `1.0000`, p95 `40.486 ms`.
@@ -231,6 +281,12 @@ Head-to-head runs on real suites (release mode, February 24, 2026):
 29. Current operating mode:
    - do not treat Phase 3 as a replacement for Phase 2.
    - run `Phase 2 closeout` and `Phase 3 bootstrap` in parallel.
+30. Explicit multi-root contract benchmark (March 2, 2026):
+   - tracked config + fixture now exist (`config/relevance-multiroot.toml`, `tests/retrieval_golden/semanticfs_multiroot_explicit.json`).
+   - the tracked fixture now covers `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`.
+   - repeated same-file result entries are now collapsed before final search output.
+   - SemanticFS relevance is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest narrow rerun (`active_version=171`) keeps SemanticFS ahead on overall quality (`recall 1.0000` vs `0.9200`, `MRR 1.0000` vs `0.7700`, `symbol-hit 1.0000` vs `0.2000`), while `rg` is still ahead on p95 on the broadened fixture (`42.725 ms` vs SemanticFS `53.024 ms`).
 
 Note:
 1. Measurements include both representative real suites with 7+ same-day head-to-head snapshots each.
@@ -244,10 +300,13 @@ Note:
 3. Keep `buckit_curated_*` and `tensorflow_models_curated_*` in monitor mode; rerun them only after material retrieval/indexing changes.
 4. For any scoped repo strict-suite work, use config-aligned bootstrap generation (`scripts/bootstrap_golden_from_repo.py --config ...`) instead of raw bootstrap mode.
 5. Use `.semanticfs/bench/filesystem_scope_backlog_latest.json` and `.semanticfs/bench/filesystem_domain_plan_latest.json` as monitor artifacts: the current discovered-root queue is now fully covered.
-6. Continue the explicit Phase 3 implementation slice:
+6. Use the signed-off Phase 3 baseline:
+   - Phase 3 is now operationally complete
    - keep single-root runtime behavior unchanged
-   - extend policy-boundary and scheduler contracts on top of the landed multi-root domain scaffolding
-7. Optional follow-up: refine the bounded `Robot` parent-root suite if you want to reduce its remaining generic misses (`train`, `predict`), but it is already strongly ahead of baseline and the backlog now classifies it as `covered_ok`.
+   - treat the config/health/runtime guard layer, persisted domain metadata, domain-aware `/map`, repeated same-file search de-duplication, domain-rank-aware index ordering, exact-symbol fast path, indexed exact-symbol lookup, BM25 case-only variant de-duplication, BM25 path-intent filtering, config-query priors, and median-of-3 warmed head-to-head timing as landed
+   - the tracked `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` contract set is the signed-off Phase 3 baseline (`25/25` rank `1`)
+   - future work now shifts to the next expansion phase instead of Phase 3 closeout
+7. Keep `Robot` in monitor mode now that its bounded holdout is clean on the semantic side; rerun it only after retrieval/indexing changes or if a new parent-root monitor query regresses.
 
 ## 5) Execution Plan For Next Session
 1. Representative nightly maintenance run (now optional, no longer gating):

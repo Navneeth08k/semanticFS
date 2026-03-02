@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use notify::{
     Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use policy_guard::PolicyGuard;
+use policy_guard::{PolicyGuard, ResolvedPath};
 use semanticfs_common::{IndexVersionState, IndexingStatus, SemanticFsConfig};
 use sha2::{Digest, Sha256};
 use std::{
@@ -47,7 +47,7 @@ impl Indexer {
         let db = IndexerDb::open(db_path)?;
         db.ensure_schema()?;
 
-        let guard = PolicyGuard::new(&cfg.filter.allow_roots, &cfg.filter.deny_globs)?;
+        let guard = PolicyGuard::from_config(&cfg)?;
         let embedder = Embedder::from_config(&cfg.embedding)?;
 
         Ok(Self {
@@ -65,7 +65,6 @@ impl Indexer {
 
     fn build_full_index_with_plan(&self, plan: Option<&ReindexPlan>) -> Result<u64> {
         let version = self.db.create_staging_version()?;
-        let root = Path::new(&self.cfg.workspace.repo_root);
         let hotset: HashSet<String> = plan
             .map(|p| p.hot_paths.iter().cloned().collect())
             .unwrap_or_default();
@@ -84,44 +83,79 @@ impl Indexer {
         }
 
         let mut all_files = Vec::new();
-        for entry in walkdir::WalkDir::new(root)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            if !entry.file_type().is_file() {
-                continue;
-            }
+        let mut seen_paths = HashSet::new();
+        for root in self.guard.watch_roots() {
+            for entry in walkdir::WalkDir::new(&root)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                if !entry.file_type().is_file() {
+                    continue;
+                }
 
-            let path = entry.path().to_path_buf();
-            let rel = normalize_rel_path(&path.strip_prefix(root)?.to_string_lossy());
-            all_files.push((path, rel));
+                let path = entry.path().to_path_buf();
+                let Some(resolved) = self.guard.resolve_disk_path(&path) else {
+                    continue;
+                };
+                if !seen_paths.insert(resolved.virtual_path.clone()) {
+                    continue;
+                }
+                let domain_rank = self.guard.domain_schedule_rank(&resolved.domain_id);
+                all_files.push((path, resolved.virtual_path, resolved.domain_id, domain_rank));
+            }
         }
 
         all_files.sort_by(|a, b| {
             let a_hot = hotset.contains(&a.1);
             let b_hot = hotset.contains(&b.1);
-            b_hot.cmp(&a_hot).then_with(|| a.1.cmp(&b.1))
+            b_hot
+                .cmp(&a_hot)
+                .then_with(|| a.3.cmp(&b.3))
+                .then_with(|| a.2.cmp(&b.2))
+                .then_with(|| a.1.cmp(&b.1))
         });
 
-        for (idx, (path, rel)) in all_files.into_iter().enumerate() {
-            let decision = self.guard.should_index_path(&rel);
+        for (idx, (path, _rel, _domain_id, _domain_rank)) in all_files.into_iter().enumerate() {
+            let Some(resolved) = self.guard.resolve_disk_path(&path) else {
+                continue;
+            };
+            let decision = self.guard.should_index_resolved(&resolved);
             if !decision.allow {
                 self.db
-                    .upsert_file_record(&rel, "", "skipped", "denied", version)?;
+                    .upsert_file_record(
+                        &resolved.virtual_path,
+                        "",
+                        "skipped",
+                        "denied",
+                        &resolved.domain_id,
+                        &resolved.trust_label,
+                        0,
+                        version,
+                    )?;
                 continue;
             }
 
             let metadata = fs::metadata(&path)?;
+            let modified_unix_ms = file_modified_unix_ms(&metadata);
             let size_mb = metadata.len() / (1024 * 1024);
             if size_mb > self.cfg.filter.max_file_mb {
                 self.db
-                    .upsert_file_record(&rel, "", "skipped", "too_large", version)?;
+                    .upsert_file_record(
+                        &resolved.virtual_path,
+                        "",
+                        "skipped",
+                        "too_large",
+                        &resolved.domain_id,
+                        &resolved.trust_label,
+                        modified_unix_ms,
+                        version,
+                    )?;
                 continue;
             }
 
-            self.index_file(&path, &rel, version)?;
+            self.index_file(&path, &resolved, modified_unix_ms, version)?;
 
-            if pending_changed.remove(&rel) {
+            if pending_changed.remove(&resolved.virtual_path) {
                 if phase == "p1_hotset" && !pending_changed.iter().any(|p| hotset.contains(p)) {
                     phase = "p3_backfill".to_string();
                     if let Some(plan) = plan {
@@ -148,7 +182,6 @@ impl Indexer {
     }
 
     pub fn watch(&self) -> Result<()> {
-        let root = Path::new(&self.cfg.workspace.repo_root).to_path_buf();
         let debounce = Duration::from_millis(self.cfg.index.debounce_ms.max(50));
         let (tx, rx) = mpsc::channel::<notify::Result<Event>>();
 
@@ -159,26 +192,28 @@ impl Indexer {
             NotifyConfig::default(),
         )?;
 
-        watcher.watch(&root, RecursiveMode::Recursive)?;
-        info!(path = %root.display(), "watching filesystem for incremental rebuild triggers");
+        let roots = self.guard.watch_roots();
+        for root in &roots {
+            watcher.watch(root, RecursiveMode::Recursive)?;
+            info!(path = %root.display(), "watching filesystem for incremental rebuild triggers");
+        }
 
-        self.event_loop(&rx, &root, debounce)
+        self.event_loop(&rx, debounce)
     }
 
     fn event_loop(
         &self,
         rx: &Receiver<notify::Result<Event>>,
-        root: &Path,
         debounce: Duration,
     ) -> Result<()> {
         loop {
             let mut changed_counts: HashMap<String, u32> = HashMap::new();
             let first = rx.recv()?;
-            self.capture_event_changes(first, root, &mut changed_counts);
+            self.capture_event_changes(first, &mut changed_counts);
 
             loop {
                 match rx.recv_timeout(debounce) {
-                    Ok(event) => self.capture_event_changes(event, root, &mut changed_counts),
+                    Ok(event) => self.capture_event_changes(event, &mut changed_counts),
                     Err(RecvTimeoutError::Timeout) => break,
                     Err(RecvTimeoutError::Disconnected) => return Ok(()),
                 }
@@ -242,12 +277,11 @@ impl Indexer {
     fn capture_event_changes(
         &self,
         event: notify::Result<Event>,
-        root: &Path,
         changed_counts: &mut HashMap<String, u32>,
     ) {
         match event {
             Ok(ev) if should_trigger_reindex(&ev) => {
-                let paths = event_relative_paths(&ev, root);
+                let paths = event_relative_paths(&ev, &self.guard);
                 if paths.is_empty() {
                     return;
                 }
@@ -265,7 +299,14 @@ impl Indexer {
         }
     }
 
-    fn index_file(&self, absolute: &Path, relative: &str, version: u64) -> Result<()> {
+    fn index_file(
+        &self,
+        absolute: &Path,
+        resolved: &ResolvedPath,
+        modified_unix_ms: i64,
+        version: u64,
+    ) -> Result<()> {
+        let relative = resolved.virtual_path.as_str();
         let bytes = fs::read(absolute).with_context(|| format!("read file {}", relative))?;
         let hash = hash_bytes(&bytes);
 
@@ -273,8 +314,16 @@ impl Indexer {
 
         match file_type {
             FileType::Binary => {
-                self.db
-                    .upsert_file_record(relative, &hash, "binary", "metadata_only", version)?;
+                self.db.upsert_file_record(
+                    relative,
+                    &hash,
+                    "binary",
+                    "metadata_only",
+                    &resolved.domain_id,
+                    &resolved.trust_label,
+                    modified_unix_ms,
+                    version,
+                )?;
             }
             _ => {
                 let content = String::from_utf8_lossy(&bytes).to_string();
@@ -286,6 +335,9 @@ impl Indexer {
                     &hash,
                     file_type.as_str(),
                     "indexed",
+                    &resolved.domain_id,
+                    &resolved.trust_label,
+                    modified_unix_ms,
                     version,
                 )?;
 
@@ -297,7 +349,14 @@ impl Indexer {
                 let embeddings = self.embedder.embed_batch(&batch_texts)?;
 
                 for (chunk, embedding) in chunks.into_iter().zip(embeddings.into_iter()) {
-                    self.db.upsert_chunk(&chunk, relative, &hash, version)?;
+                    self.db.upsert_chunk(
+                        &chunk,
+                        relative,
+                        &hash,
+                        &resolved.domain_id,
+                        &resolved.trust_label,
+                        version,
+                    )?;
                     self.db
                         .upsert_vector(&chunk.chunk_id, relative, &embedding, version)?;
                 }
@@ -377,6 +436,15 @@ fn hash_bytes(data: &[u8]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+fn file_modified_unix_ms(metadata: &fs::Metadata) -> i64 {
+    metadata
+        .modified()
+        .ok()
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
+        .unwrap_or(0)
+}
+
 pub fn normalize_index_state(state: IndexVersionState) -> &'static str {
     match state {
         IndexVersionState::Staging => "staging",
@@ -399,28 +467,17 @@ fn should_trigger_reindex(event: &Event) -> bool {
     )
 }
 
-fn event_relative_paths(event: &Event, root: &Path) -> Vec<String> {
+fn event_relative_paths(event: &Event, guard: &PolicyGuard) -> Vec<String> {
     let mut out = Vec::new();
     for p in &event.paths {
-        let rel = if let Ok(r) = p.strip_prefix(root) {
-            Some(normalize_rel_path(&r.to_string_lossy()))
-        } else if !p.is_absolute() {
-            Some(normalize_rel_path(&p.to_string_lossy()))
-        } else {
-            None
-        };
-
-        if let Some(path) = rel {
+        if let Some(resolved) = guard.resolve_disk_path(p) {
+            let path = resolved.virtual_path;
             if !path.is_empty() {
                 out.push(path);
             }
         }
     }
     out
-}
-
-fn normalize_rel_path(path: &str) -> String {
-    path.replace('\\', "/")
 }
 
 fn unix_now_ms() -> u64 {

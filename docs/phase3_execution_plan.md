@@ -1,139 +1,190 @@
 # SemanticFS Phase 3 Execution Plan
 
-Last updated: March 1, 2026
+Last updated: March 2, 2026
 
-## Intent
-Phase 3 is the controlled transition from repo-first validation to filesystem-scope architecture.
-This is not a flip from "one repo" to "whole machine" in one step.
-It is a staged bootstrap of multi-root semantics, trust boundaries, and scheduling.
+## Purpose
+This file is the forward-looking Phase 3 plan.
 
-Phase 3 starts now as a parallel workstream.
-Phase 2 remains active until its stability and hardening criteria are closed.
+Use it for:
+1. the Phase 3 objective
+2. the active workstreams
+3. acceptance criteria
+4. execution order
 
-## Why Start Now
-1. Repo-level concept validation is strong enough to justify expansion:
-   - representative head-to-head trend is favorable
-   - date-separated night coverage is now closed at `7/7`
-   - external strict holdout coverage spans multiple repos
-2. Filesystem-scope prep artifacts now exist:
-   - candidate discovery
-   - cleaned candidate discovery (workspace-mirror suppression + clone dedupe)
-   - backlog prioritization (`uncovered`, `covered_gap`, `covered_partial`, `covered_ok`)
-3. The remaining repo-level gaps are now concentrated enough that they should not block architecture bootstrap.
+Do not use this file as the running completion log.
+Use `docs/phase3_execution_status.md` for the current measured state, completed work, and immediate status.
 
-## Scope Boundary
-Phase 3 bootstrap is in scope:
-1. Multi-root domain model and config scaffolding.
-2. Domain-aware planning artifacts and queueing.
-3. Trust and policy boundary design for heterogeneous roots.
-4. Early non-code inclusion policy and content classes.
-5. Scheduler and resource model definition for multiple roots.
+## Phase 3 Objective
+Phase 3 moves SemanticFS from repo-first validation into filesystem-scope runtime behavior.
 
-Still out of scope for the first Phase 3 slice:
-1. Full whole-machine indexing by default.
-2. Background indexing of all discovered roots automatically.
-3. Write-enabled cross-root operations.
-4. Broad multimodal indexing as a default path.
+The goal is:
+1. explicit multi-root domain behavior
+2. explicit trust and policy boundaries
+3. deterministic cross-root verification through `/raw`
+4. measurable multi-root retrieval quality and latency
+5. stable single-root behavior as the default contract
 
-## Parallel Operating Mode
-Two workstreams now run in parallel:
+Phase 3 is not:
+1. automatic whole-machine indexing by default
+2. unconstrained background indexing of every discovered path
+3. write-enabled cross-root behavior
 
-1. `Phase 2 closeout`
-   - keep representative nightlies on maintenance cadence now that `7/7` is closed
-   - keep release-gate quality signal stable
-   - preserve green holdout quality while Phase 3 scaffolding expands
+## Operating Mode
+Two tracks continue in parallel:
 
-2. `Phase 3 bootstrap`
-   - land non-breaking multi-root config/domain scaffolding
-   - build root/domain planning artifacts
-   - define the first system-scope scheduling and policy contracts
+1. `Phase 2 maintenance`
+   - keep representative nightlies green on maintenance cadence
+   - rerun after meaningful retrieval/indexing changes
+   - preserve the repo-level baseline while Phase 3 evolves
 
-## Bootstrap Progress (March 1, 2026)
-1. Non-breaking multi-root config scaffolding is landed:
-   - `workspace.domains` now exists in shared config.
-   - effective-domain resolution preserves current single-root behavior when no explicit domains are configured.
-   - CLI `init` and `health` now expose Phase 3 domain shape without changing runtime indexing behavior.
-2. Domain planning artifact now exists:
-   - `.semanticfs/bench/filesystem_domain_plan_latest.json`
-3. Current planning counts:
-   - backlog: `uncovered=0`, `covered_gap=0`, `covered_partial=0`, `covered_representative=0`, `covered_ok=21`
-   - domain plan: `promote_candidate=0`, `harden_existing=0`, `expand_parent_root=0`, `add_strict_holdout=0`, `monitor=21`
-4. Query-level hardening tooling is now in place:
-   - `scripts/build_query_gap_report.ps1`
-   - current gap reports also exist for `buckit_curated` and `yolov5`
-5. Backlog-driven uncovered repo promotion is now established as the daytime loop:
-   - `WilcoxRobotics`, `catapult_project`, `BoilerMakeXII`, `labelImg`, `yolov5`, `Euler-r9`, `mathGame`, and `navs-apple-folio` have all completed bootstrap, deterministic split, and strict holdout.
-   - the uncovered queue is now fully cleared.
-6. Bounded full-root validation is now proven for large roots:
-   - `flutter_v2` completed successfully once the run was constrained to the exact package roots referenced by the dataset.
-7. Scoped strict-suite generation is now aligned with benchmark filters:
-   - `scripts/bootstrap_golden_from_repo.py` now supports `--config`, so scoped repos can generate strict suites that respect their actual benchmark allow/deny rules.
-   - `ai_testgen_strict_*` was regenerated and direct holdout validation now passes.
-8. Parent-root expansion is now underway:
-   - `classifai-blogs` and the bounded `Robot` parent-root validation have both completed.
-   - the current discovered-root bootstrap queue is fully closed; all current domains are now in monitor mode.
+2. `Phase 3 closeout complete`
+   - the explicit multi-root runtime is now signed off
+   - the tracked multi-root contract is now the frozen Phase 3 baseline
+   - additional broadening now moves to the next expansion phase
 
-## Phase 3 Acceptance Criteria (Bootstrap Slice)
-1. Config model can represent more than one root without breaking v1.x single-root behavior.
-2. A deterministic root/domain plan can be generated from filesystem candidates.
-3. Each root can carry explicit trust/policy metadata.
-4. There is a documented promotion rule from discovery candidate -> indexed domain.
-5. Phase 2 hardening remains green while Phase 3 scaffolding is added.
+## Current Planning Baseline
+Detailed status lives in `docs/phase3_execution_status.md`.
+
+Planning assumptions:
+1. the current discovered-root promotion queue is already closed
+2. the filesystem backlog is now a monitor artifact
+3. the tracked explicit multi-root benchmark is the primary Phase 3 regression signal
+4. runtime multi-root behavior is already live and signed off, so future work now focuses on broader expansion from this baseline
+
+## Acceptance Criteria
+Phase 3 is considered operationally successful when:
+1. explicit multi-root configs remain non-breaking for single-root users
+2. domain ownership is deterministic across indexing, retrieval, `/raw`, and `/map`
+3. trust/policy boundaries remain explicit and enforceable per domain
+4. the tracked explicit multi-root benchmark remains green after runtime changes
+5. broader domain expansion does not introduce silent cross-root ambiguity
 
 ## Workstreams
-## Workstream A: Domain Model
+### Workstream A: Runtime Retrieval Quality
 Goal:
-1. Add non-breaking config support for multiple roots/domains.
+1. keep improving the tracked multi-root contract quality without destabilizing single-root behavior
 
 Near-term deliverables:
-1. Domain config type in shared config.
-2. Effective-domain resolution that preserves current single-root behavior.
-3. CLI visibility for configured/effective domains.
-4. Sample config shape for future multi-root use.
+1. keep the current `25`-query tracked suite at rank `1`
+2. keep same-file de-duplication stable
+3. keep intent-aware ranking (config, docs, scripts, workflow, systemd) precise rather than overly broad
+4. preserve the current `1.0000` tracked relevance result while continuing to narrow the remaining p95 gap on the broader tracked suite
 
-## Workstream B: Domain Planning
+### Workstream B: Domain Expansion
 Goal:
-1. Turn discovered repos/roots into an explicit queue and domain plan.
+1. expand the tracked multi-root fixture beyond code-adjacent roots in a controlled way
 
 Near-term deliverables:
-1. Continue using `.semanticfs/bench/filesystem_scope_backlog_latest.json` as the queue source.
-2. Add a draft domain-plan artifact that maps roots to trust classes and indexing intent.
-3. Separate:
-   - `promote_now`
-   - `triage_quality_gap`
-   - `expand_partial_root`
-   - `defer`
+1. hold the current eight-domain tracked set stable after adding the top-level `workspace_meta` root
+2. keep new domains deterministic and low-risk
+3. ensure each added domain has clear expected-path queries
+4. avoid broadening the fixture faster than it remains interpretable
 
-## Workstream C: Phase 2 Hardening (Parallel)
+### Workstream C: Runtime Contract Stability
 Goal:
-1. Keep retrieval quality and operational confidence increasing while Phase 3 starts.
+1. keep the multi-root runtime contract coherent as complexity increases
 
 Near-term deliverables:
-1. Move from root promotion to architecture work; the current discovered-root queue is now fully covered.
-2. `covered_representative` is now cleared; keep those roots in monitor mode.
-3. Triage the residual `semanticfs_repo_v1` representative rank lag (`s20`) only if it can be done without destabilizing the now-green nightly baseline.
-4. Keep representative nightlies on maintenance cadence rather than gating cadence.
+1. preserve deterministic ownership resolution
+2. preserve `/raw` as the final verification boundary
+3. prevent out-of-domain leakage in benchmarks and serving
+4. keep `/map` aligned with the same domain model as `/raw`
+5. keep top-level `.` domain normalization pinned by regression coverage
+6. keep runtime indexing order aligned with the domain scheduler instead of relying on incidental cross-root path order
 
-## First Execution Order
-1. Land multi-root config scaffolding without changing runtime indexing behavior.
-2. Add reusable gap-analysis tooling so hardening remains fast.
-3. Add/refresh domain-planning artifacts from filesystem backlog.
-4. Use the backlog as a monitor artifact, not an active promotion queue, until new roots are discovered or a covered domain regresses.
-   - completed examples: `WilcoxRobotics`, `catapult_project`, `BoilerMakeXII`, `labelImg`, `yolov5`, `Euler-r9`, `mathGame`, `navs-apple-folio`
-   - the current discovered-root queue is fully covered; next work is scheduler/policy design, not more promotion
-5. Keep representative nightlies on maintenance cadence while Phase 3 daytime work continues.
+### Workstream D: Monitor-Only Coverage Operations
+Goal:
+1. keep prior Phase 2 and root-promotion work from regressing without turning coverage into the main workstream again
+
+Near-term deliverables:
+1. keep filesystem backlog/domain plan in monitor mode
+2. rerun representative suites only after meaningful retrieval/indexing changes
+3. rerun promotion flows only if new roots are discovered or a covered root regresses
+
+## Execution Order
+1. Make one narrow retrieval/indexing change at a time.
+2. Re-run the tracked explicit multi-root suite only.
+3. If the tracked suite stays green, then update docs.
+4. Only after that, consider broadening the tracked domain mix.
+5. Keep broad sweeps and representative nightlies secondary unless a regression demands them.
 
 ## Guardrails
-1. Keep `/raw` as the deterministic read/verify boundary.
-2. Do not let Phase 3 introduce silent cross-root ambiguity.
-3. Do not treat "discovered root" as "trusted root".
-4. Preserve single-root compatibility while adding multi-root structure.
-5. Keep release decisions based on measured artifacts, not architectural optimism.
+1. Keep `/raw` as the deterministic truth path.
+2. Do not let ranking heuristics blur domain ownership.
+3. Do not treat discovered roots as trusted by default.
+4. Keep benchmark comparisons fair and domain-aligned.
+5. Prefer narrow measurable improvements over broad architectural churn.
 
-## Primary Artifacts
-1. `.semanticfs/bench/filesystem_repo_candidates_latest.json`
-2. `.semanticfs/bench/filesystem_scope_backlog_latest.json`
-3. `.semanticfs/bench/filesystem_domain_plan_latest.json`
-4. `docs/v1_2_execution_plan.md`
-5. `docs/new-chat-handoff.md`
-6. `docs/future-steps-log.md`
+## Phase 3 Primary Files
+1. `docs/phase3_execution_plan.md`
+2. `docs/phase3_execution_status.md`
+3. `config/relevance-multiroot.toml`
+4. `tests/retrieval_golden/semanticfs_multiroot_explicit.json`
+5. `docs/benchmark.md`
+6. `docs/new-chat-handoff.md`
+
+## Immediate Planning Focus
+1. hold `semanticfs_multiroot_explicit_v9` as the Phase 3 sign-off suite
+2. use the signed-off active-version-`184` result as the baseline for the next expansion phase (`25/25` rank `1`, with three consecutive warmed median-of-3 reruns at SemanticFS p95 `42.989-53.384 ms` vs baseline `28.468-37.609 ms`)
+3. move further domain-class broadening into the next expansion phase instead of keeping Phase 3 open
+
+## Phase 3 Completion Plan
+Phase 3 is complete only when the runtime is both:
+1. correct on the tracked multi-root contract
+2. stable enough that broadening scope is no longer likely to collapse quality or latency
+
+### Milestone 1: Stabilize The Current Eight-Domain Contract
+Exit criteria:
+1. the tracked `semanticfs_multiroot_explicit_v9` suite stays fully green (`25/25` rank `1`)
+2. the current p95 gap is materially reduced and the warmed narrow reruns no longer swing badly between runs
+3. recent runtime changes stop reopening the same doc/symbol latency regressions
+
+Concrete work:
+1. remove avoidable runtime I/O in scoring paths
+2. target the highest-latency tracked queries first; the current noisy set is the narrative/workflow/systemd cluster (`m05`, `m11`, `m12`, `m13`, `m19`, `m20`, `m21`, `m22`)
+3. keep all reruns narrow and use the tracked suite as the only primary regression gate
+
+### Milestone 2: Remove Remaining Runtime Cost From Search-Time Metadata Lookups
+Exit criteria:
+1. `files.modified_unix_ms` is persisted in the snapshot and available for a future recency path
+2. retrieval-side use of persisted recency data either matches or beats the current tracked p95 before it replaces the live-fs fallback
+3. the tracked suite stays fully green after any retrieval-side recency change
+
+Concrete work:
+1. keep recency inputs persisted in indexed metadata, but do not leave a retrieval-side metadata change enabled if it widens the tracked p95 gap
+2. keep the current exact-symbol optimization (`indexed symbol probe first, case-fold fallback second`) because it removes an indexed-path full scan without changing the search contract
+3. keep SQLite/LanceDB ownership metadata parity intact
+4. rerun only the tracked suite after each retrieval/indexing change
+
+### Milestone 3: Lock The Current Eight-Domain Contract As The Phase 3 Broadening Baseline
+Exit criteria:
+1. the current eight-domain contract is stable enough that further broadening is no longer required for Phase 3 sign-off
+2. the top-level `workspace_meta` root and the mixed-content `fixture_repo` subtree remain green and domain-correct
+3. additional domain classes are explicitly deferred to the next expansion phase
+
+Concrete work:
+1. keep the fixture interpretable and avoid vague queries
+2. preserve the current eight-domain suite as the signed-off contract
+3. do not reopen Phase 3 just to add more domains once the runtime contract is already stable
+
+### Milestone 4: Final Runtime Contract Sign-Off
+Exit criteria:
+1. indexing, retrieval, `/raw`, and `/map` all use the same domain model without known contract gaps
+2. benchmark baseline normalization remains domain-correct across top-level and nested roots
+3. monitor-mode reruns do not reveal new cross-root ambiguity
+
+Concrete work:
+1. run one final narrow tracked rerun after the last runtime change
+2. run one final explicit multi-root `benchmark run --skip-reindex --soak-seconds 1`
+3. confirm docs, handoff, and benchmark references all match the final canonical artifacts
+
+### Milestone 5: Declare Phase 3 Operationally Complete
+Phase 3 is now marked complete because:
+1. the tracked contract is green and stable
+2. the runtime contract is fully wired and documented
+3. the remaining work is no longer "make multi-root runtime correct," but "future broader system-scope expansion"
+4. the final active-version-`184` sign-off held the tracked suite at `25/25` rank `1`, with three consecutive warmed median-of-3 reruns staying inside a materially tighter p95 band than the earlier single-sample runs
+
+At this point:
+1. Phase 3 status moves from `runtime hardening` to `operationally complete`
+2. future work shifts into the next expansion phase instead of Phase 3 closeout

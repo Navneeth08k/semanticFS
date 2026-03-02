@@ -48,10 +48,29 @@ fn build_enrichment_for_dir(
 ) -> Result<String> {
     let types = db.file_type_counts_for_dir(dir, version, 5)?;
     let symbols = db.top_symbols_for_dir(dir, version, 8)?;
+    let child_dirs = db.child_directories_for_dir(dir, version, 6)?;
+    let trust_labels = db.trust_label_counts_for_dir(dir, version)?;
+    let dir_label = if dir == "." { "/" } else { dir };
 
     let mut out = String::new();
-    out.push_str(&format!("Directory: `{}`\n", dir));
+    out.push_str(&format!("Directory: `{}`\n", dir_label));
     out.push_str("This section is generated asynchronously and never blocks `/map` reads.\n\n");
+
+    if !child_dirs.is_empty() {
+        out.push_str("Immediate child directories in this indexed subtree:\n");
+        for (child, nested_count) in child_dirs {
+            out.push_str(&format!("- `{}` ({} indexed descendant summaries)\n", child, nested_count));
+        }
+        out.push('\n');
+    }
+
+    if !trust_labels.is_empty() {
+        out.push_str("Observed trust labels in this subtree:\n");
+        for (label, count) in trust_labels {
+            out.push_str(&format!("- `{}`: {} indexed files\n", label, count));
+        }
+        out.push('\n');
+    }
 
     if !types.is_empty() {
         out.push_str("Likely dominant file types:\n");
@@ -75,6 +94,7 @@ fn build_enrichment_for_dir(
     out.push_str("Guidance:\n");
     out.push_str("- Use `/search/<intent>.md` to locate grounded files/lines.\n");
     out.push_str("- Verify exact bytes via `/raw/<path>` before edits.\n");
+    out.push_str("- Traverse `/map/<domain-or-dir>/directory_overview.md` to move one directory level at a time across domains.\n");
     out.push_str("- If results are stale, re-run search on latest snapshot.\n\n");
 
     let high_level = infer_focus_hint(base_summary);

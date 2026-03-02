@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection};
+use std::collections::BTreeMap;
 
 use crate::{chunking::ChunkRecord, map_summary::DirectorySummary, symbols::SymbolRecord};
 use semanticfs_common::IndexingStatus;
@@ -12,9 +13,11 @@ pub struct IndexerDb {
 pub struct VectorRow {
     pub chunk_id: String,
     pub path: String,
+    pub domain_id: String,
     pub start_line: u32,
     pub end_line: u32,
     pub file_hash: String,
+    pub trust_label: String,
     pub embedding: Vec<f32>,
 }
 
@@ -42,6 +45,9 @@ impl IndexerDb {
                 file_hash TEXT NOT NULL,
                 file_type TEXT NOT NULL,
                 parse_status TEXT NOT NULL,
+                domain_id TEXT NOT NULL DEFAULT 'default',
+                trust_label TEXT NOT NULL DEFAULT 'trusted',
+                modified_unix_ms INTEGER NOT NULL DEFAULT 0,
                 index_version INTEGER NOT NULL,
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY(path, index_version)
@@ -58,6 +64,8 @@ impl IndexerDb {
                 file_hash TEXT NOT NULL,
                 index_version INTEGER NOT NULL,
                 trust_level TEXT NOT NULL,
+                domain_id TEXT NOT NULL DEFAULT 'default',
+                trust_label TEXT NOT NULL DEFAULT 'trusted',
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY(chunk_id, path, index_version)
             );
@@ -130,6 +138,11 @@ impl IndexerDb {
             );
             "#,
         )?;
+        self.ensure_column("files", "domain_id", "TEXT NOT NULL DEFAULT 'default'")?;
+        self.ensure_column("files", "trust_label", "TEXT NOT NULL DEFAULT 'trusted'")?;
+        self.ensure_column("files", "modified_unix_ms", "INTEGER NOT NULL DEFAULT 0")?;
+        self.ensure_column("chunks_meta", "domain_id", "TEXT NOT NULL DEFAULT 'default'")?;
+        self.ensure_column("chunks_meta", "trust_label", "TEXT NOT NULL DEFAULT 'trusted'")?;
         Ok(())
     }
 
@@ -175,20 +188,35 @@ impl IndexerDb {
         file_hash: &str,
         file_type: &str,
         parse_status: &str,
+        domain_id: &str,
+        trust_label: &str,
+        modified_unix_ms: i64,
         version: u64,
     ) -> Result<()> {
         self.conn.execute(
             r#"
-            INSERT INTO files(path, file_hash, file_type, parse_status, index_version, updated_at)
-            VALUES(?1, ?2, ?3, ?4, ?5, datetime('now'))
+            INSERT INTO files(path, file_hash, file_type, parse_status, domain_id, trust_label, modified_unix_ms, index_version, updated_at)
+            VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))
             ON CONFLICT(path, index_version)
             DO UPDATE SET
                 file_hash = excluded.file_hash,
                 file_type = excluded.file_type,
                 parse_status = excluded.parse_status,
+                domain_id = excluded.domain_id,
+                trust_label = excluded.trust_label,
+                modified_unix_ms = excluded.modified_unix_ms,
                 updated_at = excluded.updated_at
             "#,
-            params![path, file_hash, file_type, parse_status, version],
+            params![
+                path,
+                file_hash,
+                file_type,
+                parse_status,
+                domain_id,
+                trust_label,
+                modified_unix_ms,
+                version
+            ],
         )?;
         Ok(())
     }
@@ -224,13 +252,16 @@ impl IndexerDb {
         chunk: &ChunkRecord,
         path: &str,
         file_hash: &str,
+        domain_id: &str,
+        trust_label: &str,
         version: u64,
     ) -> Result<()> {
+        let trust_level = normalized_trust_level(trust_label);
         self.conn.execute(
             r#"
             INSERT INTO chunks_meta(
-                chunk_id, path, start_line, end_line, language, symbol, content, file_hash, index_version, trust_level, updated_at
-            ) VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'trusted', datetime('now'))
+                chunk_id, path, start_line, end_line, language, symbol, content, file_hash, index_version, trust_level, domain_id, trust_label, updated_at
+            ) VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, datetime('now'))
             "#,
             params![
                 chunk.chunk_id,
@@ -241,7 +272,10 @@ impl IndexerDb {
                 chunk.symbol,
                 chunk.content,
                 file_hash,
-                version
+                version,
+                trust_level,
+                domain_id,
+                trust_label
             ],
         )?;
 
@@ -304,26 +338,33 @@ impl IndexerDb {
     pub fn compute_directory_summaries(&self, version: u64) -> Result<Vec<DirectorySummary>> {
         let mut stmt = self.conn.prepare(
             r#"
-            SELECT
-                COALESCE(substr(path, 1, instr(path || '/', '/') - 1), '.') AS dir,
-                COUNT(*) AS file_count
+            SELECT path
             FROM files
             WHERE index_version=?1 AND parse_status='indexed'
-            GROUP BY dir
-            ORDER BY file_count DESC
+            ORDER BY path
             "#,
         )?;
 
-        let mut rows = stmt.query(params![version])?;
-        let mut out = Vec::new();
-        while let Some(row) = rows.next()? {
-            let dir: String = row.get(0)?;
-            let file_count: i64 = row.get(1)?;
+        let rows = stmt.query_map(params![version], |row| row.get::<_, String>(0))?;
+        let mut counts = BTreeMap::<String, u32>::new();
+        for path in rows.filter_map(|r| r.ok()) {
+            for dir in directory_ancestors_for_path(&path) {
+                *counts.entry(dir).or_insert(0) += 1;
+            }
+        }
+
+        let mut out = Vec::with_capacity(counts.len());
+        for (dir, file_count) in counts {
+            let label = if dir == "." {
+                "/".to_string()
+            } else {
+                dir.clone()
+            };
             out.push(DirectorySummary {
-                dir_path: dir.clone(),
+                dir_path: dir,
                 summary_markdown: format!(
                     "# Directory Overview: `{}`\n\n- Indexed files: {}\n- Snapshot version: {}\n- Summary mode: deterministic_precompute\n",
-                    dir,
+                    label,
                     file_count,
                     version
                 ),
@@ -388,15 +429,15 @@ impl IndexerDb {
         version: u64,
         limit: usize,
     ) -> Result<Vec<(String, u32)>> {
-        let exact = dir;
-        let prefix = format!("{}/%", dir);
+        let normalized = normalize_dir_key(dir);
+        let (exact, prefix) = dir_match_patterns(&normalized);
         let mut stmt = self.conn.prepare(
             r#"
             SELECT file_type, COUNT(*) AS c
             FROM files
             WHERE index_version=?1
               AND parse_status='indexed'
-              AND (path=?2 OR path LIKE ?3)
+              AND (?2 = '.' OR path=?2 OR path LIKE ?3)
             GROUP BY file_type
             ORDER BY c DESC
             LIMIT ?4
@@ -415,14 +456,14 @@ impl IndexerDb {
         version: u64,
         limit: usize,
     ) -> Result<Vec<(String, String, u32)>> {
-        let exact = dir;
-        let prefix = format!("{}/%", dir);
+        let normalized = normalize_dir_key(dir);
+        let (exact, prefix) = dir_match_patterns(&normalized);
         let mut stmt = self.conn.prepare(
             r#"
             SELECT symbol_name, symbol_kind, COUNT(*) AS c
             FROM symbols
             WHERE index_version=?1
-              AND (path=?2 OR path LIKE ?3)
+              AND (?2 = '.' OR path=?2 OR path LIKE ?3)
             GROUP BY symbol_name, symbol_kind
             ORDER BY c DESC, symbol_name ASC
             LIMIT ?4
@@ -439,15 +480,83 @@ impl IndexerDb {
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
 
+    pub fn child_directories_for_dir(
+        &self,
+        dir: &str,
+        version: u64,
+        limit: usize,
+    ) -> Result<Vec<(String, u32)>> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT dir_path
+            FROM map_summaries
+            WHERE index_version=?1
+            ORDER BY dir_path
+            "#,
+        )?;
+        let rows = stmt.query_map(params![version], |row| row.get::<_, String>(0))?;
+
+        let parent = normalize_dir_key(dir);
+        let mut counts = BTreeMap::<String, u32>::new();
+        for path in rows.filter_map(|r| r.ok()) {
+            if path == "." || path == parent {
+                continue;
+            }
+
+            let child = if parent == "." {
+                path.split('/').next().unwrap_or_default().trim().to_string()
+            } else {
+                let prefix = format!("{parent}/");
+                let Some(rest) = path.strip_prefix(&prefix) else {
+                    continue;
+                };
+                rest.split('/').next().unwrap_or_default().trim().to_string()
+            };
+
+            if child.is_empty() {
+                continue;
+            }
+            *counts.entry(child).or_insert(0) += 1;
+        }
+
+        let mut out = counts.into_iter().collect::<Vec<_>>();
+        out.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        out.truncate(limit);
+        Ok(out)
+    }
+
+    pub fn trust_label_counts_for_dir(&self, dir: &str, version: u64) -> Result<Vec<(String, u32)>> {
+        let normalized = normalize_dir_key(dir);
+        let (exact, prefix) = dir_match_patterns(&normalized);
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT trust_label, COUNT(*) AS c
+            FROM files
+            WHERE index_version=?1
+              AND parse_status='indexed'
+              AND (?2 = '.' OR path=?2 OR path LIKE ?3)
+            GROUP BY trust_label
+            ORDER BY c DESC, trust_label ASC
+            "#
+        )?;
+
+        let rows = stmt.query_map(params![version, exact, prefix], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u32))
+        })?;
+        Ok(rows.filter_map(|r| r.ok()).collect())
+    }
+
     pub fn fetch_vectors_for_version(&self, version: u64) -> Result<Vec<VectorRow>> {
         let mut stmt = self.conn.prepare(
             r#"
             SELECT
                 m.chunk_id,
                 m.path,
+                m.domain_id,
                 m.start_line,
                 m.end_line,
                 m.file_hash,
+                m.trust_label,
                 v.embedding_json
             FROM chunks_vec v
             JOIN chunks_meta m
@@ -459,14 +568,16 @@ impl IndexerDb {
         )?;
 
         let rows = stmt.query_map(params![version], |row| {
-            let embedding_json: String = row.get(5)?;
+            let embedding_json: String = row.get(7)?;
             let embedding: Vec<f32> = serde_json::from_str(&embedding_json).unwrap_or_default();
             Ok(VectorRow {
                 chunk_id: row.get(0)?,
                 path: row.get(1)?,
-                start_line: row.get::<_, i64>(2)? as u32,
-                end_line: row.get::<_, i64>(3)? as u32,
-                file_hash: row.get(4)?,
+                domain_id: row.get(2)?,
+                start_line: row.get::<_, i64>(3)? as u32,
+                end_line: row.get::<_, i64>(4)? as u32,
+                file_hash: row.get(5)?,
+                trust_label: row.get(6)?,
                 embedding,
             })
         })?;
@@ -520,5 +631,72 @@ impl IndexerDb {
 
     pub fn clear_indexing_status(&self) -> Result<()> {
         self.clear_runtime_state("indexing_status")
+    }
+
+    fn ensure_column(&self, table: &str, column: &str, definition: &str) -> Result<()> {
+        let pragma = format!("PRAGMA table_info({table})");
+        let mut stmt = self.conn.prepare(&pragma)?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
+        let has_column = rows.filter_map(|r| r.ok()).any(|name| name == column);
+        if has_column {
+            return Ok(());
+        }
+
+        let alter = format!("ALTER TABLE {table} ADD COLUMN {column} {definition}");
+        self.conn.execute(&alter, [])?;
+        Ok(())
+    }
+}
+
+fn normalized_trust_level(trust_label: &str) -> &'static str {
+    if trust_label.eq_ignore_ascii_case("untrusted") {
+        "untrusted"
+    } else {
+        "trusted"
+    }
+}
+
+fn directory_ancestors_for_path(path: &str) -> Vec<String> {
+    let normalized = path.trim_matches('/');
+    if normalized.is_empty() {
+        return vec![".".to_string()];
+    }
+
+    let parts = normalized.split('/').collect::<Vec<_>>();
+    let dir_parts = if parts.len() > 1 {
+        &parts[..parts.len() - 1]
+    } else {
+        &[][..]
+    };
+
+    let mut out = vec![".".to_string()];
+    let mut current = String::new();
+    for part in dir_parts {
+        if current.is_empty() {
+            current.push_str(part);
+        } else {
+            current.push('/');
+            current.push_str(part);
+        }
+        out.push(current.clone());
+    }
+
+    out
+}
+
+fn normalize_dir_key(dir: &str) -> String {
+    let trimmed = dir.trim_matches('/');
+    if trimmed.is_empty() {
+        ".".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn dir_match_patterns(dir: &str) -> (String, String) {
+    if dir == "." {
+        (".".to_string(), "%".to_string())
+    } else {
+        (dir.to_string(), format!("{dir}/%"))
     }
 }

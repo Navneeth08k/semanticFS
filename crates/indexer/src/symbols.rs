@@ -33,7 +33,9 @@ pub fn extract_symbols(
                 line_start: (idx + 1) as u32,
                 line_end: (idx + 1) as u32,
                 language: "code".to_string(),
-                exported: t.starts_with("pub ") || t.starts_with("export "),
+                exported: t.starts_with("pub ")
+                    || t.starts_with("pub(")
+                    || t.starts_with("export "),
                 scope: "top_level".to_string(),
             });
         }
@@ -48,6 +50,12 @@ fn parse_symbol_name(line: &str) -> Option<String> {
         "async fn ",
         "pub fn ",
         "pub async fn ",
+        "pub(crate) fn ",
+        "pub(crate) async fn ",
+        "pub(super) fn ",
+        "pub(super) async fn ",
+        "pub(self) fn ",
+        "pub(self) async fn ",
         "public class ",
         "private class ",
         "protected class ",
@@ -59,11 +67,23 @@ fn parse_symbol_name(line: &str) -> Option<String> {
         "interface ",
         "def ",
         "async def ",
+        "pub struct ",
+        "pub(crate) struct ",
+        "pub(super) struct ",
+        "pub(self) struct ",
         "struct ",
+        "pub enum ",
+        "pub(crate) enum ",
+        "pub(super) enum ",
+        "pub(self) enum ",
         "public enum ",
         "private enum ",
         "protected enum ",
         "enum ",
+        "pub trait ",
+        "pub(crate) trait ",
+        "pub(super) trait ",
+        "pub(self) trait ",
         "trait ",
         "const ",
         "let ",
@@ -185,6 +205,14 @@ mod tests {
         assert_eq!(
             parse_symbol_name("pub async fn run_service() -> Result<()> {"),
             Some("run_service".to_string())
+        );
+        assert_eq!(
+            parse_symbol_name("pub(crate) fn map_dir_entries(&self) -> Vec<String> {"),
+            Some("map_dir_entries".to_string())
+        );
+        assert_eq!(
+            parse_symbol_name("pub struct ResolvedPath {"),
+            Some("ResolvedPath".to_string())
         );
     }
 

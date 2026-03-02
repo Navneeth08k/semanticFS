@@ -8,9 +8,10 @@ pub mod version;
 
 pub use audit::AuditEvent;
 pub use config::{
-    EmbeddingConfig, FilterConfig, FuseCacheConfig, FuseSessionConfig, IndexConfig, MapConfig,
-    McpConfig, ObservabilityConfig, PolicyConfig, RetrievalConfig, SemanticFsConfig,
-    WorkspaceConfig, WorkspaceDomainConfig,
+    DomainContractError, EmbeddingConfig, FilterConfig, FuseCacheConfig, FuseSessionConfig,
+    IndexConfig, MapConfig, McpConfig, ObservabilityConfig, PolicyConfig, RetrievalConfig,
+    SemanticFsConfig, WorkspaceConfig, WorkspaceDomainConfig, WorkspaceDomainPlan,
+    WorkspaceDomainReport,
 };
 pub use embedding::{cosine_similarity, embed_text_hash};
 pub use health::{HealthIndex, HealthReport};

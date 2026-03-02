@@ -6,7 +6,9 @@ It keeps deterministic file truth (`/raw`) while adding semantic discovery (`/se
 
 ## Purpose
 Traditional agent tooling wastes turns finding context.
+Agents like OpenClaw can burn time and tokens repeatedly `cd`-ing, `ls`-ing, and `grep`-ing through the filesystem just to locate the right files.
 SemanticFS moves retrieval into a filesystem-shaped interface so agents can use normal file operations to get grounded results faster.
+That is why `/search` exists: instead of wandering the tree manually, an agent can ask for the relevant files directly and then verify the final target through `/raw`.
 
 Core design goal:
 1. Probabilistic discovery.
@@ -171,7 +173,7 @@ graph LR
     S3 --> SameProcess
 ```
 
-## Current State (As of February 28, 2026)
+## Current State (As of March 1, 2026)
 Implemented:
 1. Core `/raw` + `/search` + `/map` behavior.
 2. Snapshot versioning and two-phase publish.
@@ -185,7 +187,8 @@ Implemented:
 10. Benchmark suite: run/soak/relevance/release-gate/head-to-head.
 11. Mounted Linux FUSE workflow validation for `/.well-known/session.json` and `/.well-known/session.refresh` in WSL long-lived session.
 12. Strict daytime tune-vs-holdout workflow with deterministic suite splitting and holdout-only final reporting.
-13. Phase 3 bootstrap has started in parallel: non-breaking multi-root domain config scaffolding plus filesystem domain-plan artifacts, while v1.x runtime remains single-root.
+13. Phase 3 bootstrap has started in parallel: non-breaking multi-root domain scaffolding, filesystem domain-plan artifacts, and explicit multi-root runtime ownership are now landed while single-root remains the default mode.
+14. Phase 3 runtime now persists domain ownership into indexed file/chunk metadata, serves `/map` through domain-aware directory summaries and enrichment, and includes a tracked explicit multi-root benchmark config + fixture (`code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`).
 
 Known constraints:
 1. Default embedding runtime is `hash` unless ONNX is configured.
@@ -286,6 +289,12 @@ powershell -ExecutionPolicy Bypass -File scripts/build_phase3_domain_plan.ps1 -B
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/build_query_gap_report.ps1 -DatasetName repo8872pp_bootstrap_v1_holdout_v1
 ```
+16. Explicit multi-root benchmark (tracked `code` + `docs` + `config` + `scripts` + `systemd` domains):
+```bash
+cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark relevance --golden tests/retrieval_golden/semanticfs_multiroot_explicit.json --history
+cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark head-to-head --golden tests/retrieval_golden/semanticfs_multiroot_explicit.json --history
+```
+The tracked fixture is now `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`. Latest result on active version `1`: relevance recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`; head-to-head gives SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `27.644 ms` vs `rg` recall `0.9375`, MRR `0.8021`, symbol-hit `0.4000`, p95 `30.716 ms`. All 16 tracked queries are currently rank `1`; the remaining Phase 3 work is holding this broader seven-domain contract green while expanding toward less synthetic mixed-content roots.
 
 ## Documentation Map
 Use these docs by role:
@@ -293,11 +302,12 @@ Use these docs by role:
 2. `docs/big-picture-roadmap.md`: multi-phase product direction and guardrails.
 3. `docs/v1_2_execution_plan.md`: v1.2 scope, acceptance criteria, active work items.
 4. `docs/phase3_execution_plan.md`: parallel Phase 3 bootstrap scope and execution order.
-5. `docs/future-steps-log.md`: running backlog/history of discussed future work.
-6. `docs/benchmark.md`: command reference and artifact semantics.
-7. `docs/implemented-v1_1.md`: v1.1 implementation baseline.
-8. `docs/release-v1_1_0-rc1.md`: release gate checklist.
-9. `docs/README.md`: documentation index and read order.
+5. `docs/phase3_execution_status.md`: current Phase 3 status, completed work, open work, and exact next steps.
+6. `docs/future-steps-log.md`: running backlog/history of discussed future work.
+7. `docs/benchmark.md`: command reference and artifact semantics.
+8. `docs/implemented-v1_1.md`: v1.1 implementation baseline.
+9. `docs/release-v1_1_0-rc1.md`: release gate checklist.
+10. `docs/README.md`: documentation index and read order.
 
 ## New Chat Bootstrap
 If starting a fresh assistant chat, read in this order:
@@ -305,7 +315,8 @@ If starting a fresh assistant chat, read in this order:
 2. `docs/new-chat-handoff.md`
 3. `docs/v1_2_execution_plan.md`
 4. `docs/phase3_execution_plan.md`
-5. `docs/future-steps-log.md`
-6. `docs/benchmark.md`
+5. `docs/phase3_execution_status.md`
+6. `docs/future-steps-log.md`
+7. `docs/benchmark.md`
 
 This sequence is the source of truth for current priorities.

@@ -18,7 +18,7 @@ use std::{
 };
 
 #[cfg(target_os = "linux")]
-use crate::{FuseBridge, FuseSessionMode};
+use crate::{FuseBridge, FuseSessionMode, RawNodeKind};
 
 #[cfg(target_os = "linux")]
 const TTL: Duration = Duration::from_millis(300);
@@ -136,9 +136,10 @@ impl SemanticFsFuse {
 
         let size = if node.kind == FileType::RegularFile {
             if let Some(raw_path) = node.path.strip_prefix("/raw/") {
-                let mut disk = PathBuf::from(self.bridge.repo_root());
-                disk.push(raw_path);
-                fs::metadata(disk).map(|m| m.len()).unwrap_or(0)
+                self.bridge
+                    .raw_node_info(raw_path)
+                    .map(|(_, size)| size)
+                    .unwrap_or(0)
             } else {
                 // Virtual files are rendered dynamically at read-time.
                 // Advertise a non-zero size so clients issue reads instead of treating as EOF.
@@ -184,23 +185,30 @@ impl SemanticFsFuse {
         let kind = if parent_path.starts_with("/search") && name_str.ends_with(".md") {
             FileType::RegularFile
         } else if parent_path.starts_with("/map") {
+            let active = self.bridge.active_version().unwrap_or(0);
             if name_str == "directory_overview.md" {
-                FileType::RegularFile
+                let relative = parent_path.trim_start_matches("/map").trim_start_matches('/');
+                if self.bridge.map_has_overview(relative, active).ok()? {
+                    FileType::RegularFile
+                } else {
+                    return None;
+                }
             } else {
-                FileType::Directory
+                let relative = full.trim_start_matches("/map").trim_start_matches('/');
+                if self.bridge.map_dir_exists(relative, active).ok()? {
+                    FileType::Directory
+                } else {
+                    return None;
+                }
             }
         } else if parent_path.starts_with("/raw") {
             let relative = full.trim_start_matches("/raw/");
-            let mut disk = PathBuf::from(self.bridge.repo_root());
-            disk.push(relative);
-            if let Ok(meta) = fs::metadata(disk) {
-                if meta.is_dir() {
-                    FileType::Directory
-                } else {
-                    FileType::RegularFile
-                }
-            } else {
+            let Ok((kind, _)) = self.bridge.raw_node_info(relative) else {
                 return None;
+            };
+            match kind {
+                RawNodeKind::Directory => FileType::Directory,
+                RawNodeKind::File => FileType::RegularFile,
             }
         } else {
             return None;
@@ -431,52 +439,40 @@ impl Filesystem for SemanticFsFuse {
             }
             p if p.starts_with("/raw") => {
                 let rel = p.trim_start_matches("/raw").trim_start_matches('/');
-                let mut disk = PathBuf::from(self.bridge.repo_root());
-                if !rel.is_empty() {
-                    disk.push(rel);
-                }
-                if let Ok(iter) = fs::read_dir(disk) {
-                    for child in iter.flatten() {
-                        let name = child.file_name();
-                        let name_str = name.to_string_lossy();
+                if let Ok(children) = self.bridge.raw_dir_entries(rel) {
+                    for (child_name, child_kind) in children {
+                        let name = OsString::from(&child_name);
                         let child_virtual = if p == "/raw" {
-                            format!("/raw/{}", name_str)
+                            format!("/raw/{}", child_name)
                         } else {
-                            format!("{}/{}", p, name_str)
+                            format!("{}/{}", p, child_name)
+                        };
+                        let fuse_kind = match child_kind {
+                            RawNodeKind::Directory => FileType::Directory,
+                            RawNodeKind::File => FileType::RegularFile,
                         };
 
-                        let child_kind = child
-                            .metadata()
-                            .map(|m| {
-                                if m.is_dir() {
-                                    FileType::Directory
-                                } else {
-                                    FileType::RegularFile
-                                }
-                            })
-                            .unwrap_or(FileType::RegularFile);
+                        let child_ino = *self.path_to_inode.entry(child_virtual.clone()).or_insert_with(|| {
+                            let ino = hash_inode(&child_virtual);
+                            self.inode_to_node.insert(
+                                ino,
+                                Node {
+                                    path: child_virtual,
+                                    kind: fuse_kind,
+                                },
+                            );
+                            ino
+                        });
 
-                        let child_ino = *self
-                            .path_to_inode
-                            .entry(child_virtual.clone())
-                            .or_insert_with(|| {
-                                let ino = hash_inode(&child_virtual);
-                                self.inode_to_node.insert(
-                                    ino,
-                                    Node {
-                                        path: child_virtual,
-                                        kind: child_kind,
-                                    },
-                                );
-                                ino
-                            });
-
-                        entries.push((child_ino, child_kind, name));
+                        entries.push((child_ino, fuse_kind, name));
                     }
                 }
             }
             p if p.starts_with("/map") => {
-                if p != "/map" {
+                let active = self.bridge.active_version().unwrap_or(0);
+                let rel = p.trim_start_matches("/map").trim_start_matches('/');
+
+                if self.bridge.map_has_overview(rel, active).unwrap_or(false) {
                     let candidate = format!("{}/directory_overview.md", p);
                     let inode = *self
                         .path_to_inode
@@ -497,6 +493,32 @@ impl Filesystem for SemanticFsFuse {
                         FileType::RegularFile,
                         OsString::from("directory_overview.md"),
                     ));
+                }
+
+                if let Ok(children) = self.bridge.map_dir_entries(rel, active) {
+                    for child_name in children {
+                        let name = OsString::from(&child_name);
+                        let child_virtual = if p == "/map" {
+                            format!("/map/{}", child_name)
+                        } else {
+                            format!("{}/{}", p, child_name)
+                        };
+                        let child_ino = *self
+                            .path_to_inode
+                            .entry(child_virtual.clone())
+                            .or_insert_with(|| {
+                                let ino = hash_inode(&child_virtual);
+                                self.inode_to_node.insert(
+                                    ino,
+                                    Node {
+                                        path: child_virtual,
+                                        kind: FileType::Directory,
+                                    },
+                                );
+                                ino
+                            });
+                        entries.push((child_ino, FileType::Directory, name));
+                    }
                 }
             }
             _ => {}

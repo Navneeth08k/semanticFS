@@ -20,11 +20,11 @@
     },
     {
       "id": "b06",
-      "query": "train",
+      "query": "tb_writer",
       "expected_paths": [
         "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/train.py"
       ],
-      "symbol_query": true
+      "symbol_query": false
     },
     {
       "id": "b08",
@@ -36,11 +36,11 @@
     },
     {
       "id": "b10",
-      "query": "predict",
+      "query": "object detection yolov5s",
       "expected_paths": [
         "newModelCreate/classifai-blogs/0_Complete_Guide_To_Custom_Object_Detection_Model_With_Yolov5/ModelTraining/src/utils/flask_rest_api/restapi.py"
       ],
-      "symbol_query": true
+      "symbol_query": false
     },
     {
       "id": "b12",

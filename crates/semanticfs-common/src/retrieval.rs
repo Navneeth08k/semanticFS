@@ -18,6 +18,7 @@ pub enum TrustLevel {
 pub struct GroundedHit {
     pub rank: u32,
     pub path: String,
+    pub domain_id: String,
     pub start_line: u32,
     pub end_line: u32,
     pub file_hash: String,
@@ -30,6 +31,7 @@ pub struct GroundedHit {
     pub source: HitSource,
     pub symbol_kind: Option<String>,
     pub stale: bool,
+    pub trust_label: String,
     pub trust_level: TrustLevel,
     pub why_selected: String,
 }
