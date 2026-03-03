@@ -475,3 +475,16 @@ Status legend:
    - the latest saved head-to-head artifact on the same snapshot is: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `42.989 ms`; baseline `rg` recall `0.9200`, MRR `0.7500`, symbol-hit `0.4000`, p95 `28.468 ms`.
    - the explicit multi-root `benchmark run --skip-reindex --soak-seconds 1` still passes `4/4` E2E checks on `active_version=184`.
    - this moves Phase 3 from `runtime hardening` to `operationally complete`; future work now shifts to the next expansion phase instead of Phase 3 closeout.
+130. Phase 4 is now explicitly defined as the next workstream:
+   - new plan doc: `docs/phase4_execution_plan.md`.
+   - Phase 4 is `controlled domain expansion` on top of the signed-off Phase 3 baseline.
+   - its core goals are: add new domain classes one at a time, evolve scheduler behavior from static ordering into resource-aware budgeting, preserve policy-safe trust boundaries, and keep the frozen `semanticfs_multiroot_explicit_v9` suite as the regression gate while broader system-scope coverage expands.
+   - this makes the next phase explicit in the roadmap and handoff docs instead of leaving it as an implied `next expansion phase.`
+131. Phase 4 is now signed off as operationally complete:
+   - `config/relevance-multiroot.toml` now adds a new bounded `playbooks` domain on top of the Phase 3 baseline, and `workspace.scheduler.max_watch_targets` is now part of the config contract.
+   - `policy-guard` now derives exact-file watch targets when a domain uses exact `allow_roots`, dedupes redundant descendants, and applies the watch-target budget cap before the indexer subscribes to filesystem notifications.
+   - the frozen Phase 3 gate (`semanticfs_multiroot_explicit_v9`) remains fully green on `active_version=185` at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - the broadened Phase 4 baseline (`semanticfs_multiroot_explicit_v10`) is fully green on `active_version=186` at `27/27` rank `1`, with relevance recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`.
+   - latest broadened head-to-head on the same snapshot: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `69.421 ms`; baseline `rg` recall `0.9259`, MRR `0.7778`, symbol-hit `0.2000`, p95 `45.671 ms`.
+   - explicit multi-root `benchmark run --skip-reindex --soak-seconds 1` still passes `4/4` E2E checks on `active_version=186`.
+   - this moves Phase 4 from `controlled domain expansion` to `operationally complete`; the next work is post-Phase-4 expansion, not more Phase 4 closeout.

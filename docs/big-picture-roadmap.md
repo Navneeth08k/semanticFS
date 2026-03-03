@@ -14,20 +14,23 @@ Core invariant:
 2. Edits are grounded through deterministic source reads.
 
 ## Current Phase
-Phase: `v1.2 reliability and quality hardening` with `Phase 3 bootstrap` running in parallel (as of March 1, 2026)
+Phase: `v1.2 maintenance` with `Phase 4 controlled domain expansion` now operationally complete (as of March 3, 2026)
 
 Current state:
 1. Core architecture is implemented and operational.
 2. Reliability/quality features are active (session pinning, queue planning, anti-shadowing priors).
 3. Benchmark + gate tooling is in place, including head-to-head comparisons.
 4. Representative nightly stability evidence is now closed at `7/7`, so Phase 2 no longer blocks daytime architecture work.
-5. Phase 3 runtime has moved from config-only scaffolding into real explicit multi-root behavior (persisted domain metadata, domain-aware `/raw` and `/map`, tracked multi-root benchmarks).
+5. Phase 3 runtime is now operationally complete as a signed-off explicit multi-root foundation (persisted domain metadata, domain-aware `/raw` and `/map`, tracked multi-root benchmarks).
+6. Phase 4 is now also operationally complete: one additional domain class was added beyond the Phase 3 baseline, the broadened suite is green, and first-pass resource-aware watch scheduling is landed.
+7. The next work is the post-Phase-4 expansion phase, not more Phase 3 or Phase 4 closeout.
 
 Remaining phase focus:
 1. Keep representative quality green on maintenance cadence instead of gating cadence.
-2. Tighten remaining measured ranking inefficiencies rather than broad repo-level viability.
-3. Continue Phase 3 runtime hardening from bootstrap behavior into broader multi-root/system-scope contracts.
-4. Preserve deterministic verification boundaries while multi-root scope expands.
+2. Treat the signed-off Phase 3 and Phase 4 tracked suites as regression gates.
+3. Formalize the post-Phase-4 expansion phase before broadening again.
+4. Improve scheduler/resource behavior beyond the new minimum watch-budget layer.
+5. Preserve deterministic verification boundaries while system scope expands.
 
 ## Phases
 ## Phase 1: v1.1 Repo-First Foundation
@@ -72,7 +75,26 @@ Bootstrap status:
 2. Initial discovery and backlog artifacts are now in place.
 3. Non-breaking multi-root config/domain scaffolding is landed.
 4. Explicit multi-root runtime ownership is now active across indexing, retrieval, `/raw`, and `/map`.
-5. A tracked explicit multi-root benchmark suite is now in the repo and green on the current `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` contract fixture, with SemanticFS ahead on recall, MRR, symbol-hit, and p95 on the latest head-to-head run.
+5. A tracked explicit multi-root benchmark suite is now in the repo and green on the current `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` contract fixture.
+6. Phase 3 is now operationally complete as the signed-off multi-root runtime baseline.
+
+## Phase 4: Controlled Domain Expansion
+Goal:
+1. Expand beyond the signed-off Phase 3 contract into broader, more realistic system-scope coverage.
+
+Required capabilities:
+1. Add new domain classes one at a time with explicit expected-path benchmarks.
+2. Evolve scheduler behavior from deterministic ordering into resource-aware orchestration.
+3. Preserve trust/policy boundaries as heterogeneous non-code roots are added.
+4. Keep the Phase 3 `v9` tracked suite green while broader suites expand.
+5. Move closer to practical filesystem-scope coverage without enabling uncontrolled whole-machine indexing by default.
+
+Initial operating model:
+1. Freeze the Phase 3 `v9` suite as the regression baseline.
+2. Add one bounded, low-risk domain class at a time.
+3. Keep reruns narrow and benchmark-driven.
+4. Treat broader machine scope as opt-in, policy-bounded, and measurable.
+5. Current status: this Phase 4 bar is now met on top of the new `playbooks` domain and the broadened `v10` suite.
 
 ## Decision Guardrails
 1. Grounded edits over clever retrieval.
@@ -91,5 +113,7 @@ Bootstrap status:
 2. `docs/new-chat-handoff.md`
 3. `docs/v1_2_execution_plan.md`
 4. `docs/phase3_execution_plan.md`
-5. `docs/future-steps-log.md`
-6. `docs/benchmark.md`
+5. `docs/phase3_execution_status.md`
+6. `docs/phase4_execution_plan.md`
+7. `docs/future-steps-log.md`
+8. `docs/benchmark.md`

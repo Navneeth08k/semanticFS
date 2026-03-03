@@ -300,12 +300,14 @@ Note:
 3. Keep `buckit_curated_*` and `tensorflow_models_curated_*` in monitor mode; rerun them only after material retrieval/indexing changes.
 4. For any scoped repo strict-suite work, use config-aligned bootstrap generation (`scripts/bootstrap_golden_from_repo.py --config ...`) instead of raw bootstrap mode.
 5. Use `.semanticfs/bench/filesystem_scope_backlog_latest.json` and `.semanticfs/bench/filesystem_domain_plan_latest.json` as monitor artifacts: the current discovered-root queue is now fully covered.
-6. Use the signed-off Phase 3 baseline:
+6. Use the signed-off Phase 4 baseline from `docs/phase4_execution_plan.md`:
    - Phase 3 is now operationally complete
+   - Phase 4 is now operationally complete
    - keep single-root runtime behavior unchanged
    - treat the config/health/runtime guard layer, persisted domain metadata, domain-aware `/map`, repeated same-file search de-duplication, domain-rank-aware index ordering, exact-symbol fast path, indexed exact-symbol lookup, BM25 case-only variant de-duplication, BM25 path-intent filtering, config-query priors, and median-of-3 warmed head-to-head timing as landed
-   - the tracked `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` contract set is the signed-off Phase 3 baseline (`25/25` rank `1`)
-   - future work now shifts to the next expansion phase instead of Phase 3 closeout
+   - the tracked `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` contract set remains the signed-off Phase 3 baseline (`25/25` rank `1`)
+   - the broadened Phase 4 baseline now adds `playbooks`, and `semanticfs_multiroot_explicit_v10` is green at `27/27` rank `1`
+   - the watch planner now uses exact-file watch targets for exact allow-roots and supports `workspace.scheduler.max_watch_targets` as the minimum scheduling-budget layer
 7. Keep `Robot` in monitor mode now that its bounded holdout is clean on the semantic side; rerun it only after retrieval/indexing changes or if a new parent-root monitor query regresses.
 
 ## 5) Execution Plan For Next Session

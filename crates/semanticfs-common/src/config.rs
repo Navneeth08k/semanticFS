@@ -41,7 +41,23 @@ pub struct WorkspaceConfig {
     pub repo_root: String,
     pub mount_point: String,
     #[serde(default)]
+    pub scheduler: WorkspaceSchedulerConfig,
+    #[serde(default)]
     pub domains: Vec<WorkspaceDomainConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceSchedulerConfig {
+    #[serde(default)]
+    pub max_watch_targets: usize,
+}
+
+impl Default for WorkspaceSchedulerConfig {
+    fn default() -> Self {
+        Self {
+            max_watch_targets: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -585,7 +601,7 @@ mod tests {
     use super::{
         EmbeddingConfig, FilterConfig, FuseCacheConfig, FuseSessionConfig, IndexConfig, MapConfig,
         McpConfig, ObservabilityConfig, PolicyConfig, RetrievalConfig, SemanticFsConfig,
-        WorkspaceConfig, WorkspaceDomainConfig,
+        WorkspaceConfig, WorkspaceDomainConfig, WorkspaceSchedulerConfig,
     };
 
     fn sample_config(domains: Vec<WorkspaceDomainConfig>) -> SemanticFsConfig {
@@ -593,6 +609,7 @@ mod tests {
             workspace: WorkspaceConfig {
                 repo_root: "/repo".to_string(),
                 mount_point: "/mnt/ai".to_string(),
+                scheduler: WorkspaceSchedulerConfig::default(),
                 domains,
             },
             filter: FilterConfig {
@@ -670,6 +687,7 @@ mod tests {
         let cfg = WorkspaceConfig {
             repo_root: "/repo".to_string(),
             mount_point: "/mnt/ai".to_string(),
+            scheduler: WorkspaceSchedulerConfig::default(),
             domains: Vec::new(),
         };
 
@@ -688,6 +706,7 @@ mod tests {
         let cfg = WorkspaceConfig {
             repo_root: "/repo".to_string(),
             mount_point: "/mnt/ai".to_string(),
+            scheduler: WorkspaceSchedulerConfig::default(),
             domains: vec![
                 WorkspaceDomainConfig {
                     id: "code".to_string(),

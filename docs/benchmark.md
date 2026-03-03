@@ -87,29 +87,37 @@
 ## Explicit multi-root benchmark fixture
 1. Tracked config:
 - `config/relevance-multiroot.toml`
-2. Tracked fixture:
+2. Frozen Phase 3 regression gate:
 - `tests/retrieval_golden/semanticfs_multiroot_explicit.json`
- - current tracked mix is `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`
-3. Relevance:
+- current tracked mix is `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`
+3. Broadened Phase 4 baseline:
+- `tests/retrieval_golden/semanticfs_multiroot_explicit_v10.json`
+- broadened mix adds `playbooks` on top of the frozen Phase 3 gate
+4. Relevance:
 - `cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark relevance --golden tests/retrieval_golden/semanticfs_multiroot_explicit.json --history`
-4. Head-to-head:
-- `cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark head-to-head --golden tests/retrieval_golden/semanticfs_multiroot_explicit.json --history`
-5. Latest observed sign-off result on the tracked `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` fixture (dataset `semanticfs_multiroot_explicit_v9`, `25` queries):
- - SemanticFS relevance remains green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000` on `active_version=184`.
- - Head-to-head quality remains green on the same active snapshot: SemanticFS still holds the quality lead on recall/MRR/symbol-hit.
- - The final Phase 3 sign-off now uses one untimed warm-up plus median-of-3 timed samples per query for both engines; three consecutive warmed reruns held SemanticFS p95 in `42.989-53.384 ms` vs baseline `rg` `28.468-37.609 ms`, which is materially tighter than the earlier single-sample swings.
- - All currently tracked queries (`m01`-`m25`) are now rank `1`.
- - The tracked suite now explicitly exercises workflow-style literals, a full multi-file `systemd` root, a real `docs/runbook.md` operational-doc query, and top-level workspace metadata (`Cargo.toml`, `Cargo.lock`, `README.md`).
- - `semanticfs-cli` now has a regression test that locks top-level `.` baseline normalization to the configured `workspace_meta` allow-roots.
- - The current runtime slice also includes domain-rank-aware full-index ordering, an exact-symbol fast path for symbol-like queries with exact hits, indexed exact-symbol lookup, BM25 case-only variant de-duplication, and BM25 SQL-side path-intent filtering for workflow/systemd/script queries.
- - `files.modified_unix_ms` is now persisted in the snapshot and is used on the free exact-symbol path only; broader retrieval-side replacement remains deferred until it no longer widens tracked p95.
- - Head-to-head now performs one untimed warm-up plus median-of-3 timed samples for both SemanticFS and `rg` so reruns measure warmed runtime behavior with less single-run noise.
-6. Use this as a Phase 3 contract fixture:
-- it validates explicit multi-root indexing, domain-prefixed path normalization, mixed `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` retrieval, de-duplicated same-file search output, and a fair filtered `rg` baseline on one tracked dataset (including top-level `.` domains).
-7. Domain-aware map verification:
+5. Broadened relevance:
+- `cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark relevance --golden tests/retrieval_golden/semanticfs_multiroot_explicit_v10.json --history`
+6. Head-to-head:
+- `cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark head-to-head --golden tests/retrieval_golden/semanticfs_multiroot_explicit_v10.json --history`
+7. Frozen Phase 3 sign-off result on the tracked `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo` fixture (dataset `semanticfs_multiroot_explicit_v9`, `25` queries):
+- SemanticFS relevance remains green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000` on `active_version=185`.
+- All tracked queries (`m01`-`m25`) are rank `1`.
+- The tracked suite explicitly exercises workflow-style literals, a full multi-file `systemd` root, a real `docs/runbook.md` operational-doc query, and top-level workspace metadata (`Cargo.toml`, `Cargo.lock`, `README.md`).
+- `semanticfs-cli` has regression coverage that locks top-level `.` baseline normalization to the configured `workspace_meta` allow-roots.
+- Head-to-head uses one untimed warm-up plus median-of-3 timed samples for both SemanticFS and `rg` so reruns measure warmed runtime behavior with less single-run noise.
+8. Broadened Phase 4 sign-off result on the `playbooks`-expanded fixture (dataset `semanticfs_multiroot_explicit_v10`, `27` queries):
+- SemanticFS relevance is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000` on `active_version=186`.
+- Broadened head-to-head is green on quality on the same snapshot: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `69.421 ms`; baseline `rg` recall `0.9259`, MRR `0.7778`, symbol-hit `0.2000`, p95 `45.671 ms`.
+- All broadened tracked queries (`m01`-`m27`) are rank `1`.
+- The new `playbooks` domain is intentionally bounded through exact `allow_roots`, which also exercises the watch-target planner path.
+9. Use this pair as the signed-off Phase 3 / Phase 4 contract:
+- `semanticfs_multiroot_explicit_v9` is the frozen regression gate.
+- `semanticfs_multiroot_explicit_v10` is the broadened Phase 4 baseline.
+- Together they validate explicit multi-root indexing, domain-prefixed path normalization, mixed code/docs/config/scripts/system roots, the `playbooks` expansion slice, de-duplicated same-file search output, and a fair filtered `rg` baseline (including top-level `.` domains).
+10. Domain-aware map verification:
 - `cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark run --soak-seconds 1`
-- latest result passed `4/4` E2E checks on active version `184`, which includes `/map/docs/directory_overview.md`.
-8. The latest explicit multi-root benchmark cycle also exercised the optional LanceDB sync path:
+- latest broadened result passed `4/4` E2E checks on `active_version=186`, which includes `/map/docs/directory_overview.md`.
+11. The latest explicit multi-root benchmark cycle also exercised the optional LanceDB sync path:
 - fresh `chunks_v1.lance` datasets are created on fresh explicit-suite DB runs, so the persisted `domain_id` / `trust_label` vector-sync schema remains live on the optional vector backend too.
 
 ## Retrieval prior knobs (anti-shadowing)

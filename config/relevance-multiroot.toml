@@ -2,6 +2,9 @@
 repo_root = "."
 mount_point = "/mnt/ai"
 
+[workspace.scheduler]
+max_watch_targets = 0
+
 [[workspace.domains]]
 id = "workspace_meta"
 root = "."
@@ -61,6 +64,13 @@ id = "fixture_repo"
 root = "./tests/fixtures/benchmark_repo"
 trust_label = "untrusted"
 allow_roots = ["**"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "playbooks"
+root = "./playbooks"
+trust_label = "untrusted"
+allow_roots = ["watch_budgeting.md", "domain_intake_checklist.md"]
 deny_globs = []
 
 [filter]

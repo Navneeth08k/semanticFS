@@ -21,11 +21,18 @@ pub struct ResolvedPath {
     pub absolute_path: PathBuf,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WatchTarget {
+    pub path: PathBuf,
+    pub recursive: bool,
+}
+
 #[derive(Debug, Clone)]
 struct DomainRule {
     id: String,
     root: Option<PathBuf>,
     trust_label: String,
+    allow_roots_patterns: Vec<String>,
     allow_set: GlobSet,
     has_allow_roots: bool,
     deny_set: GlobSet,
@@ -36,6 +43,7 @@ struct DomainRule {
 pub struct PolicyGuard {
     domains: Vec<DomainRule>,
     explicit_multi_root: bool,
+    max_watch_targets: usize,
     secret_patterns: Vec<Regex>,
 }
 
@@ -49,12 +57,14 @@ impl PolicyGuard {
                 id: "default".to_string(),
                 root: None,
                 trust_label: "trusted".to_string(),
+                allow_roots_patterns: allow_roots.to_vec(),
                 allow_set,
                 has_allow_roots: !allow_roots.is_empty(),
                 deny_set,
                 uses_virtual_prefix: false,
             }],
             explicit_multi_root: false,
+            max_watch_targets: 0,
             secret_patterns: default_secret_patterns()?,
         })
     }
@@ -73,6 +83,7 @@ impl PolicyGuard {
         Ok(Self {
             domains,
             explicit_multi_root,
+            max_watch_targets: cfg.workspace.scheduler.max_watch_targets,
             secret_patterns: default_secret_patterns()?,
         })
     }
@@ -82,16 +93,18 @@ impl PolicyGuard {
     }
 
     pub fn watch_roots(&self) -> Vec<PathBuf> {
-        let mut roots = Vec::new();
+        self.watch_targets()
+            .into_iter()
+            .map(|target| target.path)
+            .collect()
+    }
+
+    pub fn watch_targets(&self) -> Vec<WatchTarget> {
+        let mut targets = Vec::new();
         for domain in &self.domains {
-            let Some(root) = &domain.root else {
-                continue;
-            };
-            if !roots.iter().any(|existing: &PathBuf| existing == root) {
-                roots.push(root.clone());
-            }
+            targets.extend(domain.watch_targets());
         }
-        roots
+        prune_watch_targets(targets, self.max_watch_targets)
     }
 
     pub fn domain_ids(&self) -> Vec<String> {
@@ -261,6 +274,7 @@ impl DomainRule {
             id: plan.id.clone(),
             root: Some(root),
             trust_label: plan.trust_label.clone(),
+            allow_roots_patterns: plan.effective_allow_roots.clone(),
             allow_set: build_glob_set(&plan.effective_allow_roots)?,
             has_allow_roots: !plan.effective_allow_roots.is_empty(),
             deny_set: build_glob_set(&plan.effective_deny_globs)?,
@@ -276,6 +290,40 @@ impl DomainRule {
             return self.id.clone();
         }
         format!("{}/{}", self.id, domain_relative_path)
+    }
+
+    fn watch_targets(&self) -> Vec<WatchTarget> {
+        let Some(root) = &self.root else {
+            return Vec::new();
+        };
+
+        if self.allow_roots_patterns.is_empty() {
+            return vec![WatchTarget {
+                path: root.clone(),
+                recursive: true,
+            }];
+        }
+
+        let exact_patterns = self
+            .allow_roots_patterns
+            .iter()
+            .filter(|pattern| is_exact_watch_pattern(pattern))
+            .collect::<Vec<_>>();
+
+        if !exact_patterns.is_empty() && exact_patterns.len() == self.allow_roots_patterns.len() {
+            let mut targets = Vec::with_capacity(exact_patterns.len());
+            for pattern in exact_patterns {
+                let path = join_domain_path(root, pattern);
+                let recursive = path.is_dir();
+                targets.push(WatchTarget { path, recursive });
+            }
+            return targets;
+        }
+
+        vec![WatchTarget {
+            path: root.clone(),
+            recursive: true,
+        }]
     }
 }
 
@@ -340,6 +388,48 @@ fn has_parent_traversal(path: &str) -> bool {
         .any(|segment| segment == "..")
 }
 
+fn is_exact_watch_pattern(pattern: &str) -> bool {
+    !pattern.contains('*')
+        && !pattern.contains('?')
+        && !pattern.contains('[')
+        && !pattern.contains('{')
+}
+
+fn prune_watch_targets(mut targets: Vec<WatchTarget>, max_watch_targets: usize) -> Vec<WatchTarget> {
+    targets.sort_by(|left, right| {
+        path_depth(&left.path)
+            .cmp(&path_depth(&right.path))
+            .then_with(|| right.recursive.cmp(&left.recursive))
+            .then_with(|| left.path.cmp(&right.path))
+    });
+
+    let mut out = Vec::new();
+    for target in targets {
+        if out.iter().any(|existing: &WatchTarget| {
+            existing.recursive && is_same_or_ancestor(&existing.path, &target.path)
+        }) {
+            continue;
+        }
+        if let Some(existing) = out.iter_mut().find(|existing| existing.path == target.path) {
+            existing.recursive |= target.recursive;
+            continue;
+        }
+        out.push(target);
+        if max_watch_targets > 0 && out.len() >= max_watch_targets {
+            break;
+        }
+    }
+    out
+}
+
+fn path_depth(path: &Path) -> usize {
+    path.components().count()
+}
+
+fn is_same_or_ancestor(parent: &Path, child: &Path) -> bool {
+    child == parent || child.starts_with(parent)
+}
+
 fn trust_level_from_label(label: &str) -> TrustLevel {
     if label.eq_ignore_ascii_case("trusted") {
         TrustLevel::Trusted
@@ -379,6 +469,7 @@ mod tests {
         EmbeddingConfig, FilterConfig, FuseCacheConfig, FuseSessionConfig, IndexConfig, MapConfig,
         McpConfig, ObservabilityConfig, PolicyConfig, RetrievalConfig, WorkspaceConfig,
         WorkspaceDomainConfig,
+        WorkspaceSchedulerConfig,
     };
 
     fn workspace_root() -> PathBuf {
@@ -396,6 +487,7 @@ mod tests {
             workspace: WorkspaceConfig {
                 repo_root: repo_root.to_string_lossy().to_string(),
                 mount_point: "/mnt/ai".to_string(),
+                scheduler: WorkspaceSchedulerConfig::default(),
                 domains,
             },
             filter: FilterConfig {
@@ -568,5 +660,65 @@ mod tests {
         assert_eq!(guard.domain_schedule_rank("code"), 1);
         assert_eq!(guard.domain_schedule_rank("docs"), 2);
         assert_eq!(guard.domain_schedule_rank("missing"), 3);
+    }
+
+    #[test]
+    fn watch_targets_use_exact_allow_roots_before_broad_root_watch() {
+        let root = workspace_root();
+        let cfg = sample_config(vec![
+            WorkspaceDomainConfig {
+                id: "workspace_meta".to_string(),
+                root: root.to_string_lossy().to_string(),
+                trust_label: "untrusted".to_string(),
+                enabled: true,
+                allow_roots: vec!["README.md".to_string(), "Cargo.toml".to_string()],
+                deny_globs: vec![],
+            },
+            WorkspaceDomainConfig {
+                id: "code".to_string(),
+                root: root.join("crates").to_string_lossy().to_string(),
+                trust_label: "trusted".to_string(),
+                enabled: true,
+                allow_roots: vec!["**".to_string()],
+                deny_globs: vec![],
+            },
+        ]);
+
+        let guard = PolicyGuard::from_config(&cfg).unwrap();
+        let targets = guard.watch_targets();
+
+        assert!(targets.iter().any(|target| target.path.ends_with("README.md") && !target.recursive));
+        assert!(targets.iter().any(|target| target.path.ends_with("Cargo.toml") && !target.recursive));
+        assert!(targets.iter().any(|target| target.path.ends_with("crates") && target.recursive));
+        assert!(!targets.iter().any(|target| target.path == root && target.recursive));
+    }
+
+    #[test]
+    fn watch_targets_respect_max_watch_target_limit() {
+        let root = workspace_root();
+        let mut cfg = sample_config(vec![
+            WorkspaceDomainConfig {
+                id: "workspace_meta".to_string(),
+                root: root.to_string_lossy().to_string(),
+                trust_label: "untrusted".to_string(),
+                enabled: true,
+                allow_roots: vec!["README.md".to_string(), "Cargo.toml".to_string()],
+                deny_globs: vec![],
+            },
+            WorkspaceDomainConfig {
+                id: "docs".to_string(),
+                root: root.join("docs").to_string_lossy().to_string(),
+                trust_label: "untrusted".to_string(),
+                enabled: true,
+                allow_roots: vec!["**".to_string()],
+                deny_globs: vec![],
+            },
+        ]);
+        cfg.workspace.scheduler.max_watch_targets = 2;
+
+        let guard = PolicyGuard::from_config(&cfg).unwrap();
+        let targets = guard.watch_targets();
+
+        assert_eq!(targets.len(), 2);
     }
 }

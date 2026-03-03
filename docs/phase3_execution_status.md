@@ -175,6 +175,7 @@ Interpretation:
 ## What Moves To The Next Phase
 Phase 3 closeout is complete.
 The remaining work is broader expansion, not Phase 3 repair.
+See `docs/phase4_execution_plan.md` for the forward-looking execution plan.
 
 ### 1. Broaden Beyond The Current Phase 3 Contract
 The current eight-domain contract is now the signed-off baseline.

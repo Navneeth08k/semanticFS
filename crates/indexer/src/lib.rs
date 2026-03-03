@@ -192,10 +192,19 @@ impl Indexer {
             NotifyConfig::default(),
         )?;
 
-        let roots = self.guard.watch_roots();
-        for root in &roots {
-            watcher.watch(root, RecursiveMode::Recursive)?;
-            info!(path = %root.display(), "watching filesystem for incremental rebuild triggers");
+        let targets = self.guard.watch_targets();
+        for target in &targets {
+            let mode = if target.recursive {
+                RecursiveMode::Recursive
+            } else {
+                RecursiveMode::NonRecursive
+            };
+            watcher.watch(&target.path, mode)?;
+            info!(
+                path = %target.path.display(),
+                recursive = target.recursive,
+                "watching filesystem for incremental rebuild triggers"
+            );
         }
 
         self.event_loop(&rx, debounce)

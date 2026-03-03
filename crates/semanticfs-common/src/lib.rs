@@ -11,7 +11,7 @@ pub use config::{
     DomainContractError, EmbeddingConfig, FilterConfig, FuseCacheConfig, FuseSessionConfig,
     IndexConfig, MapConfig, McpConfig, ObservabilityConfig, PolicyConfig, RetrievalConfig,
     SemanticFsConfig, WorkspaceConfig, WorkspaceDomainConfig, WorkspaceDomainPlan,
-    WorkspaceDomainReport,
+    WorkspaceDomainReport, WorkspaceSchedulerConfig,
 };
 pub use embedding::{cosine_similarity, embed_text_hash};
 pub use health::{HealthIndex, HealthReport};
