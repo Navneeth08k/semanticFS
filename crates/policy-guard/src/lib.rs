@@ -50,6 +50,7 @@ pub struct PolicyGuard {
     domains: Vec<DomainRule>,
     explicit_multi_root: bool,
     max_watch_targets: usize,
+    max_scan_targets: usize,
     deny_secret_paths: bool,
     secret_patterns: Vec<Regex>,
 }
@@ -77,6 +78,7 @@ impl PolicyGuard {
             }],
             explicit_multi_root: false,
             max_watch_targets: 0,
+            max_scan_targets: 0,
             deny_secret_paths: false,
             secret_patterns: default_secret_patterns()?,
         })
@@ -97,6 +99,7 @@ impl PolicyGuard {
             domains,
             explicit_multi_root,
             max_watch_targets: cfg.workspace.scheduler.max_watch_targets,
+            max_scan_targets: cfg.workspace.scheduler.max_scan_targets,
             deny_secret_paths: cfg.policy.deny_secret_paths,
             secret_patterns: default_secret_patterns()?,
         })
@@ -114,11 +117,7 @@ impl PolicyGuard {
     }
 
     pub fn scan_targets(&self) -> Vec<WatchTarget> {
-        let mut targets = Vec::new();
-        for domain in &self.domains {
-            targets.extend(domain.scan_targets());
-        }
-        prune_watch_targets(targets, 0)
+        prune_watch_targets(self.collect_scan_targets(), self.max_scan_targets)
     }
 
     pub fn watch_targets(&self) -> Vec<WatchTarget> {
@@ -133,8 +132,25 @@ impl PolicyGuard {
         self.scan_targets().len()
     }
 
+    pub fn raw_scan_target_count(&self) -> usize {
+        self.collect_scan_targets().len()
+    }
+
+    pub fn scan_target_pruned_count(&self) -> usize {
+        self.raw_scan_target_count()
+            .saturating_sub(self.scan_target_count())
+    }
+
+    pub fn scan_target_limit(&self) -> usize {
+        self.max_scan_targets
+    }
+
     pub fn watch_target_count(&self) -> usize {
         self.watch_targets().len()
+    }
+
+    pub fn watch_target_limit(&self) -> usize {
+        self.max_watch_targets
     }
 
     pub fn watch_enabled_domain_count(&self) -> usize {
@@ -285,6 +301,56 @@ impl PolicyGuard {
         }
     }
 
+    pub fn should_traverse_resolved(&self, resolved: &ResolvedPath) -> PolicyDecision {
+        let Some(domain) = self.domains.iter().find(|d| d.id == resolved.domain_id) else {
+            return PolicyDecision {
+                allow: false,
+                reason: Some("domain not found for resolved path".to_string()),
+            };
+        };
+
+        if domain.deny_set.is_match(&resolved.domain_relative_path) {
+            return PolicyDecision {
+                allow: false,
+                reason: Some(format!("path matched deny list for domain `{}`", domain.id)),
+            };
+        }
+
+        if self.deny_secret_paths
+            && !domain.allow_hidden_paths
+            && (domain.root_is_hidden || contains_hidden_path_segment(&resolved.domain_relative_path))
+        {
+            return PolicyDecision {
+                allow: false,
+                reason: Some(format!(
+                    "hidden path blocked by deny_secret_paths for domain `{}`",
+                    domain.id
+                )),
+            };
+        }
+
+        if !domain.has_allow_roots
+            || domain.allow_set.is_match(&resolved.domain_relative_path)
+            || path_can_reach_allowed_descendant(
+                &resolved.domain_relative_path,
+                &domain.allow_roots_patterns,
+            )
+        {
+            return PolicyDecision {
+                allow: true,
+                reason: None,
+            };
+        }
+
+        PolicyDecision {
+            allow: false,
+            reason: Some(format!(
+                "path cannot reach any allow roots for domain `{}`",
+                domain.id
+            )),
+        }
+    }
+
     pub fn trust_level_for_virtual_path(&self, virtual_path: &str) -> TrustLevel {
         self.resolve_virtual_path(virtual_path)
             .map(|resolved| trust_level_from_label(&resolved.trust_label))
@@ -324,6 +390,16 @@ impl PolicyGuard {
             latency_ms,
             result_count,
         }
+    }
+}
+
+impl PolicyGuard {
+    fn collect_scan_targets(&self) -> Vec<WatchTarget> {
+        let mut targets = Vec::new();
+        for domain in &self.domains {
+            targets.extend(domain.scan_targets());
+        }
+        prune_watch_targets(targets, 0)
     }
 }
 
@@ -549,6 +625,51 @@ fn has_glob_tokens(pattern: &str) -> bool {
         || pattern.contains('?')
         || pattern.contains('[')
         || pattern.contains('{')
+}
+
+fn static_prefix_for_pattern(pattern: &str) -> String {
+    let normalized = normalize_virtual_path(pattern);
+    let first_glob = normalized
+        .char_indices()
+        .find(|(_, ch)| matches!(ch, '*' | '?' | '[' | '{'))
+        .map(|(idx, _)| idx)
+        .unwrap_or(normalized.len());
+    normalized[..first_glob].trim_end_matches('/').to_string()
+}
+
+fn path_can_reach_allowed_descendant(current_path: &str, patterns: &[String]) -> bool {
+    let current = normalize_virtual_path(current_path);
+    if current.is_empty() {
+        return !patterns.is_empty();
+    }
+
+    for pattern in patterns {
+        let normalized = normalize_virtual_path(pattern);
+        if normalized.is_empty() {
+            continue;
+        }
+
+        if !has_glob_tokens(&normalized) {
+            if normalized == current || normalized.starts_with(&(current.clone() + "/")) {
+                return true;
+            }
+            continue;
+        }
+
+        let prefix = static_prefix_for_pattern(&normalized);
+        if prefix.is_empty() {
+            continue;
+        }
+
+        if current == prefix
+            || current.starts_with(&(prefix.clone() + "/"))
+            || prefix.starts_with(&(current.clone() + "/"))
+        {
+            return true;
+        }
+    }
+
+    false
 }
 
 fn is_broad_root_pattern(pattern: &str) -> bool {
@@ -989,6 +1110,35 @@ mod tests {
     }
 
     #[test]
+    fn scan_targets_respect_max_scan_target_limit() {
+        let root = workspace_root();
+        let mut cfg = sample_config(vec![WorkspaceDomainConfig {
+            id: "home_like".to_string(),
+            root: root.to_string_lossy().to_string(),
+            trust_label: "untrusted".to_string(),
+            enabled: true,
+            watch_enabled: false,
+            watch_priority: 25,
+            max_indexed_files: 0,
+            allow_hidden_paths: false,
+            allow_roots: vec![
+                "*.url".to_string(),
+                "rules/*.rules".to_string(),
+                "skills/**/*.md".to_string(),
+            ],
+            deny_globs: vec![],
+        }]);
+        cfg.workspace.scheduler.max_scan_targets = 2;
+
+        let guard = PolicyGuard::from_config(&cfg).unwrap();
+
+        assert_eq!(guard.raw_scan_target_count(), 3);
+        assert_eq!(guard.scan_target_limit(), 2);
+        assert_eq!(guard.scan_target_count(), 2);
+        assert_eq!(guard.scan_target_pruned_count(), 1);
+    }
+
+    #[test]
     fn watch_targets_skip_disabled_domains() {
         let root = workspace_root();
         let cfg = sample_config(vec![
@@ -1171,6 +1321,29 @@ mod tests {
         assert!(!targets.is_empty());
         assert!(!targets.iter().any(|target| target.path == root && target.recursive));
         assert!(targets.iter().all(|target| target.path.starts_with(&root)));
+    }
+
+    #[test]
+    fn traverse_allows_directory_prefix_of_recursive_allow_root() {
+        let root = workspace_root();
+        let cfg = sample_config(vec![WorkspaceDomainConfig {
+            id: "home_like".to_string(),
+            root: root.to_string_lossy().to_string(),
+            trust_label: "untrusted".to_string(),
+            enabled: true,
+            watch_enabled: false,
+            watch_priority: 25,
+            max_indexed_files: 0,
+            allow_hidden_paths: false,
+            allow_roots: vec!["skills/**/*.md".to_string()],
+            deny_globs: vec![],
+        }]);
+
+        let guard = PolicyGuard::from_config(&cfg).unwrap();
+        let resolved = guard.resolve_virtual_path("home_like/skills").unwrap();
+        let decision = guard.should_traverse_resolved(&resolved);
+
+        assert!(decision.allow);
     }
 
     #[test]

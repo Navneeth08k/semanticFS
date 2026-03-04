@@ -46,12 +46,15 @@ pub struct WorkspaceConfig {
 pub struct WorkspaceSchedulerConfig {
     #[serde(default)]
     pub max_watch_targets: usize,
+    #[serde(default)]
+    pub max_scan_targets: usize,
 }
 
 impl Default for WorkspaceSchedulerConfig {
     fn default() -> Self {
         Self {
             max_watch_targets: 0,
+            max_scan_targets: 0,
         }
     }
 }

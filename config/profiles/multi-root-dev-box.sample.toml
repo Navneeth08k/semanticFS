@@ -1,0 +1,131 @@
+[workspace]
+repo_root = "__REPO_ROOT__"
+mount_point = "__MOUNT_POINT__"
+
+[workspace.scheduler]
+max_watch_targets = 12
+max_scan_targets = 48
+
+[[workspace.domains]]
+id = "workspace_meta"
+root = "__REPO_ROOT__"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 20
+allow_roots = ["README.md", "Cargo.toml", "Cargo.lock"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "code"
+root = "__REPO_ROOT__/src"
+trust_label = "trusted"
+watch_priority = 100
+allow_roots = ["**"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "lib"
+root = "__REPO_ROOT__/lib"
+trust_label = "trusted"
+watch_priority = 95
+allow_roots = ["**"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "docs"
+root = "__REPO_ROOT__/docs"
+trust_label = "untrusted"
+watch_priority = 40
+watch_enabled = false
+allow_roots = ["**"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "config"
+root = "__REPO_ROOT__/config"
+trust_label = "trusted"
+watch_priority = 90
+allow_roots = ["**"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "scripts"
+root = "__REPO_ROOT__/scripts"
+trust_label = "trusted"
+watch_priority = 85
+allow_roots = ["**"]
+deny_globs = []
+
+[filter]
+mode = "repo_first"
+allow_roots = ["**"]
+deny_globs = [
+  "**/.git/**", "**/node_modules/**", "**/target/**", "**/dist/**", "**/build/**",
+  "**/.venv/**", "**/venv/**", "**/__pycache__/**", "**/.cache/**", "**/.idea/**",
+  "**/coverage/**", "**/out/**", "**/*.jpg", "**/*.png", "**/*.mp4"
+]
+max_file_mb = 10
+
+[index]
+debounce_ms = 500
+publish_mode = "two_phase"
+chunk_max_lines = 120
+chunk_overlap_lines = 20
+bulk_event_threshold = 80
+hotset_max_paths = 32
+pending_path_report_limit = 20
+
+[embedding]
+model = "bge-small-en-v1.5"
+runtime = "hash"
+quantization = "int8"
+dimension = 384
+batch_size = 64
+
+[retrieval]
+rrf_mode = "plain"
+rrf_k = 60
+topn_symbol = 10
+topn_bm25 = 16
+topn_vector = 12
+topn_final = 5
+symbol_exact_boost = 2.0
+symbol_prefix_boost = 1.2
+allow_stale = false
+code_path_boost = 1.15
+docs_path_penalty = 0.85
+test_path_penalty = 0.95
+asset_path_penalty = 0.45
+recency_half_life_hours = 24.0
+recency_min_boost = 0.85
+recency_max_boost = 1.20
+
+[fuse_cache]
+max_virtual_inodes = 50000
+max_cached_mb = 256
+entry_ttl_ms = 300
+attr_ttl_ms = 300
+
+[fuse_session]
+mode = "pinned"
+max_entries = 512
+
+[map]
+base_summary_mode = "deterministic_precompute"
+llm_enrichment = "async_optional"
+cache_ttl_sec = 3600
+
+[policy]
+read_only = true
+deny_secret_paths = true
+search_result_redaction = true
+trust_labels = ["trusted", "untrusted"]
+
+[observability]
+metrics_bind = "127.0.0.1:9464"
+health_bind = "127.0.0.1:9465"
+log_level = "info"
+
+[mcp]
+enabled = true
+mode = "minimal"

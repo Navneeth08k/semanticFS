@@ -104,7 +104,7 @@
                     },
                     {
                         "id":  "m13",
-                        "query":  "name: semanticfs-bench-artifacts",
+                        "query":  "name: ci",
                         "expected_paths":  [
                                                "github/workflows/ci.yml"
                                            ],
@@ -192,7 +192,7 @@
                     },
                     {
                         "id":  "m24",
-                        "query":  "name = \"aho-corasick\"",
+                        "query":  "name = \"adler2\"",
                         "expected_paths":  [
                                                "workspace_meta/Cargo.lock"
                                            ],
@@ -200,7 +200,7 @@
                     },
                     {
                         "id":  "m25",
-                        "query":  "Agents like OpenClaw can burn time and tokens repeatedly",
+                        "query":  "SemanticFS is a filesystem-wide intelligence layer for AI agents.",
                         "expected_paths":  [
                                                "workspace_meta/README.md"
                                            ],
@@ -336,7 +336,7 @@
                     },
                     {
                         "id":  "m42",
-                        "query":  "Warmed repeated-query latency is acceptable for progress when correctness stays fully green.",
+                        "query":  "WARM_PATH_POLICY",
                         "expected_paths":  [
                                                "triage/a_warm_path_policy.md"
                                            ],
@@ -344,7 +344,7 @@
                     },
                     {
                         "id":  "m43",
-                        "query":  "Cold first-query latency should be addressed only after the warmed path stops blocking expansion.",
+                        "query":  "COLD_PATH_FOLLOWUP",
                         "expected_paths":  [
                                                "triage/b_cold_path_followup.md"
                                            ],

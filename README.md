@@ -1,50 +1,62 @@
 # SemanticFS
 
 SemanticFS is a filesystem-wide intelligence layer for AI agents.
-Currently (v1.x), SemanticFS is optimized for software repositories as we build toward full system-scope capabilities.
-It keeps deterministic file truth (`/raw`) while adding semantic discovery (`/search`) and orientation summaries (`/map`).
+In `v1.x`, it is optimized for software repositories and bounded multi-root home profiles as the path toward broader system-scope usage.
+It keeps deterministic file truth through `/raw` while adding semantic discovery through `/search` and orientation summaries through `/map`.
 
-## Purpose
-Traditional agent tooling wastes turns finding context.
-Agents like OpenClaw can burn time and tokens repeatedly `cd`-ing, `ls`-ing, and `grep`-ing through the filesystem just to locate the right files.
-SemanticFS moves retrieval into a filesystem-shaped interface so agents can use normal file operations to get grounded results faster.
-That is why `/search` exists: instead of wandering the tree manually, an agent can ask for the relevant files directly and then verify the final target through `/raw`.
+## Why it exists
+Agents like OpenClaw, Claude Code, and Cursor waste time and tokens manually:
+1. changing directories
+2. listing folders
+3. grepping for likely files
+
+SemanticFS moves that retrieval work behind a filesystem-shaped interface so an agent can:
+1. ask `/search` for relevant files first
+2. get grounded paths and line ranges back
+3. verify the final target through `/raw` before acting
 
 Core design goal:
 1. Probabilistic discovery.
 2. Deterministic verification before edits.
 
-## Product Shape (v1.x)
-SemanticFS is currently optimized for software repositories, not whole-machine indexing.
+## What you get
+SemanticFS exposes four main surfaces:
+1. `/raw/<path>`: byte-accurate passthrough of the real file.
+2. `/search/<query>.md`: hybrid retrieval results with grounded paths and line ranges.
+3. `/map/<dir>/directory_overview.md`: deterministic directory summaries with optional async enrichment.
+4. MCP server: lets agents use SemanticFS as a tool/resource backend instead of manually navigating the tree.
 
-Provided surfaces:
-1. `/raw/<path>`: byte-accurate passthrough.
-2. `/search/<query>.md`: hybrid retrieval results with grounded paths/lines.
-3. `/map/<dir>/directory_overview.md`: deterministic summaries with optional async enrichment.
-4. MCP minimal server for agent discovery/use.
+## How agents use it
+The intended flow is:
+1. Agent asks SemanticFS where the relevant files are.
+2. SemanticFS returns ranked candidates with grounded locations.
+3. Agent reads the target through `/raw`.
+4. Agent verifies before editing.
+
+This is the point of `/search`: stop spending turns on blind navigation and move directly to likely files.
 
 ## Architecture
 
-Request flow:
-1. Files change in repo.
-2. `indexer` updates metadata/symbols/vectors and publishes a new index version via two-phase publish.
-3. `fuse-bridge` serves virtual paths against a snapshot.
-4. `retrieval-core` executes symbol-first + BM25 + vector fusion and applies policy + ranking priors.
-5. Agent verifies final edit targets through `/raw`.
+### Request flow
+1. Files change in a configured root.
+2. `indexer` updates metadata, symbols, chunks, and embeddings, then publishes a new snapshot.
+3. `fuse-bridge` serves virtual paths against that snapshot.
+4. `retrieval-core` executes symbol-first + BM25 + vector fusion and applies ranking priors.
+5. Agent confirms the final target through `/raw`.
 
-Main crates:
-1. `semanticfs-common`: shared config/types.
-2. `policy-guard`: filtering, secret heuristics, redaction.
-3. `indexer`: chunking/symbol extraction/embedding/map precompute/watch.
-4. `retrieval-core`: hybrid planner + RRF + priors.
-5. `map-engine`: map summary read path + enrichment merge.
-6. `fuse-bridge`: virtual FS rendering + caches + stats.
-7. `mcp`: minimal MCP-compatible tool/resource server.
-8. `semanticfs-cli`: operational commands and benchmarks.
+### Main crates
+1. `semanticfs-common`: shared config and core types.
+2. `policy-guard`: trust boundaries, filtering, redaction, and root/domain rules.
+3. `indexer`: chunking, symbol extraction, embeddings, snapshot publish, and watch logic.
+4. `retrieval-core`: hybrid retrieval planner, RRF fusion, and ranking priors.
+5. `map-engine`: directory summary reads and enrichment merge.
+6. `fuse-bridge`: virtual filesystem rendering, cache behavior, and stats.
+7. `mcp`: minimal MCP-compatible server surface.
+8. `semanticfs-cli`: operational commands, health checks, and benchmarks.
 
 ## How retrieval works
-
-Search runs **symbol lookup**, **BM25**, and **vector search** in parallel, then fuses and re-ranks results. The diagrams below render on GitHub and other Mermaid-capable viewers.
+Search runs symbol lookup, BM25, and vector search in parallel, then fuses and re-ranks the results.
+The diagrams below are unchanged and should render in GitHub or any Mermaid-capable viewer.
 
 ### Retrieval pipeline
 
@@ -173,145 +185,119 @@ graph LR
     S3 --> SameProcess
 ```
 
-## Current State (As of March 1, 2026)
-Implemented:
-1. Core `/raw` + `/search` + `/map` behavior.
-2. Snapshot versioning and two-phase publish.
-3. Symbol-first hybrid retrieval (symbol + BM25 + vector).
-4. Policy guard at indexing and retrieval/render.
-5. Async `/map` enrichment worker.
-6. MCP session pinning (`session_id`, `refresh_session`).
-7. Branch-swap queue planning with in-progress status signaling.
-8. Anti-shadowing ranking priors (file-type + recency).
-9. FUSE long-lived session pinning with explicit refresh/status control files.
-10. Benchmark suite: run/soak/relevance/release-gate/head-to-head.
-11. Mounted Linux FUSE workflow validation for `/.well-known/session.json` and `/.well-known/session.refresh` in WSL long-lived session.
-12. Strict daytime tune-vs-holdout workflow with deterministic suite splitting and holdout-only final reporting.
-13. Explicit multi-root runtime ownership is landed while single-root remains the default mode.
-14. Indexed file/chunk metadata now carries domain ownership, and `/map` uses domain-aware directory summaries and enrichment.
+## Current status
+Implemented in the current release band:
+1. Core `/raw`, `/search`, and `/map` behavior.
+2. Snapshot versioning with two-phase publish.
+3. Symbol-first hybrid retrieval.
+4. Policy-aware multi-root ownership and trust boundaries.
+5. Domain-aware `/raw` and `/map`.
+6. MCP server for agent integration.
+7. Benchmarks, relevance gates, and head-to-head validation.
+8. A production-shaped bounded home profile (`home_profile_v1`) for practical home-directory usage.
+9. Packaging, local install, and release-readiness smoke checks.
 
 Known constraints:
 1. Default embedding runtime is `hash` unless ONNX is configured.
-2. FUSE mount path is Linux-only; Windows/macOS can still use indexing/retrieval/MCP/benchmarks.
+2. FUSE mounting is Linux-first; Windows and macOS can still use indexing, retrieval, MCP, and benchmarks.
+3. The recommended default is the bounded home profile, not an uncapped full-home crawl.
 
 ## Quickstart
-1. Build:
+
+### 1. Build
 ```bash
 cargo build
 ```
-2. Copy config and set repo path:
+
+### 2. Create a local config
 ```bash
-cp config/semanticfs.sample.toml local.toml
-```
-3. Build index:
-```bash
-cargo run -p semanticfs-cli -- --config local.toml index build
-```
-4. Start MCP server:
-```bash
-cargo run -p semanticfs-cli -- --config local.toml serve mcp
-```
-5. Run benchmark in release mode:
-```bash
-cargo run --release -p semanticfs-cli -- --config local.toml benchmark run --soak-seconds 30
+cp config/semanticfs.sample.toml config/local.toml
 ```
 
-## Using SemanticFS with agents (Claude Code, Cursor, OpenClaw)
+Then set the root or domains you want SemanticFS to index.
 
-The intended usage pattern for agents is:
-1. **Run SemanticFS locally**
-   - Follow the Quickstart above to `cargo build`, create `local.toml`, run `index build`, then:
-   ```bash
-   cargo run -p semanticfs-cli -- --config local.toml serve mcp
-   ```
-   - The `serve mcp` command will print the MCP endpoint (host/port or socket) to use.
-2. **Register the MCP server in your agent**
-   - In Claude Code, Cursor, OpenClaw, or any MCP-capable agent, add a new **MCP server** pointing at the SemanticFS endpoint from step 1.
-   - Give it a name like `semanticfs` and keep it enabled for the workspaces where you want semantic filesystem access.
-3. **Let the agent use `/search` + `/raw`**
-   - The agent calls SemanticFS via MCP tools/resources instead of manually `cd`/`ls`/`grep`-ing:
-     - Use SemanticFS search tools to get **paths + line ranges**.
-     - Use `/raw/<path>` reads (or the equivalent MCP read tool) to verify and edit files.
+### 3. Build the index
+```bash
+cargo run -p semanticfs-cli -- --config config/local.toml index build
+```
 
-Once configured, agents can treat SemanticFS as a semantic filesystem layer over the roots/domains you configured in `local.toml`.
+### 4. Start the MCP server
+```bash
+cargo run -p semanticfs-cli -- --config config/local.toml serve mcp
+```
 
-## Validation Commands
-1. Relevance:
+### 5. Run a quick validation pass
 ```bash
-cargo run --release -p semanticfs-cli -- --config local.toml benchmark relevance --fixture-repo /abs/repo --golden-dir tests/retrieval_golden --history
+cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark run --soak-seconds 30
 ```
-2. Head-to-head (SemanticFS vs `rg` baseline):
-```bash
-cargo run --release -p semanticfs-cli -- --config local.toml benchmark head-to-head --fixture-repo /abs/repo --golden-dir tests/retrieval_golden --history
-```
-3. Daytime smoke:
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/daytime_smoke.ps1 -SoakSeconds 2
-```
-4. Nightly sequence:
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/nightly_bench.ps1 -ConfigPath config/semanticfs.sample.toml -FixtureRepo tests/fixtures/benchmark_repo -GoldenDir tests/retrieval_golden -SoakSeconds 30
-```
-5. Representative nightly (semanticFS + ai-testgen suites + strict release gate):
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/nightly_representative.ps1 -SoakSeconds 30
-```
-6. Mounted Linux FUSE session validation (WSL):
-```powershell
-wsl -d Ubuntu -- bash -lc 'cd /mnt/c/path/to/semanticFS && bash scripts/wsl_run_fuse_session_validation.sh'
-```
-7. Drift summary (history counts + deltas + date coverage):
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/drift_summary.ps1
-```
-8. Daytime full action runner (split + smoke + tune/holdout + drift summary):
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2
-```
-Optional strict gate variant:
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/daytime_action_items.ps1 -SoakSeconds 2 -IncludeReleaseGate
-```
-9. Tune-vs-holdout selection on a repo:
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/daytime_tune_holdout.ps1 -Label repo -RepoRoot C:\path\repo -BaseConfig config/relevance-real.toml -TuneGolden tests/retrieval_golden/repo_tune.json -HoldoutGolden tests/retrieval_golden/repo_holdout.json -History
-```
-10. Deterministic split from bootstrap suite:
-```bash
-python scripts/split_golden_suite.py --input tests/retrieval_golden/repo_bootstrap.json --tune-output tests/retrieval_golden/repo_tune.json --holdout-output tests/retrieval_golden/repo_holdout.json --tune-count 10
-```
-11. Curated mixed split build from expanded bootstrap suite:
-```bash
-python scripts/build_curated_mixed_suites.py --input tests/retrieval_golden/repo_bootstrap_v2_full.json --tune-output tests/retrieval_golden/repo_curated_tune.json --holdout-output tests/retrieval_golden/repo_curated_holdout.json --split-size 40 --non-symbol-per-split 10 --dataset-prefix repo
-```
-12. Config-aligned bootstrap generation for a scoped repo:
-```bash
-python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --config config/relevance-ai-testgen.toml --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20
-```
-Optional faster mode for large git repos:
-```bash
-python scripts/bootstrap_golden_from_repo.py --repo-root C:\path\repo --git-tracked-only --output tests/retrieval_golden/repo_bootstrap.json --dataset-name repo_bootstrap_v1 --max-queries 20
-```
-12. Filesystem candidate discovery (workspace mirrors excluded + remote dedupe by default):
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/discover_repo_candidates.ps1 -Roots C:\Users\<user> -MinTrackedFiles 80 -TopN 80 -OutputPath .semanticfs/bench/filesystem_repo_candidates_min80.json
-```
-13. Filesystem backlog build (prioritized uncovered/gap/partial/representative/ok queue):
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/build_filesystem_scope_backlog.ps1 -CandidatesPath .semanticfs/bench/filesystem_repo_candidates_min80.json -OutputPath .semanticfs/bench/filesystem_scope_backlog_latest.json
-```
-14. Phase 3 domain-plan build from latest backlog:
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/build_phase3_domain_plan.ps1 -BacklogPath .semanticfs/bench/filesystem_scope_backlog_latest.json -OutputPath .semanticfs/bench/filesystem_domain_plan_latest.json
-```
-15. Query gap report for targeted hardening:
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/build_query_gap_report.ps1 -DatasetName repo8872pp_bootstrap_v1_holdout_v1
-```
-16. Explicit multi-root benchmark (tracked `code` + `docs` + `config` + `scripts` + `systemd` domains):
-```bash
-cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark relevance --golden tests/retrieval_golden/semanticfs_multiroot_explicit.json --history
-cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark head-to-head --golden tests/retrieval_golden/semanticfs_multiroot_explicit.json --history
-```
-The tracked fixture is now `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`. Latest result on active version `1`: relevance recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`; head-to-head gives SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `27.644 ms` vs `rg` recall `0.9375`, MRR `0.8021`, symbol-hit `0.4000`, p95 `30.716 ms`. All 16 tracked queries are currently rank `1`; the remaining Phase 3 work is holding this broader seven-domain contract green while expanding toward less synthetic mixed-content roots.
 
+## Agent setup
+Use SemanticFS with Claude Code, Cursor, OpenClaw, or any MCP-capable agent like this:
+1. Run `serve mcp`.
+2. Register the SemanticFS MCP endpoint in the agent.
+3. Let the agent use SemanticFS search/resources instead of manual `cd` / `ls` / `grep`.
+4. Have the agent verify final edit targets through `/raw`.
+
+For a faster setup path, see `docs/setup_10_minute_agents.md`.
+
+## Recommended profiles
+The current practical defaults are:
+1. `single-repo`: for one project root.
+2. `multi-root-dev-box`: for a curated set of development roots.
+3. `home-projects`: for a bounded home-plus-projects profile.
+
+Sample profiles live in `config/profiles/`.
+You can render them with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/apply_config_profile.ps1 -Profile single-repo -OutputPath .semanticfs/bench/local.single-repo.toml -RepoRoot (Get-Location).Path
+```
+
+## Common commands
+
+### Health
+```bash
+cargo run -p semanticfs-cli -- --config config/local.toml health
+```
+
+### Relevance benchmark
+```bash
+cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark relevance --fixture-repo /abs/repo --golden tests/retrieval_golden/semanticfs_multiroot_explicit_v14.json
+```
+
+### Head-to-head vs `rg`
+```bash
+cargo run --release -p semanticfs-cli -- --config config/local.toml benchmark head-to-head --fixture-repo /abs/repo --golden tests/retrieval_golden/semanticfs_multiroot_explicit_v14.json
+```
+
+### One-command release smoke
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run_release_readiness.ps1 -OutputDir .semanticfs/bench -SkipBuild
+```
+
+### Local install
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install_local.ps1 -InstallDir .semanticfs/local-bin-release -BinaryPath target/release/semanticfs.exe
+```
+
+## What is currently supported
+The current supported production path is:
+1. bounded multi-root repository usage
+2. bounded multi-root home usage through `home_profile_v1`
+3. packaged local usage through the release bundle and install scripts
+
+The current release band is designed to be:
+1. deterministic
+2. policy-bounded
+3. fast on warmed repeated-query paths
+
+It is not positioned as:
+1. automatic whole-machine indexing by default
+2. unbounded home crawling as the recommended default
+
+## Repo docs
+If you need deeper operational detail:
+1. `docs/setup_10_minute_agents.md`: quick setup with agents
+2. `docs/current_execution_plan.md`: current implementation baseline
+3. `docs/future-steps-log.md`: short active queue
+4. `docs/benchmark.md`: benchmark command reference

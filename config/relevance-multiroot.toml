@@ -4,6 +4,7 @@ mount_point = "/mnt/ai"
 
 [workspace.scheduler]
 max_watch_targets = 0
+max_scan_targets = 0
 
 [[workspace.domains]]
 id = "workspace_meta"
@@ -64,6 +65,7 @@ id = "github"
 root = "./.github"
 trust_label = "untrusted"
 watch_priority = 35
+allow_hidden_paths = true
 allow_roots = ["workflows/ci.yml"]
 deny_globs = []
 

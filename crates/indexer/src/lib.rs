@@ -107,12 +107,6 @@ impl Indexer {
                     break;
                 }
             }
-            if let Some(target_resolved) = self.guard.resolve_disk_path(&target.path) {
-                let target_decision = self.guard.should_index_resolved(&target_resolved);
-                if !target_decision.allow {
-                    continue;
-                }
-            }
             let mut walker = walkdir::WalkDir::new(&target.path).sort_by_file_name();
             if !target.recursive {
                 walker = walker.max_depth(1);
@@ -121,7 +115,11 @@ impl Indexer {
                 let Some(resolved) = self.guard.resolve_disk_path(entry.path()) else {
                     return false;
                 };
-                self.guard.should_index_resolved(&resolved).allow
+                if entry.file_type().is_dir() {
+                    self.guard.should_traverse_resolved(&resolved).allow
+                } else {
+                    self.guard.should_index_resolved(&resolved).allow
+                }
             });
             for entry in walker.filter_map(|e| e.ok()) {
                 if let Some(limit) = single_domain_budget {

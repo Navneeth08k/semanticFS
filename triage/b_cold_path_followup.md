@@ -1,1 +1,1 @@
-Cold first-query latency should be addressed only after the warmed path stops blocking expansion.
+COLD_PATH_FOLLOWUP: defer first-query tuning until warmed-path regressions stop blocking broader scope.

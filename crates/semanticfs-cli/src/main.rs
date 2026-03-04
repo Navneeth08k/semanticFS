@@ -529,8 +529,24 @@ fn print_domain_report(report: &WorkspaceDomainReport) {
 }
 
 fn print_domain_runtime_stats(guard: &PolicyGuard) {
+    println!(
+        "workspace_scan_target_raw_count={}",
+        guard.raw_scan_target_count()
+    );
     println!("workspace_scan_target_count={}", guard.scan_target_count());
+    println!(
+        "workspace_scan_target_pruned_count={}",
+        guard.scan_target_pruned_count()
+    );
+    println!(
+        "workspace_scan_target_limit={}",
+        guard.scan_target_limit()
+    );
     println!("workspace_watch_target_count={}", guard.watch_target_count());
+    println!(
+        "workspace_watch_target_limit={}",
+        guard.watch_target_limit()
+    );
     println!(
         "workspace_watch_enabled_domain_count={}",
         guard.watch_enabled_domain_count()

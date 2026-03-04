@@ -1,1 +1,1 @@
-Warmed repeated-query latency is acceptable for progress when correctness stays fully green.
+WARM_PATH_POLICY: favor continued expansion once repeated-query reads are effectively free on the same snapshot.
