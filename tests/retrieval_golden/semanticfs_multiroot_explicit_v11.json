@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "dataset_name": "semanticfs_multiroot_explicit_v9",
+  "dataset_name": "semanticfs_multiroot_explicit_v11",
   "queries": [
     {
       "id": "m01",
@@ -203,6 +203,38 @@
       "query": "Agents like OpenClaw can burn time and tokens repeatedly",
       "expected_paths": [
         "workspace_meta/README.md"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "m26",
+      "query": "Per-domain watch budgeting should prevent redundant recursive subscriptions",
+      "expected_paths": [
+        "playbooks/watch_budgeting.md"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "m27",
+      "query": "Every new domain must carry an explicit expected-path query",
+      "expected_paths": [
+        "playbooks/domain_intake_checklist.md"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "m28",
+      "query": "Every domain must declare explicit watch ownership and update priority before it is allowed to scale",
+      "expected_paths": [
+        "governance/trust_boundary_contract.md"
+      ],
+      "symbol_query": false
+    },
+    {
+      "id": "m29",
+      "query": "Sensitive roots must be added as untrusted first and only promoted through explicit review",
+      "expected_paths": [
+        "governance/sensitive_root_intake.md"
       ],
       "symbol_query": false
     }

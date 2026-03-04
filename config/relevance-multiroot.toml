@@ -9,6 +9,8 @@ max_watch_targets = 0
 id = "workspace_meta"
 root = "."
 trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 5
 allow_roots = ["Cargo.toml", "Cargo.lock", "README.md"]
 deny_globs = []
 
@@ -16,6 +18,7 @@ deny_globs = []
 id = "code"
 root = "./crates"
 trust_label = "trusted"
+watch_priority = 100
 allow_roots = ["**"]
 deny_globs = []
 
@@ -23,6 +26,7 @@ deny_globs = []
 id = "docs"
 root = "./docs"
 trust_label = "untrusted"
+watch_priority = 40
 allow_roots = ["**"]
 deny_globs = []
 
@@ -30,6 +34,7 @@ deny_globs = []
 id = "config"
 root = "./config"
 trust_label = "trusted"
+watch_priority = 90
 allow_roots = ["semanticfs.sample.toml", "relevance-real.toml", "relevance-ai-testgen.toml", "relevance-multiroot.toml"]
 deny_globs = []
 
@@ -37,6 +42,7 @@ deny_globs = []
 id = "scripts"
 root = "./scripts"
 trust_label = "trusted"
+watch_priority = 80
 allow_roots = ["nightly_representative.ps1", "daytime_action_items.ps1", "bootstrap_golden_from_repo.py", "build_phase3_domain_plan.ps1"]
 deny_globs = []
 
@@ -44,6 +50,7 @@ deny_globs = []
 id = "systemd"
 root = "./systemd"
 trust_label = "trusted"
+watch_priority = 85
 allow_roots = [
   "semanticfs-fuse.service",
   "semanticfs-indexer.service",
@@ -56,6 +63,7 @@ deny_globs = []
 id = "github"
 root = "./.github"
 trust_label = "untrusted"
+watch_priority = 35
 allow_roots = ["workflows/ci.yml"]
 deny_globs = []
 
@@ -63,6 +71,8 @@ deny_globs = []
 id = "fixture_repo"
 root = "./tests/fixtures/benchmark_repo"
 trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 10
 allow_roots = ["**"]
 deny_globs = []
 
@@ -70,7 +80,86 @@ deny_globs = []
 id = "playbooks"
 root = "./playbooks"
 trust_label = "untrusted"
+watch_priority = 20
 allow_roots = ["watch_budgeting.md", "domain_intake_checklist.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "governance"
+root = "./governance"
+trust_label = "untrusted"
+watch_priority = 15
+allow_roots = ["trust_boundary_contract.md", "sensitive_root_intake.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "inventory"
+root = "./inventory"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 12
+max_indexed_files = 2
+allow_roots = ["a_root_class_matrix.md", "b_index_budget_policy.md", "z_deferred_large_roots.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "profiles"
+root = "./profiles"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 11
+max_indexed_files = 2
+allow_roots = ["a_root_selection_heuristics.md", "b_latency_budget_targets.md", "z_future_aggressive_modes.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "operations"
+root = "./operations"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 9
+max_indexed_files = 2
+allow_roots = ["a_agent_lookup_playbook.md", "b_cache_trim_policy.md", "z_unbounded_host_sweeps.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "intake"
+root = "./intake"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 8
+max_indexed_files = 2
+allow_roots = ["a_low_risk_root_batch.md", "b_domain_promotion_checklist.md", "z_sensitive_root_backlog.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "telemetry"
+root = "./telemetry"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 7
+max_indexed_files = 2
+allow_roots = ["a_query_reuse_budget.md", "b_hotspot_triage_loop.md", "z_raw_trace_backlog.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "admission"
+root = "./admission"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 6
+max_indexed_files = 2
+allow_roots = ["a_batch_gate.md", "b_root_class_allowlist.md", "z_high_risk_root_candidates.md"]
+deny_globs = []
+
+[[workspace.domains]]
+id = "triage"
+root = "./triage"
+trust_label = "untrusted"
+watch_enabled = false
+watch_priority = 4
+max_indexed_files = 2
+allow_roots = ["a_warm_path_policy.md", "b_cold_path_followup.md", "z_unbounded_trace_dump.md"]
 deny_globs = []
 
 [filter]

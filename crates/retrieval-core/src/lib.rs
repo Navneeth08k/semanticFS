@@ -110,10 +110,12 @@ pub struct RetrievalCore {
     guard: PolicyGuard,
     conn: Mutex<Connection>,
     path_cache: Mutex<HashMap<String, CachedPathScoreContext>>,
+    search_cache: Mutex<HashMap<String, Vec<GroundedHit>>>,
     path_cache_version: AtomicU64,
 }
 
 const PATH_SCORE_CACHE_TTL: Duration = Duration::from_secs(120);
+const SEARCH_RESULT_CACHE_MAX_ENTRIES: usize = 256;
 
 impl RetrievalCore {
     pub fn open(
@@ -132,6 +134,7 @@ impl RetrievalCore {
             guard,
             conn: Mutex::new(conn),
             path_cache: Mutex::new(HashMap::new()),
+            search_cache: Mutex::new(HashMap::new()),
             path_cache_version: AtomicU64::new(0),
         })
     }
@@ -142,18 +145,24 @@ impl RetrievalCore {
         snapshot_version: u64,
         active_version: u64,
     ) -> Result<Vec<GroundedHit>> {
-        self.refresh_path_cache_for_snapshot(snapshot_version);
+        self.refresh_caches_for_snapshot(snapshot_version);
+        let cache_key = search_cache_key(query, snapshot_version, active_version);
+        if let Some(cached) = self.cached_search_result(&cache_key) {
+            return Ok(cached);
+        }
         let query_ctx = QueryScoreContext::new(query);
         let mut rank_lists: Vec<Vec<PartialHit>> = Vec::new();
 
         let exact = self.symbol_exact(query, snapshot_version)?;
         if query_ctx.is_symbol_like && !exact.is_empty() {
-            return Ok(self.guard.redact_sensitive_hits(self.render_direct_hits(
+            let rendered = self.guard.redact_sensitive_hits(self.render_direct_hits(
                 &query_ctx,
                 exact,
                 snapshot_version,
                 active_version,
-            )));
+            ));
+            self.store_search_result(cache_key, &rendered);
+            return Ok(rendered);
         }
         if !exact.is_empty() {
             rank_lists.push(exact.clone());
@@ -186,14 +195,12 @@ impl RetrievalCore {
         }
 
         let has_symbol_hits = !exact.is_empty() || !prefix.is_empty();
-        if let Some(vector_limit) =
-            self.vector_limit_for_query(
-                &query_ctx,
-                has_symbol_hits,
-                has_bm25_hits,
-                has_bm25_docs_hint,
-            )
-        {
+        if let Some(vector_limit) = self.vector_limit_for_query(
+            &query_ctx,
+            has_symbol_hits,
+            has_bm25_hits,
+            has_bm25_docs_hint,
+        ) {
             let vector = self.vector_search(query, snapshot_version, vector_limit)?;
             if !vector.is_empty() {
                 rank_lists.push(vector);
@@ -244,13 +251,11 @@ impl RetrievalCore {
             }
         }
 
-        let ordered_keys = dedupe_ranked_keys_by_path(&ordered_keys, &rank_lists, self.cfg.topn_final);
+        let ordered_keys =
+            dedupe_ranked_keys_by_path(&ordered_keys, &rank_lists, self.cfg.topn_final);
         let fused_scores: HashMap<String, f32> = adjusted_fused.into_iter().collect();
         let mut out = Vec::new();
-        for (idx, path_key) in ordered_keys
-            .into_iter()
-            .enumerate()
-        {
+        for (idx, path_key) in ordered_keys.into_iter().enumerate() {
             if let Some(hit) = hit_lookup.get(&path_key).cloned() {
                 let prior = cached_score_prior(self, &query_ctx, &hit, &mut prior_cache);
                 out.push(GroundedHit {
@@ -279,11 +284,16 @@ impl RetrievalCore {
             }
         }
 
-        Ok(self.guard.redact_sensitive_hits(out))
+        let rendered = self.guard.redact_sensitive_hits(out);
+        self.store_search_result(cache_key, &rendered);
+        Ok(rendered)
     }
 
     pub fn active_version(&self) -> Result<u64> {
-        let conn = self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut stmt = conn.prepare_cached(
             "SELECT version FROM index_versions WHERE state='active' ORDER BY version DESC LIMIT 1",
         )?;
@@ -295,7 +305,10 @@ impl RetrievalCore {
     }
 
     pub fn indexing_status(&self) -> Result<Option<IndexingStatus>> {
-        let conn = self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut stmt = conn.prepare_cached(
             "SELECT value FROM runtime_state WHERE key='indexing_status' LIMIT 1",
         )?;
@@ -308,12 +321,11 @@ impl RetrievalCore {
         Ok(None)
     }
 
-    fn symbol_exact(
-        &self,
-        query: &str,
-        version: u64,
-    ) -> Result<Vec<PartialHit>> {
-        let conn = self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    fn symbol_exact(&self, query: &str, version: u64) -> Result<Vec<PartialHit>> {
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let variants = symbol_query_variants(query);
         if variants.is_empty() {
             return Ok(Vec::new());
@@ -389,12 +401,11 @@ impl RetrievalCore {
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
 
-    fn symbol_prefix(
-        &self,
-        query: &str,
-        version: u64,
-    ) -> Result<Vec<PartialHit>> {
-        let conn = self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    fn symbol_prefix(&self, query: &str, version: u64) -> Result<Vec<PartialHit>> {
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let variants = lower_dedup_variants(symbol_query_variants(query));
         if variants.is_empty() {
             return Ok(Vec::new());
@@ -452,7 +463,10 @@ impl RetrievalCore {
         version: u64,
         topn: usize,
     ) -> Result<Vec<PartialHit>> {
-        let conn = self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let path_filter = bm25_path_filter_clause(query_ctx)
             .map(|clause| format!(" AND ({clause})"))
             .unwrap_or_default();
@@ -515,12 +529,7 @@ impl RetrievalCore {
         Ok(out)
     }
 
-    fn vector_search(
-        &self,
-        query: &str,
-        version: u64,
-        topn: usize,
-    ) -> Result<Vec<PartialHit>> {
+    fn vector_search(&self, query: &str, version: u64, topn: usize) -> Result<Vec<PartialHit>> {
         let query_embedding = embed_text_hash(query, self.embed_dim);
         let topn = topn.max(1);
 
@@ -534,7 +543,10 @@ impl RetrievalCore {
         }
 
         let candidate_pool = (topn * 50).max(500);
-        let conn = self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         let mut stmt = conn.prepare_cached(
             r#"
@@ -610,9 +622,12 @@ impl RetrievalCore {
         }
         if query.is_narrative_docs && has_bm25_hits {
             if query.is_docs_schema_like {
-                return Some(topn.min(10).max(1));
+                return Some(topn.min(8).max(1));
             }
-            return Some(topn.min(10).max(1));
+            if query.overlap_terms.len() <= 4 {
+                return Some(topn.min(6).max(1));
+            }
+            return Some(topn.min(8).max(1));
         }
 
         Some(topn)
@@ -627,24 +642,54 @@ impl RetrievalCore {
         if query.is_config_like || query.is_command_like {
             return topn.min(8).max(1);
         }
+        if query.is_narrative_docs {
+            if query.is_docs_schema_like {
+                return topn.min(10).max(1);
+            }
+            return topn.min(8).max(1);
+        }
 
         topn
     }
 
-    fn refresh_path_cache_for_snapshot(&self, snapshot_version: u64) {
+    fn refresh_caches_for_snapshot(&self, snapshot_version: u64) {
         if self.path_cache_version.load(AtomicOrdering::Relaxed) == snapshot_version {
             return;
         }
 
-        let mut cache = self
+        let mut path_cache = self
             .path_cache
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut search_cache = self
+            .search_cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         if self.path_cache_version.load(AtomicOrdering::Relaxed) != snapshot_version {
-            cache.clear();
+            path_cache.clear();
+            search_cache.clear();
             self.path_cache_version
                 .store(snapshot_version, AtomicOrdering::Relaxed);
         }
+    }
+
+    fn cached_search_result(&self, cache_key: &str) -> Option<Vec<GroundedHit>> {
+        self.search_cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(cache_key)
+            .cloned()
+    }
+
+    fn store_search_result(&self, cache_key: String, hits: &[GroundedHit]) {
+        let mut cache = self
+            .search_cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if !cache.contains_key(&cache_key) && cache.len() >= SEARCH_RESULT_CACHE_MAX_ENTRIES {
+            cache.clear();
+        }
+        cache.insert(cache_key, hits.to_vec());
     }
 
     fn path_score_context(&self, path: &str, modified_unix_ms: Option<i64>) -> PathScoreContext {
@@ -800,7 +845,11 @@ impl RetrievalCore {
         mult
     }
 
-    fn query_path_overlap_multiplier(&self, query: &QueryScoreContext, path: &PathScoreContext) -> f32 {
+    fn query_path_overlap_multiplier(
+        &self,
+        query: &QueryScoreContext,
+        path: &PathScoreContext,
+    ) -> f32 {
         if query.overlap_terms.is_empty() || path.path_terms.is_empty() {
             return 1.0;
         }
@@ -888,12 +937,19 @@ impl RetrievalCore {
             return 1.0;
         };
         let Ok(age) = SystemTime::now().duration_since(modified) else {
-            return self.cfg.recency_max_boost.max(self.cfg.recency_min_boost.max(0.1));
+            return self
+                .cfg
+                .recency_max_boost
+                .max(self.cfg.recency_min_boost.max(0.1));
         };
         self.recency_prior_from_age_hours(age.as_secs_f32() / 3600.0)
     }
 
-    fn config_query_path_multiplier(&self, query: &QueryScoreContext, path: &PathScoreContext) -> f32 {
+    fn config_query_path_multiplier(
+        &self,
+        query: &QueryScoreContext,
+        path: &PathScoreContext,
+    ) -> f32 {
         if !query.is_config_like {
             return 1.0;
         }
@@ -947,7 +1003,11 @@ impl RetrievalCore {
         1.0
     }
 
-    fn command_query_path_multiplier(&self, query: &QueryScoreContext, path: &PathScoreContext) -> f32 {
+    fn command_query_path_multiplier(
+        &self,
+        query: &QueryScoreContext,
+        path: &PathScoreContext,
+    ) -> f32 {
         if !query.is_command_like {
             return 1.0;
         }
@@ -967,7 +1027,11 @@ impl RetrievalCore {
         1.0
     }
 
-    fn workflow_query_path_multiplier(&self, query: &QueryScoreContext, path: &PathScoreContext) -> f32 {
+    fn workflow_query_path_multiplier(
+        &self,
+        query: &QueryScoreContext,
+        path: &PathScoreContext,
+    ) -> f32 {
         if !query.is_workflow_like {
             return 1.0;
         }
@@ -1637,6 +1701,13 @@ fn cached_score_prior(
     prior
 }
 
+fn search_cache_key(query: &str, snapshot_version: u64, active_version: u64) -> String {
+    format!(
+        "{}|snapshot={}|active={}",
+        query, snapshot_version, active_version
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1707,14 +1778,18 @@ mod tests {
 
     #[test]
     fn generated_path_detection_flags_transpiled_output() {
-        assert!(is_generated_artifact_path("client/.next/dev/server/chunks/ssr/app_page.js"));
+        assert!(is_generated_artifact_path(
+            "client/.next/dev/server/chunks/ssr/app_page.js"
+        ));
         assert!(is_generated_artifact_path("web/dist/assets/main.js"));
         assert!(!is_generated_artifact_path("client/app/page.tsx"));
     }
 
     #[test]
     fn asset_path_detection_flags_non_code_assets() {
-        assert!(is_asset_path("FtcRobotController/src/main/assets/Skystone.dat"));
+        assert!(is_asset_path(
+            "FtcRobotController/src/main/assets/Skystone.dat"
+        ));
         assert!(is_asset_path("web/static/logo.png"));
         assert!(!is_asset_path("src/lib/auth.rs"));
     }
@@ -1747,9 +1822,15 @@ mod tests {
         let command = QueryScoreContext::new("Run-Step \"Phase 3 domain plan build\"");
         let narrative = QueryScoreContext::new("Benchmark Fixture Architecture");
 
-        assert!(bm25_path_filter_clause(&workflow).unwrap_or_default().contains("workflows"));
-        assert!(bm25_path_filter_clause(&systemd).unwrap_or_default().contains(".service"));
-        assert!(bm25_path_filter_clause(&command).unwrap_or_default().contains("scripts"));
+        assert!(bm25_path_filter_clause(&workflow)
+            .unwrap_or_default()
+            .contains("workflows"));
+        assert!(bm25_path_filter_clause(&systemd)
+            .unwrap_or_default()
+            .contains(".service"));
+        assert!(bm25_path_filter_clause(&command)
+            .unwrap_or_default()
+            .contains("scripts"));
         assert!(bm25_path_filter_clause(&narrative).is_none());
     }
 
@@ -1776,14 +1857,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(
-            Path::new(":memory:"),
-            Path::new("."),
-            cfg,
-            384,
-            guard,
-        )
-        .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new("future steps log");
         let future_steps = core.query_path_overlap_multiplier(
@@ -1823,8 +1898,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new("future steps log");
         let future_steps = core.file_name_query_overlap_multiplier(
@@ -1864,8 +1939,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new("mount_point = \"/mnt/ai\"");
         let config_prior = core.config_query_path_multiplier(
@@ -1918,8 +1993,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new(
             "stabilize multi-root retrieval on representative mixed-domain workloads",
@@ -1961,14 +2036,16 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new(
             "ts actor op target snapshot_id policy_result reason_code latency_ms result_total",
         );
-        let docs_prior =
-            core.narrative_docs_query_multiplier(&query, &core.path_score_context("docs/runbook.md", None));
+        let docs_prior = core.narrative_docs_query_multiplier(
+            &query,
+            &core.path_score_context("docs/runbook.md", None),
+        );
         let code_prior = core.narrative_docs_query_multiplier(
             &query,
             &core.path_score_context("code/policy-guard/src/lib.rs", None),
@@ -2006,8 +2083,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new("Run-Step \"Phase 3 domain plan build\"");
         let git_query = QueryScoreContext::new("git ls-files failed for");
@@ -2049,8 +2126,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new("runs-on: ubuntu-latest");
         let workflow_prior = core.workflow_query_path_multiplier(
@@ -2090,8 +2167,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new("WantedBy=multi-user.target");
         let unit_prior = core.systemd_unit_query_path_multiplier(
@@ -2161,14 +2238,23 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new("explain domain ownership in map summaries");
 
-        assert_eq!(core.vector_limit_for_query(&query, false, true, true), Some(6));
-        assert_eq!(core.vector_limit_for_query(&query, false, true, false), Some(10));
-        assert_eq!(core.vector_limit_for_query(&query, false, false, false), Some(12));
+        assert_eq!(
+            core.vector_limit_for_query(&query, false, true, true),
+            Some(6)
+        );
+        assert_eq!(
+            core.vector_limit_for_query(&query, false, true, false),
+            Some(8)
+        );
+        assert_eq!(
+            core.vector_limit_for_query(&query, false, false, false),
+            Some(12)
+        );
     }
 
     #[test]
@@ -2194,20 +2280,22 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new(
             "this runbook explains how domain ownership, policy decisions, and latency reporting fit together",
         );
 
         assert_eq!(core.vector_limit_for_query(&query, false, true, true), None);
-        assert_eq!(core.vector_limit_for_query(&query, false, true, false), Some(10));
+        assert_eq!(
+            core.vector_limit_for_query(&query, false, true, false),
+            Some(8)
+        );
     }
 
-
     #[test]
-    fn docs_schema_queries_keep_full_vector_budget_without_docs_hint() {
+    fn docs_schema_queries_trim_vector_budget_without_docs_hint() {
         let cfg = RetrievalConfig {
             rrf_mode: "plain".to_string(),
             rrf_k: 60,
@@ -2229,18 +2317,21 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let query = QueryScoreContext::new(
             "ts actor op target snapshot_id policy_result reason_code latency_ms result_total",
         );
 
-        assert_eq!(core.vector_limit_for_query(&query, false, true, false), Some(10));
+        assert_eq!(
+            core.vector_limit_for_query(&query, false, true, false),
+            Some(8)
+        );
     }
 
     #[test]
-    fn structured_literal_queries_trim_bm25_budget() {
+    fn structured_and_narrative_queries_trim_bm25_budget() {
         let cfg = RetrievalConfig {
             rrf_mode: "plain".to_string(),
             rrf_k: 60,
@@ -2262,18 +2353,17 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
 
         let workflow = QueryScoreContext::new("runs-on: ubuntu-latest");
         let config = QueryScoreContext::new("mount_point = \"/mnt/ai\"");
         let narrative = QueryScoreContext::new(
             "stabilize multi-root retrieval on representative mixed-domain workloads",
         );
-
         assert_eq!(core.bm25_limit_for_query(&workflow), 6);
         assert_eq!(core.bm25_limit_for_query(&config), 8);
-        assert_eq!(core.bm25_limit_for_query(&narrative), 12);
+        assert_eq!(core.bm25_limit_for_query(&narrative), 8);
     }
 
     #[test]
@@ -2299,8 +2389,8 @@ mod tests {
         let allow = vec!["**".to_string()];
         let deny = Vec::new();
         let guard = PolicyGuard::new(&allow, &deny).unwrap();
-        let core = RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard)
-            .unwrap();
+        let core =
+            RetrievalCore::open(Path::new(":memory:"), Path::new("."), cfg, 384, guard).unwrap();
         let query = QueryScoreContext::new("normalize_result_path");
 
         let rendered = core.render_direct_hits(
@@ -2346,5 +2436,15 @@ mod tests {
         assert_eq!(rendered.len(), 1);
         assert!(rendered[0].why_selected.contains("exact-symbol-fast-path"));
     }
-}
 
+    #[test]
+    fn search_cache_key_changes_with_snapshot_context() {
+        let a = search_cache_key("query", 10, 10);
+        let b = search_cache_key("query", 11, 10);
+        let c = search_cache_key("query", 10, 11);
+
+        assert_ne!(a, b);
+        assert_ne!(a, c);
+    }
+
+}

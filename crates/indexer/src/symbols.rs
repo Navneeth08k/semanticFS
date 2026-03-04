@@ -243,7 +243,9 @@ mod tests {
     #[test]
     fn extracts_java_class_declarations_with_modifiers() {
         assert_eq!(
-            parse_symbol_name("public class ConceptVuforiaDriveToTargetWebcam extends LinearOpMode {"),
+            parse_symbol_name(
+                "public class ConceptVuforiaDriveToTargetWebcam extends LinearOpMode {"
+            ),
             Some("ConceptVuforiaDriveToTargetWebcam".to_string())
         );
         assert_eq!(

@@ -5,6 +5,7 @@ use fuse_bridge::FuseBridge;
 use indexer::embedding::onnx_metrics_snapshot;
 use indexer::Indexer;
 use mcp::McpServer;
+use policy_guard::PolicyGuard;
 use semanticfs_common::{SemanticFsConfig, WorkspaceDomainReport};
 use serde_json::json;
 use std::{fs, net::SocketAddr, path::PathBuf, process::Command, sync::Arc, time::Instant};
@@ -279,12 +280,14 @@ fn health_command(config_path: &PathBuf) -> Result<()> {
     let report = cfg.workspace_domain_report();
     print_domain_report(&report);
     let status = if report.is_valid() {
-        "healthy (phase3 contract active)"
+        "healthy (multi-root contract active)"
     } else {
-        "degraded (phase3 contract invalid)"
+        "degraded (multi-root contract invalid)"
     };
     println!("status={}", status);
     report.ensure_valid().map_err(anyhow::Error::from)?;
+    let guard = PolicyGuard::from_config(&cfg)?;
+    print_domain_runtime_stats(&guard);
     Ok(())
 }
 
@@ -499,12 +502,16 @@ fn print_domain_report(report: &WorkspaceDomainReport) {
             plan.effective_deny_globs.join(",")
         };
         println!(
-            "workspace_domain_schedule=rank:{} id={} root={} trust_label={} trust_registered={} priority_class={} depth={} allow_roots={} deny_globs={} inherits_global_allow_roots={} inherits_global_deny_globs={}",
+            "workspace_domain_schedule=rank:{} id={} root={} trust_label={} trust_registered={} watch_enabled={} watch_priority={} max_indexed_files={} allow_hidden_paths={} priority_class={} depth={} allow_roots={} deny_globs={} inherits_global_allow_roots={} inherits_global_deny_globs={}",
             plan.schedule_rank,
             plan.id,
             plan.root,
             plan.trust_label,
             plan.trust_label_registered,
+            plan.watch_enabled,
+            plan.watch_priority,
+            plan.max_indexed_files,
+            plan.allow_hidden_paths,
             plan.priority_class,
             plan.root_depth,
             allow,
@@ -519,6 +526,19 @@ fn print_domain_report(report: &WorkspaceDomainReport) {
     for error in &report.errors {
         println!("workspace_domain_error={}", error);
     }
+}
+
+fn print_domain_runtime_stats(guard: &PolicyGuard) {
+    println!("workspace_scan_target_count={}", guard.scan_target_count());
+    println!("workspace_watch_target_count={}", guard.watch_target_count());
+    println!(
+        "workspace_watch_enabled_domain_count={}",
+        guard.watch_enabled_domain_count()
+    );
+    println!(
+        "workspace_budgeted_domain_count={}",
+        guard.budgeted_domain_count()
+    );
 }
 
 #[derive(Clone)]

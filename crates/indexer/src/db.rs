@@ -141,8 +141,16 @@ impl IndexerDb {
         self.ensure_column("files", "domain_id", "TEXT NOT NULL DEFAULT 'default'")?;
         self.ensure_column("files", "trust_label", "TEXT NOT NULL DEFAULT 'trusted'")?;
         self.ensure_column("files", "modified_unix_ms", "INTEGER NOT NULL DEFAULT 0")?;
-        self.ensure_column("chunks_meta", "domain_id", "TEXT NOT NULL DEFAULT 'default'")?;
-        self.ensure_column("chunks_meta", "trust_label", "TEXT NOT NULL DEFAULT 'trusted'")?;
+        self.ensure_column(
+            "chunks_meta",
+            "domain_id",
+            "TEXT NOT NULL DEFAULT 'default'",
+        )?;
+        self.ensure_column(
+            "chunks_meta",
+            "trust_label",
+            "TEXT NOT NULL DEFAULT 'trusted'",
+        )?;
         Ok(())
     }
 
@@ -504,13 +512,21 @@ impl IndexerDb {
             }
 
             let child = if parent == "." {
-                path.split('/').next().unwrap_or_default().trim().to_string()
+                path.split('/')
+                    .next()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string()
             } else {
                 let prefix = format!("{parent}/");
                 let Some(rest) = path.strip_prefix(&prefix) else {
                     continue;
                 };
-                rest.split('/').next().unwrap_or_default().trim().to_string()
+                rest.split('/')
+                    .next()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string()
             };
 
             if child.is_empty() {
@@ -525,7 +541,11 @@ impl IndexerDb {
         Ok(out)
     }
 
-    pub fn trust_label_counts_for_dir(&self, dir: &str, version: u64) -> Result<Vec<(String, u32)>> {
+    pub fn trust_label_counts_for_dir(
+        &self,
+        dir: &str,
+        version: u64,
+    ) -> Result<Vec<(String, u32)>> {
         let normalized = normalize_dir_key(dir);
         let (exact, prefix) = dir_match_patterns(&normalized);
         let mut stmt = self.conn.prepare(
@@ -537,7 +557,7 @@ impl IndexerDb {
               AND (?2 = '.' OR path=?2 OR path LIKE ?3)
             GROUP BY trust_label
             ORDER BY c DESC, trust_label ASC
-            "#
+            "#,
         )?;
 
         let rows = stmt.query_map(params![version, exact, prefix], |row| {

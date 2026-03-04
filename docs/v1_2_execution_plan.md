@@ -1,11 +1,24 @@
 # SemanticFS v1.2 Execution Plan
 
-Last updated: March 2, 2026
+Last updated: March 3, 2026
 
 ## Intent
 v1.2 is the reliability and quality release after v1.1 foundation hardening.
 Primary objective: validate and stabilize SemanticFS on representative real-repo workloads.
 This plan remains active while Phase 3 bootstrap starts in parallel; v1.2 is not yet considered closed.
+
+Parallel follow-on status:
+1. Phase 3 is operationally complete.
+2. Phase 4 is operationally complete.
+3. Phase 5 is operationally complete.
+4. Phase 6 is operationally complete:
+   - per-domain indexing budgets are now live (`workspace.domains[].max_indexed_files`)
+   - the new bounded `inventory` domain is signed off
+   - the broadened `semanticfs_multiroot_explicit_v12` suite is green on `active_version=194`
+5. Phase 7 is operationally complete:
+   - batched bounded expansion is now signed off with the `profiles`, `operations`, and `intake` domains
+   - the broadened `semanticfs_multiroot_explicit_v13` suite is green on `active_version=195`
+   - the next exposed bottleneck is broader-batch latency, not correctness drift
 
 ## In Scope
 1. Retrieval quality hardening and measurable evaluation.
@@ -246,7 +259,7 @@ This plan remains active while Phase 3 bootstrap starts in parallel; v1.2 is not
    - overlapping roots are surfaced as warnings, and scheduler order is now deterministic (`trust tier` first, then more specific roots before broader roots).
    - CLI and benchmark commands now fail fast on invalid explicit multi-root configs instead of silently accepting malformed cross-root state.
    - CLI `health` and observability now expose the contract/scheduler surface, including `/health/domains`.
-76. `Robot` parent-root suite was tightened so the monitor artifact measures the bounded code roots instead of generic English verbs:
+76. `Robot` parent-root suite was tightened so the monitor check measures the bounded code roots instead of generic English verbs:
    - `tests/retrieval_golden/robot_holdout.json` now replaces `train` with `tb_writer` and `predict` with `object detection yolov5s`.
    - targeted bounded recheck on the existing `Robot` index (`--skip-reindex`) now reports SemanticFS recall `1.0000`, MRR `0.9000`, symbol-hit `0.8750`, p95 `200.972 ms`; baseline recall `0.2000`, MRR `0.1500`, symbol-hit `0.1250`, p95 `2318.070 ms`.
    - latest `.semanticfs/bench/query_gap_robot_bootstrap_v1_holdout_v1_latest.json` now reports `semantic_miss=0`, `baseline_miss=8`, `semantic_rank_lag=0`.
@@ -453,7 +466,8 @@ This plan remains active while Phase 3 bootstrap starts in parallel; v1.2 is not
 4. Representative polish: improve the residual `semanticfs_repo_v1` rank lag on `s20` (`future steps log`) without regressing the now-green nightly gate.
 5. Phase 3 architecture track: operationally complete. The current root-promotion queue is closed, and the config/CLI contract layer, persisted domain metadata, optional vector-backend parity, domain-aware `/map` path, repeated same-file search de-duplication, domain-rank-aware full-index ordering, exact-symbol fast path, config-query priors, narrative/script/workflow/systemd intent priors, per-search prior caching, query-aware vector gating, narrative-doc vector trimming, top-level-domain baseline normalization regression coverage, and median-of-3 warmed head-to-head timing are all landed; the tracked explicit suite is signed off at `workspace_meta` + `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`, and future work now shifts to Phase 4 (`docs/phase4_execution_plan.md`) instead of Phase 3 closeout.
 6. Phase 4 controlled domain expansion: operationally complete. A new bounded `playbooks` domain is now added on top of the Phase 3 baseline, `workspace.scheduler.max_watch_targets` plus exact-file watch targets now provide the first resource-aware watch-budget layer, the frozen Phase 3 gate (`semanticfs_multiroot_explicit_v9`) remains green on `active_version=185`, and the broadened Phase 4 baseline (`semanticfs_multiroot_explicit_v10`) is green on `active_version=186` at `27/27` rank `1`. Future work now shifts to post-Phase-4 domain expansion instead of more Phase 4 closeout.
-7. Strict-suite generation alignment: config-aware bootstrap generation is now implemented; standardize on `scripts/bootstrap_golden_from_repo.py --config ...` for scoped repos so future strict suites stay benchmark-aligned.
+7. Phase 5 adaptive expansion and governance hardening: operationally complete. A new bounded `governance` domain is now added on top of the Phase 4 baseline, per-domain `watch_enabled` and `watch_priority` are now part of the runtime contract, full indexing now walks `scan_targets` instead of `watch_roots` so watch participation no longer controls index coverage, the frozen `v9` and `v10` suites are both revalidated green on `active_version=192`, and the broadened Phase 5 baseline (`semanticfs_multiroot_explicit_v11`) is green at `29/29` rank `1` with head-to-head quality still ahead of `rg` (`recall 1.0000`, `MRR 1.0000`, `symbol-hit 1.0000`, p95 `48.298 ms` vs baseline `28.439 ms`). Future work now shifts to post-Phase-5 expansion instead of more Phase 5 closeout.
+8. Strict-suite generation alignment: config-aware bootstrap generation is now implemented; standardize on `scripts/bootstrap_golden_from_repo.py --config ...` for scoped repos so future strict suites stay benchmark-aligned.
 
 ## Current Risk Register
 1. Observer-effect write loop: mitigated on MCP and FUSE pinning paths; mounted Linux refresh semantics are now validated, continue overnight soak watch.
@@ -469,12 +483,13 @@ This plan remains active while Phase 3 bootstrap starts in parallel; v1.2 is not
 2. Optionally tighten the residual `semanticfs_repo_v1` rank lag from `.semanticfs/bench/query_gap_semanticfs_repo_v1_latest.json` (`s20`, `future steps log`) if it can be done without destabilizing the now-green nightly gate.
 3. Keep `buckit_curated_*` and `tensorflow_models_curated_*` in monitor mode; rerun only after retrieval/indexing changes or if query-gap drift reappears.
 4. Use config-aligned bootstrap generation (`--config`) for any scoped repo strict-suite work so benchmark filters and fixture generation stay consistent.
-5. Use `.semanticfs/bench/filesystem_scope_backlog_latest.json` and `.semanticfs/bench/filesystem_domain_plan_latest.json` as monitor artifacts now that the current discovered-root queue is fully covered; only rerun promotion flows when new roots are discovered or a monitor rerun regresses.
+5. Use `.semanticfs/bench/filesystem_scope_backlog_latest.json` and `.semanticfs/bench/filesystem_domain_plan_latest.json` as monitor-state references now that the current discovered-root queue is fully covered; only rerun promotion flows when new roots are discovered or a monitor rerun regresses.
 6. Keep `semanticfs_multiroot_explicit_v9` frozen as the Phase 3 regression gate and `semanticfs_multiroot_explicit_v10` frozen as the broadened Phase 4 baseline; rerun them narrowly after retrieval/indexing or domain-class changes.
-7. Treat `workspace.scheduler.max_watch_targets` plus exact-file watch targets as the minimum scheduler-budget layer; only deepen it when a new domain class or watch-load profile justifies the extra complexity.
-8. If retrieval-side recency is revisited later, use the already-persisted `files.modified_unix_ms` field and only switch runtime behavior if it matches or beats the current narrow `v9` / `v10` latency without reopening volatility.
-9. Start post-Phase-4 expansion one low-risk domain class at a time: add the domain, write explicit expected-path queries, keep the frozen gates green, and avoid broad sweeps unless a real runtime change lands.
-10. If Linux FUSE session code changes, rerun mounted validation for `session.json` / `session.refresh`.
+7. Keep `semanticfs_multiroot_explicit_v11` frozen as the Phase 5 broadened baseline; rerun `v9`, `v10`, and `v11` narrowly after retrieval/indexing or domain-class changes.
+8. Treat `workspace.scheduler.max_watch_targets` plus per-domain `watch_enabled` / `watch_priority` as the current minimum scheduler-budget layer; deepen it only when the next domain class or watch-load profile justifies the complexity.
+9. If retrieval-side recency is revisited later, use the already-persisted `files.modified_unix_ms` field and only switch runtime behavior if it matches or beats the current narrow `v9` / `v10` / `v11` latency without reopening volatility.
+10. Formalize the post-Phase-5 expansion phase before broadening to the next domain class.
+11. If Linux FUSE session code changes, rerun mounted validation for `session.json` / `session.refresh`.
 
 ## Primary Commands
 1. Representative nightly:

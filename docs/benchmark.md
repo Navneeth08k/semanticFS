@@ -110,14 +110,48 @@
 - Broadened head-to-head is green on quality on the same snapshot: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `69.421 ms`; baseline `rg` recall `0.9259`, MRR `0.7778`, symbol-hit `0.2000`, p95 `45.671 ms`.
 - All broadened tracked queries (`m01`-`m27`) are rank `1`.
 - The new `playbooks` domain is intentionally bounded through exact `allow_roots`, which also exercises the watch-target planner path.
-9. Use this pair as the signed-off Phase 3 / Phase 4 contract:
+9. Signed-off Phase 5 broadened baseline:
+- `tests/retrieval_golden/semanticfs_multiroot_explicit_v11.json`
+- broadened mix adds `governance` on top of the frozen Phase 4 baseline
+- latest Phase 5 sign-off on `active_version=192`:
+  - frozen `v9` gate is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - frozen `v10` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - signed-off `v11` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - signed-off `v11` head-to-head: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `48.298 ms`; baseline `rg` recall `0.9310`, MRR `0.7655`, symbol-hit `0.4000`, p95 `28.439 ms`
+  - the new `governance` root is intentionally bounded and exercises the new per-domain watch controls without changing indexing ownership
+10. Signed-off Phase 6 broadened baseline:
+- `tests/retrieval_golden/semanticfs_multiroot_explicit_v12.json`
+- broadened mix adds `inventory` on top of the frozen Phase 5 baseline
+- latest Phase 6 sign-off on `active_version=194`:
+  - frozen `v9` gate is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - frozen `v10` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - frozen `v11` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - signed-off `v12` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - signed-off `v12` head-to-head: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `50.747 ms`; baseline `rg` recall `0.9355`, MRR `0.8091`, symbol-hit `0.4000`, p95 `31.659 ms`
+  - the new `inventory` root is intentionally bounded through exact `allow_roots`, `watch_enabled=false`, and `max_indexed_files=2`, which exercises the new per-domain index-breadth cap while proving indexing still walks `scan_targets`
+  - a direct one-query probe against `inventory/z_deferred_large_roots.md` stays unmatched on the same active snapshot, which confirms the per-domain cap is actually excluding the third allowed file from the live index
+11. Signed-off Phase 7 broadened baseline:
+- `tests/retrieval_golden/semanticfs_multiroot_explicit_v13.json`
+- broadened mix adds `profiles`, `operations`, and `intake` on top of the frozen Phase 6 baseline
+- latest Phase 7 sign-off on `active_version=195`:
+  - frozen `v9` gate is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - frozen `v10` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - frozen `v11` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - frozen `v12` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - signed-off `v13` baseline is green at recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`
+  - signed-off `v13` head-to-head: SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `84.076 ms`; baseline `rg` recall `0.9459`, MRR `0.8604`, symbol-hit `0.4000`, p95 `50.329 ms`
+  - direct cap probes confirm `profiles/z_future_aggressive_modes.md`, `operations/z_unbounded_host_sweeps.md`, and `intake/z_sensitive_root_backlog.md` all stay unmatched on the same active snapshot, which confirms the batch stays bounded in the live index
+12. Use this quintet as the signed-off Phase 3 / 4 / 5 / 6 / 7 contract:
 - `semanticfs_multiroot_explicit_v9` is the frozen regression gate.
 - `semanticfs_multiroot_explicit_v10` is the broadened Phase 4 baseline.
-- Together they validate explicit multi-root indexing, domain-prefixed path normalization, mixed code/docs/config/scripts/system roots, the `playbooks` expansion slice, de-duplicated same-file search output, and a fair filtered `rg` baseline (including top-level `.` domains).
-10. Domain-aware map verification:
+- `semanticfs_multiroot_explicit_v11` is the broadened Phase 5 baseline.
+- `semanticfs_multiroot_explicit_v12` is the broadened Phase 6 baseline.
+- `semanticfs_multiroot_explicit_v13` is the broadened Phase 7 baseline.
+- Together they validate explicit multi-root indexing, domain-prefixed path normalization, mixed code/docs/config/scripts/system roots, the `playbooks`, `governance`, `inventory`, `profiles`, `operations`, and `intake` expansion slices, the new per-domain index-breadth cap, de-duplicated same-file search output, and a fair filtered `rg` baseline (including top-level `.` domains).
+13. Domain-aware map verification:
 - `cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.toml benchmark run --soak-seconds 1`
-- latest broadened result passed `4/4` E2E checks on `active_version=186`, which includes `/map/docs/directory_overview.md`.
-11. The latest explicit multi-root benchmark cycle also exercised the optional LanceDB sync path:
+- latest Phase 7 sign-off result still passed `4/4` E2E checks (current runtime RSS `42 MB`), which includes `/map/docs/directory_overview.md`.
+14. The latest explicit multi-root benchmark cycle also exercised the optional LanceDB sync path:
 - fresh `chunks_v1.lance` datasets are created on fresh explicit-suite DB runs, so the persisted `domain_id` / `trust_label` vector-sync schema remains live on the optional vector backend too.
 
 ## Retrieval prior knobs (anti-shadowing)

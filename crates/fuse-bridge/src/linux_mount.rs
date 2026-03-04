@@ -187,7 +187,9 @@ impl SemanticFsFuse {
         } else if parent_path.starts_with("/map") {
             let active = self.bridge.active_version().unwrap_or(0);
             if name_str == "directory_overview.md" {
-                let relative = parent_path.trim_start_matches("/map").trim_start_matches('/');
+                let relative = parent_path
+                    .trim_start_matches("/map")
+                    .trim_start_matches('/');
                 if self.bridge.map_has_overview(relative, active).ok()? {
                     FileType::RegularFile
                 } else {
@@ -452,17 +454,20 @@ impl Filesystem for SemanticFsFuse {
                             RawNodeKind::File => FileType::RegularFile,
                         };
 
-                        let child_ino = *self.path_to_inode.entry(child_virtual.clone()).or_insert_with(|| {
-                            let ino = hash_inode(&child_virtual);
-                            self.inode_to_node.insert(
-                                ino,
-                                Node {
-                                    path: child_virtual,
-                                    kind: fuse_kind,
-                                },
-                            );
-                            ino
-                        });
+                        let child_ino = *self
+                            .path_to_inode
+                            .entry(child_virtual.clone())
+                            .or_insert_with(|| {
+                                let ino = hash_inode(&child_virtual);
+                                self.inode_to_node.insert(
+                                    ino,
+                                    Node {
+                                        path: child_virtual,
+                                        kind: fuse_kind,
+                                    },
+                                );
+                                ino
+                            });
 
                         entries.push((child_ino, fuse_kind, name));
                     }

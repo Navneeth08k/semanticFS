@@ -84,11 +84,51 @@ impl Indexer {
 
         let mut all_files = Vec::new();
         let mut seen_paths = HashSet::new();
-        for root in self.guard.watch_roots() {
-            for entry in walkdir::WalkDir::new(&root)
-                .into_iter()
-                .filter_map(|e| e.ok())
-            {
+        let single_domain_budget = if plan.is_none() {
+            let domain_ids = self.guard.domain_ids();
+            if domain_ids.len() == 1 {
+                let domain_id = domain_ids[0].clone();
+                let budget = self.guard.domain_index_budget(&domain_id);
+                if budget > 0 {
+                    Some(budget)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let mut budget_eligible_candidates = 0usize;
+        for target in self.guard.scan_targets() {
+            if let Some(limit) = single_domain_budget {
+                if budget_eligible_candidates >= limit {
+                    break;
+                }
+            }
+            if let Some(target_resolved) = self.guard.resolve_disk_path(&target.path) {
+                let target_decision = self.guard.should_index_resolved(&target_resolved);
+                if !target_decision.allow {
+                    continue;
+                }
+            }
+            let mut walker = walkdir::WalkDir::new(&target.path).sort_by_file_name();
+            if !target.recursive {
+                walker = walker.max_depth(1);
+            }
+            let walker = walker.into_iter().filter_entry(|entry| {
+                let Some(resolved) = self.guard.resolve_disk_path(entry.path()) else {
+                    return false;
+                };
+                self.guard.should_index_resolved(&resolved).allow
+            });
+            for entry in walker.filter_map(|e| e.ok()) {
+                if let Some(limit) = single_domain_budget {
+                    if budget_eligible_candidates >= limit {
+                        break;
+                    }
+                }
                 if !entry.file_type().is_file() {
                     continue;
                 }
@@ -97,8 +137,20 @@ impl Indexer {
                 let Some(resolved) = self.guard.resolve_disk_path(&path) else {
                     continue;
                 };
+                let decision = self.guard.should_index_resolved(&resolved);
+                if !decision.allow {
+                    continue;
+                }
                 if !seen_paths.insert(resolved.virtual_path.clone()) {
                     continue;
+                }
+                if single_domain_budget.is_some() {
+                    if let Ok(metadata) = fs::metadata(&path) {
+                        let size_mb = metadata.len() / (1024 * 1024);
+                        if size_mb <= self.cfg.filter.max_file_mb {
+                            budget_eligible_candidates += 1;
+                        }
+                    }
                 }
                 let domain_rank = self.guard.domain_schedule_rank(&resolved.domain_id);
                 all_files.push((path, resolved.virtual_path, resolved.domain_id, domain_rank));
@@ -115,23 +167,42 @@ impl Indexer {
                 .then_with(|| a.1.cmp(&b.1))
         });
 
+        let mut indexed_per_domain: HashMap<String, usize> = HashMap::new();
         for (idx, (path, _rel, _domain_id, _domain_rank)) in all_files.into_iter().enumerate() {
             let Some(resolved) = self.guard.resolve_disk_path(&path) else {
                 continue;
             };
             let decision = self.guard.should_index_resolved(&resolved);
             if !decision.allow {
-                self.db
-                    .upsert_file_record(
-                        &resolved.virtual_path,
-                        "",
-                        "skipped",
-                        "denied",
-                        &resolved.domain_id,
-                        &resolved.trust_label,
-                        0,
-                        version,
-                    )?;
+                self.db.upsert_file_record(
+                    &resolved.virtual_path,
+                    "",
+                    "skipped",
+                    "denied",
+                    &resolved.domain_id,
+                    &resolved.trust_label,
+                    0,
+                    version,
+                )?;
+                continue;
+            }
+
+            let max_indexed_files = self.guard.domain_index_budget(&resolved.domain_id);
+            let indexed_count = indexed_per_domain
+                .get(&resolved.domain_id)
+                .copied()
+                .unwrap_or_default();
+            if max_indexed_files > 0 && indexed_count >= max_indexed_files {
+                self.db.upsert_file_record(
+                    &resolved.virtual_path,
+                    "",
+                    "skipped",
+                    "domain_budget_capped",
+                    &resolved.domain_id,
+                    &resolved.trust_label,
+                    0,
+                    version,
+                )?;
                 continue;
             }
 
@@ -139,21 +210,24 @@ impl Indexer {
             let modified_unix_ms = file_modified_unix_ms(&metadata);
             let size_mb = metadata.len() / (1024 * 1024);
             if size_mb > self.cfg.filter.max_file_mb {
-                self.db
-                    .upsert_file_record(
-                        &resolved.virtual_path,
-                        "",
-                        "skipped",
-                        "too_large",
-                        &resolved.domain_id,
-                        &resolved.trust_label,
-                        modified_unix_ms,
-                        version,
-                    )?;
+                self.db.upsert_file_record(
+                    &resolved.virtual_path,
+                    "",
+                    "skipped",
+                    "too_large",
+                    &resolved.domain_id,
+                    &resolved.trust_label,
+                    modified_unix_ms,
+                    version,
+                )?;
                 continue;
             }
 
             self.index_file(&path, &resolved, modified_unix_ms, version)?;
+            indexed_per_domain
+                .entry(resolved.domain_id.clone())
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
 
             if pending_changed.remove(&resolved.virtual_path) {
                 if phase == "p1_hotset" && !pending_changed.iter().any(|p| hotset.contains(p)) {
@@ -203,6 +277,7 @@ impl Indexer {
             info!(
                 path = %target.path.display(),
                 recursive = target.recursive,
+                priority = target.priority,
                 "watching filesystem for incremental rebuild triggers"
             );
         }
@@ -210,11 +285,7 @@ impl Indexer {
         self.event_loop(&rx, debounce)
     }
 
-    fn event_loop(
-        &self,
-        rx: &Receiver<notify::Result<Event>>,
-        debounce: Duration,
-    ) -> Result<()> {
+    fn event_loop(&self, rx: &Receiver<notify::Result<Event>>, debounce: Duration) -> Result<()> {
         loop {
             let mut changed_counts: HashMap<String, u32> = HashMap::new();
             let first = rx.recv()?;

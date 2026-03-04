@@ -14,7 +14,7 @@ Core invariant:
 2. Edits are grounded through deterministic source reads.
 
 ## Current Phase
-Phase: `v1.2 maintenance` with `Phase 4 controlled domain expansion` now operationally complete (as of March 3, 2026)
+Phase: `v1.2 maintenance` with `Phase 8 scaling and pressure hardening` active (as of March 3, 2026)
 
 Current state:
 1. Core architecture is implemented and operational.
@@ -22,14 +22,18 @@ Current state:
 3. Benchmark + gate tooling is in place, including head-to-head comparisons.
 4. Representative nightly stability evidence is now closed at `7/7`, so Phase 2 no longer blocks daytime architecture work.
 5. Phase 3 runtime is now operationally complete as a signed-off explicit multi-root foundation (persisted domain metadata, domain-aware `/raw` and `/map`, tracked multi-root benchmarks).
-6. Phase 4 is now also operationally complete: one additional domain class was added beyond the Phase 3 baseline, the broadened suite is green, and first-pass resource-aware watch scheduling is landed.
-7. The next work is the post-Phase-4 expansion phase, not more Phase 3 or Phase 4 closeout.
+6. Phase 4 is now operationally complete: one additional domain class was added beyond the Phase 3 baseline, the broadened suite is green, and first-pass resource-aware watch scheduling is landed.
+7. Phase 5 is now operationally complete: per-domain watch participation and watch priority are live, indexing is decoupled from watch participation, and the new `governance` domain is signed off under the `v11` broadened suite.
+8. Phase 6 is now operationally complete: per-domain indexing budgets are live, a new bounded `inventory` domain is signed off under the `v12` broadened suite, and host-scale index breadth is now explicitly budgeted.
+9. Phase 7 is now operationally complete: a three-domain bounded batch (`profiles`, `operations`, `intake`) is signed off under the `v13` broadened suite, proving that expansion can widen faster than one domain at a time without breaking the frozen gates.
+10. The active work is the post-Phase-7 scaling phase: hold the frozen gates green, reduce broader-batch latency, and improve scheduler visibility before expanding again.
+11. The first Phase 8 slice is now landed: CLI health exposes aggregate scan/watch pressure, and broader-batch narrative queries use tighter BM25/vector fanout when BM25 already has signal.
 
 Remaining phase focus:
 1. Keep representative quality green on maintenance cadence instead of gating cadence.
-2. Treat the signed-off Phase 3 and Phase 4 tracked suites as regression gates.
-3. Formalize the post-Phase-4 expansion phase before broadening again.
-4. Improve scheduler/resource behavior beyond the new minimum watch-budget layer.
+2. Treat the signed-off Phase 3 (`v9`), Phase 4 (`v10`), Phase 5 (`v11`), Phase 6 (`v12`), and Phase 7 (`v13`) suites as frozen regression gates.
+3. Deepen scheduler/resource behavior beyond the new per-domain watch controls and index-breadth budgets, specifically for broader batched expansion.
+4. Reduce broader-batch latency without regressing the frozen multi-root suites.
 5. Preserve deterministic verification boundaries while system scope expands.
 
 ## Phases
@@ -96,6 +100,62 @@ Initial operating model:
 4. Treat broader machine scope as opt-in, policy-bounded, and measurable.
 5. Current status: this Phase 4 bar is now met on top of the new `playbooks` domain and the broadened `v10` suite.
 
+## Phase 5: Adaptive Expansion And Governance Hardening
+Goal:
+1. Turn one successful controlled expansion into a repeatable system-scope expansion model.
+
+Required capabilities:
+1. Per-domain orchestration controls beyond one global watch cap.
+2. Additional bounded domain classes beyond the Phase 4 baseline.
+3. Stronger governance rules for how new roots enter the system.
+4. Frozen Phase 3/4 regression gates plus one active expansion candidate suite.
+5. Continued deterministic `/raw` verification while broader roots are introduced.
+
+Current operating model:
+1. `semanticfs_multiroot_explicit_v9` remains the frozen Phase 3 gate.
+2. `semanticfs_multiroot_explicit_v10` remains the frozen Phase 4 broadened baseline.
+3. `semanticfs_multiroot_explicit_v11` is the signed-off Phase 5 broadened baseline.
+4. `workspace.domains[].watch_enabled` and `workspace.domains[].watch_priority` are now the minimum per-domain orchestration layer.
+5. Current status: this Phase 5 bar is now met on top of the new `governance` domain and the broadened `v11` suite.
+
+## Phase 6: Host-Scale Budgeted Expansion
+Goal:
+1. Add explicit per-domain index-breadth controls before broader host-scale roots are introduced.
+
+Required capabilities:
+1. Per-domain indexing budgets in the runtime contract.
+2. Health visibility for those budgets.
+3. Another bounded domain slice beyond the Phase 5 baseline.
+4. Frozen Phase 3/4/5 regression gates plus one active broadened Phase 6 suite.
+5. Continued deterministic `/raw` verification while index breadth becomes more explicitly bounded.
+
+Current operating model:
+1. `semanticfs_multiroot_explicit_v9` remains the frozen Phase 3 gate.
+2. `semanticfs_multiroot_explicit_v10` remains the frozen Phase 4 broadened baseline.
+3. `semanticfs_multiroot_explicit_v11` remains the frozen Phase 5 broadened baseline.
+4. `semanticfs_multiroot_explicit_v12` is the signed-off Phase 6 broadened baseline.
+5. `workspace.domains[].max_indexed_files` is now the minimum host-scale index-breadth control.
+6. Current status: this Phase 6 bar is now met on top of the new `inventory` domain and the broadened `v12` suite.
+
+## Phase 7: Batched Bounded Expansion
+Goal:
+1. Widen scope faster by landing several bounded roots in one slice instead of one-at-a-time.
+
+Required capabilities:
+1. Add `3-5` low-risk bounded domains in one batch.
+2. Keep per-domain caps active for every new root in the batch.
+3. Preserve the frozen Phase 3/4/5/6 regression gates while the batch lands.
+4. Explicitly measure the latency impact of the broader batch.
+5. Keep deterministic `/raw` verification unchanged.
+
+Current operating model:
+1. `semanticfs_multiroot_explicit_v9` remains the frozen Phase 3 gate.
+2. `semanticfs_multiroot_explicit_v10` remains the frozen Phase 4 broadened baseline.
+3. `semanticfs_multiroot_explicit_v11` remains the frozen Phase 5 broadened baseline.
+4. `semanticfs_multiroot_explicit_v12` remains the frozen Phase 6 broadened baseline.
+5. `semanticfs_multiroot_explicit_v13` is the signed-off Phase 7 broadened baseline.
+6. Current status: this Phase 7 bar is now met on top of the new `profiles`, `operations`, and `intake` domains and the broadened `v13` suite.
+
 ## Decision Guardrails
 1. Grounded edits over clever retrieval.
 2. Measured performance over intuition.
@@ -110,10 +170,7 @@ Initial operating model:
 
 ## Source Of Truth Links
 1. `README.md`
-2. `docs/new-chat-handoff.md`
-3. `docs/v1_2_execution_plan.md`
-4. `docs/phase3_execution_plan.md`
-5. `docs/phase3_execution_status.md`
-6. `docs/phase4_execution_plan.md`
-7. `docs/future-steps-log.md`
-8. `docs/benchmark.md`
+2. `docs/big-picture-roadmap.md`
+3. `docs/current_execution_plan.md`
+4. `docs/future-steps-log.md`
+5. `docs/benchmark.md`

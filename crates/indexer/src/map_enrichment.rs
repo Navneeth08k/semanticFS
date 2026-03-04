@@ -59,7 +59,10 @@ fn build_enrichment_for_dir(
     if !child_dirs.is_empty() {
         out.push_str("Immediate child directories in this indexed subtree:\n");
         for (child, nested_count) in child_dirs {
-            out.push_str(&format!("- `{}` ({} indexed descendant summaries)\n", child, nested_count));
+            out.push_str(&format!(
+                "- `{}` ({} indexed descendant summaries)\n",
+                child, nested_count
+            ));
         }
         out.push('\n');
     }

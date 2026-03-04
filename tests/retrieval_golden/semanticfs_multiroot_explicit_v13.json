@@ -1,0 +1,306 @@
+{
+    "schema_version":  1,
+    "dataset_name":  "semanticfs_multiroot_explicit_v13",
+    "queries":  [
+                    {
+                        "id":  "m01",
+                        "query":  "normalize_result_path",
+                        "expected_paths":  [
+                                               "code/semanticfs-cli/src/benchmark.rs"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "m02",
+                        "query":  "ResolvedPath",
+                        "expected_paths":  [
+                                               "code/policy-guard/src/lib.rs",
+                                               "code/indexer/src/lib.rs"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "m03",
+                        "query":  "map_dir_entries",
+                        "expected_paths":  [
+                                               "code/fuse-bridge/src/lib.rs",
+                                               "code/fuse-bridge/src/linux_mount.rs"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "m04",
+                        "query":  "validate and stabilize SemanticFS on representative real-repo workloads",
+                        "expected_paths":  [
+                                               "docs/v1_2_execution_plan.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m05",
+                        "query":  "The explicit domain model is landed.",
+                        "expected_paths":  [
+                                               "docs/phase3_execution_status.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m06",
+                        "query":  "keep the multi-root runtime contract coherent as complexity increases",
+                        "expected_paths":  [
+                                               "docs/phase3_execution_plan.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m07",
+                        "query":  "allow_roots = [\"semanticfs.sample.toml\"",
+                        "expected_paths":  [
+                                               "config/relevance-multiroot.toml"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m08",
+                        "query":  "mount_point = \"/mnt/ai\"",
+                        "expected_paths":  [
+                                               "config/relevance-multiroot.toml",
+                                               "config/semanticfs.sample.toml",
+                                               "config/relevance-real.toml"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m09",
+                        "query":  "git ls-files failed for",
+                        "expected_paths":  [
+                                               "scripts/bootstrap_golden_from_repo.py"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m10",
+                        "query":  "Run-Step \"Phase 3 domain plan build\"",
+                        "expected_paths":  [
+                                               "scripts/daytime_action_items.ps1"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m11",
+                        "query":  "Representative nightly complete.",
+                        "expected_paths":  [
+                                               "scripts/nightly_representative.ps1"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m12",
+                        "query":  "ExecStart=/usr/local/bin/semanticfs --config /etc/semanticfs/config.toml serve mcp",
+                        "expected_paths":  [
+                                               "systemd/semanticfs-mcp.service"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m13",
+                        "query":  "name: semanticfs-bench-artifacts",
+                        "expected_paths":  [
+                                               "github/workflows/ci.yml"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m14",
+                        "query":  "issue_token",
+                        "expected_paths":  [
+                                               "fixture_repo/src/auth.rs"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "m15",
+                        "query":  "directory_purpose",
+                        "expected_paths":  [
+                                               "fixture_repo/src/map_logic.rs"
+                                           ],
+                        "symbol_query":  true
+                    },
+                    {
+                        "id":  "m16",
+                        "query":  "Benchmark Fixture Architecture",
+                        "expected_paths":  [
+                                               "fixture_repo/docs/architecture.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m17",
+                        "query":  "runs-on: ubuntu-latest",
+                        "expected_paths":  [
+                                               "github/workflows/ci.yml"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m18",
+                        "query":  "Description=SemanticFS MCP Service",
+                        "expected_paths":  [
+                                               "systemd/semanticfs-mcp.service"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m19",
+                        "query":  "Description=SemanticFS Fuse Bridge Service",
+                        "expected_paths":  [
+                                               "systemd/semanticfs-fuse.service"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m20",
+                        "query":  "ExecStart=/usr/local/bin/semanticfs --config /etc/semanticfs/config.toml index watch",
+                        "expected_paths":  [
+                                               "systemd/semanticfs-indexer.service"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m21",
+                        "query":  "ExecStart=/opt/semanticfs/bin/semanticfs --config /etc/semanticfs/config.toml serve observability",
+                        "expected_paths":  [
+                                               "systemd/semanticfs-observability.service"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m22",
+                        "query":  "Force-unmount stale mount",
+                        "expected_paths":  [
+                                               "docs/runbook.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m23",
+                        "query":  "authors = [\"SemanticFS Contributors\"]",
+                        "expected_paths":  [
+                                               "workspace_meta/Cargo.toml"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m24",
+                        "query":  "name = \"aho-corasick\"",
+                        "expected_paths":  [
+                                               "workspace_meta/Cargo.lock"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m25",
+                        "query":  "Agents like OpenClaw can burn time and tokens repeatedly",
+                        "expected_paths":  [
+                                               "workspace_meta/README.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m26",
+                        "query":  "Per-domain watch budgeting should prevent redundant recursive subscriptions",
+                        "expected_paths":  [
+                                               "playbooks/watch_budgeting.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m27",
+                        "query":  "Every new domain must carry an explicit expected-path query",
+                        "expected_paths":  [
+                                               "playbooks/domain_intake_checklist.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m28",
+                        "query":  "Every domain must declare explicit watch ownership and update priority before it is allowed to scale",
+                        "expected_paths":  [
+                                               "governance/trust_boundary_contract.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m29",
+                        "query":  "Sensitive roots must be added as untrusted first and only promoted through explicit review",
+                        "expected_paths":  [
+                                               "governance/sensitive_root_intake.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m30",
+                        "query":  "Low-risk roots expand first when they are text-heavy, bounded, and policy-readable.",
+                        "expected_paths":  [
+                                               "inventory/a_root_class_matrix.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m31",
+                        "query":  "Per-domain indexing budgets cap initial coverage so host-scale expansion stays predictable.",
+                        "expected_paths":  [
+                                               "inventory/b_index_budget_policy.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m32",
+                        "query":  "Batch expansion should favor low-churn, text-heavy roots before broad or noisy trees.",
+                        "expected_paths":  [
+                                               "profiles/a_root_selection_heuristics.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m33",
+                        "query":  "Each batch should expand coverage while keeping the tracked suite inside an acceptable latency envelope.",
+                        "expected_paths":  [
+                                               "profiles/b_latency_budget_targets.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m34",
+                        "query":  "Agents should hit `/search` first, confirm the candidate path set, and only then verify bytes through `/raw`.",
+                        "expected_paths":  [
+                                               "operations/a_agent_lookup_playbook.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m35",
+                        "query":  "Bounded expansion should trim stale cache pressure before widening the active root set again.",
+                        "expected_paths":  [
+                                               "operations/b_cache_trim_policy.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m36",
+                        "query":  "New domain batches should group safe text roots so one validation cycle can prove broader coverage quickly.",
+                        "expected_paths":  [
+                                               "intake/a_low_risk_root_batch.md"
+                                           ],
+                        "symbol_query":  false
+                    },
+                    {
+                        "id":  "m37",
+                        "query":  "Every candidate root should carry explicit queries, a trust label, and a bounded index plan before promotion.",
+                        "expected_paths":  [
+                                               "intake/b_domain_promotion_checklist.md"
+                                           ],
+                        "symbol_query":  false
+                    }
+                ]
+}

@@ -1,9 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fs,
-    path::Path,
-};
+use std::{collections::HashMap, fs, path::Path};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -68,6 +64,14 @@ pub struct WorkspaceDomainConfig {
     pub trust_label: String,
     #[serde(default = "default_domain_enabled")]
     pub enabled: bool,
+    #[serde(default = "default_domain_watch_enabled")]
+    pub watch_enabled: bool,
+    #[serde(default = "default_domain_watch_priority")]
+    pub watch_priority: i32,
+    #[serde(default = "default_domain_max_indexed_files")]
+    pub max_indexed_files: usize,
+    #[serde(default = "default_domain_allow_hidden_paths")]
+    pub allow_hidden_paths: bool,
     #[serde(default)]
     pub allow_roots: Vec<String>,
     #[serde(default)]
@@ -192,6 +196,10 @@ pub struct WorkspaceDomainPlan {
     pub root: String,
     pub trust_label: String,
     pub trust_label_registered: bool,
+    pub watch_enabled: bool,
+    pub watch_priority: i32,
+    pub max_indexed_files: usize,
+    pub allow_hidden_paths: bool,
     pub priority_class: String,
     pub root_depth: usize,
     pub effective_allow_roots: Vec<String>,
@@ -252,7 +260,8 @@ impl SemanticFsConfig {
 
             if domain_id.is_empty() {
                 errors.push("workspace domain id must not be empty".to_string());
-            } else if let Some(prev_root) = id_index.insert(domain_id.clone(), domain.root.clone()) {
+            } else if let Some(prev_root) = id_index.insert(domain_id.clone(), domain.root.clone())
+            {
                 errors.push(format!(
                     "workspace domain id `{}` is duplicated across roots `{}` and `{}`",
                     domain_id, prev_root, domain.root
@@ -260,16 +269,20 @@ impl SemanticFsConfig {
             }
 
             if domain_root.is_empty() {
-                errors.push(format!("workspace domain `{}` has an empty root", domain.id));
-            } else if let Some(prev_id) = root_index.insert(domain_root.clone(), domain_id.clone()) {
+                errors.push(format!(
+                    "workspace domain `{}` has an empty root",
+                    domain.id
+                ));
+            } else if let Some(prev_id) = root_index.insert(domain_root.clone(), domain_id.clone())
+            {
                 errors.push(format!(
                     "workspace domain roots `{}` and `{}` normalize to the same root `{}`",
                     prev_id, domain_id, domain_root
                 ));
             }
 
-            let trust_label_registered = !explicit_mode
-                || trust_rank.contains_key(domain.trust_label.as_str());
+            let trust_label_registered =
+                !explicit_mode || trust_rank.contains_key(domain.trust_label.as_str());
             if !trust_label_registered {
                 errors.push(format!(
                     "workspace domain `{}` uses trust_label `{}` which is not listed in policy.trust_labels",
@@ -279,8 +292,7 @@ impl SemanticFsConfig {
 
             let inherits_global_allow_roots = !explicit_mode || domain.allow_roots.is_empty();
             let inherits_global_deny_globs = domain.deny_globs.is_empty();
-            let effective_allow_roots =
-                effective_allow_roots(&self.filter, &domain, explicit_mode);
+            let effective_allow_roots = effective_allow_roots(&self.filter, &domain, explicit_mode);
             let effective_deny_globs = merge_globs(&self.filter.deny_globs, &domain.deny_globs);
 
             validate_policy_patterns(
@@ -289,12 +301,7 @@ impl SemanticFsConfig {
                 &effective_allow_roots,
                 &mut errors,
             );
-            validate_policy_patterns(
-                &domain_id,
-                "deny_globs",
-                &effective_deny_globs,
-                &mut errors,
-            );
+            validate_policy_patterns(&domain_id, "deny_globs", &effective_deny_globs, &mut errors);
 
             plans.push(WorkspaceDomainPlan {
                 schedule_rank: 0,
@@ -302,6 +309,10 @@ impl SemanticFsConfig {
                 root: domain_root.clone(),
                 trust_label: domain.trust_label,
                 trust_label_registered,
+                watch_enabled: domain.watch_enabled,
+                watch_priority: domain.watch_priority,
+                max_indexed_files: domain.max_indexed_files,
+                allow_hidden_paths: domain.allow_hidden_paths,
                 priority_class: String::new(),
                 root_depth: root_depth(&domain_root),
                 effective_allow_roots,
@@ -377,6 +388,10 @@ impl WorkspaceConfig {
             root: self.repo_root.clone(),
             trust_label: default_domain_trust_label(),
             enabled: true,
+            watch_enabled: default_domain_watch_enabled(),
+            watch_priority: default_domain_watch_priority(),
+            max_indexed_files: default_domain_max_indexed_files(),
+            allow_hidden_paths: default_domain_allow_hidden_paths(),
             allow_roots: vec!["**".to_string()],
             deny_globs: Vec::new(),
         }]
@@ -496,10 +511,7 @@ fn domain_priority_class(
 
 fn normalize_domain_root(raw: &str) -> String {
     let mut root = raw.trim().replace('\\', "/");
-    while root.ends_with('/')
-        && root.len() > 1
-        && !root.ends_with(":/")
-    {
+    while root.ends_with('/') && root.len() > 1 && !root.ends_with(":/") {
         root.pop();
     }
     root
@@ -594,6 +606,22 @@ fn default_domain_trust_label() -> String {
 
 fn default_domain_enabled() -> bool {
     true
+}
+
+fn default_domain_watch_enabled() -> bool {
+    true
+}
+
+fn default_domain_watch_priority() -> i32 {
+    100
+}
+
+fn default_domain_max_indexed_files() -> usize {
+    0
+}
+
+fn default_domain_allow_hidden_paths() -> bool {
+    false
 }
 
 #[cfg(test)]
@@ -697,6 +725,8 @@ mod tests {
         assert_eq!(domains[0].root, "/repo");
         assert_eq!(domains[0].trust_label, "workspace_default");
         assert!(domains[0].enabled);
+        assert!(domains[0].watch_enabled);
+        assert_eq!(domains[0].watch_priority, 100);
         assert_eq!(domains[0].allow_roots, vec!["**".to_string()]);
         assert!(domains[0].deny_globs.is_empty());
     }
@@ -713,6 +743,10 @@ mod tests {
                     root: "/repo/code".to_string(),
                     trust_label: "trusted".to_string(),
                     enabled: true,
+                    watch_enabled: true,
+                    watch_priority: 100,
+                    max_indexed_files: 0,
+                    allow_hidden_paths: false,
                     allow_roots: vec!["src/**".to_string()],
                     deny_globs: vec![],
                 },
@@ -721,6 +755,10 @@ mod tests {
                     root: "/repo/docs".to_string(),
                     trust_label: "untrusted".to_string(),
                     enabled: false,
+                    watch_enabled: true,
+                    watch_priority: 100,
+                    max_indexed_files: 0,
+                    allow_hidden_paths: false,
                     allow_roots: vec!["**".to_string()],
                     deny_globs: vec![],
                 },
@@ -762,6 +800,10 @@ mod tests {
                 root: "/repo/code".to_string(),
                 trust_label: "trusted".to_string(),
                 enabled: true,
+                watch_enabled: true,
+                watch_priority: 100,
+                max_indexed_files: 0,
+                allow_hidden_paths: false,
                 allow_roots: vec!["src/**".to_string()],
                 deny_globs: vec![],
             },
@@ -770,6 +812,10 @@ mod tests {
                 root: "/repo/docs".to_string(),
                 trust_label: "partner".to_string(),
                 enabled: true,
+                watch_enabled: true,
+                watch_priority: 100,
+                max_indexed_files: 0,
+                allow_hidden_paths: false,
                 allow_roots: vec!["/abs/**".to_string()],
                 deny_globs: vec!["../secret/**".to_string()],
             },
@@ -778,30 +824,22 @@ mod tests {
         let report = cfg.workspace_domain_report();
 
         assert!(!report.is_valid());
-        assert!(
-            report
-                .errors
-                .iter()
-                .any(|msg| msg.contains("workspace domain id `code` is duplicated"))
-        );
-        assert!(
-            report
-                .errors
-                .iter()
-                .any(|msg| msg.contains("trust_label `partner`"))
-        );
-        assert!(
-            report
-                .errors
-                .iter()
-                .any(|msg| msg.contains("absolute `allow_roots` entry `/abs/**`"))
-        );
-        assert!(
-            report
-                .errors
-                .iter()
-                .any(|msg| msg.contains("traversal in `deny_globs` entry `../secret/**`"))
-        );
+        assert!(report
+            .errors
+            .iter()
+            .any(|msg| msg.contains("workspace domain id `code` is duplicated")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|msg| msg.contains("trust_label `partner`")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|msg| msg.contains("absolute `allow_roots` entry `/abs/**`")));
+        assert!(report
+            .errors
+            .iter()
+            .any(|msg| msg.contains("traversal in `deny_globs` entry `../secret/**`")));
     }
 
     #[test]
@@ -812,6 +850,10 @@ mod tests {
                 root: "/repo".to_string(),
                 trust_label: "trusted".to_string(),
                 enabled: true,
+                watch_enabled: true,
+                watch_priority: 100,
+                max_indexed_files: 0,
+                allow_hidden_paths: false,
                 allow_roots: vec![],
                 deny_globs: vec![],
             },
@@ -820,6 +862,10 @@ mod tests {
                 root: "/repo/apps".to_string(),
                 trust_label: "trusted".to_string(),
                 enabled: true,
+                watch_enabled: true,
+                watch_priority: 100,
+                max_indexed_files: 0,
+                allow_hidden_paths: false,
                 allow_roots: vec!["apps/**".to_string()],
                 deny_globs: vec!["apps/generated/**".to_string()],
             },
@@ -834,17 +880,9 @@ mod tests {
         assert_eq!(report.plans[0].priority_class, "trusted:tier_1");
         assert_eq!(
             report.plans[0].effective_deny_globs,
-            vec![
-                "**/.git/**".to_string(),
-                "apps/generated/**".to_string()
-            ]
+            vec!["**/.git/**".to_string(), "apps/generated/**".to_string()]
         );
         assert_eq!(report.plans[1].id, "primary");
-        assert!(
-            report
-                .warnings
-                .iter()
-                .any(|msg| msg.contains("overlap"))
-        );
+        assert!(report.warnings.iter().any(|msg| msg.contains("overlap")));
     }
 }

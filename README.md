@@ -187,8 +187,8 @@ Implemented:
 10. Benchmark suite: run/soak/relevance/release-gate/head-to-head.
 11. Mounted Linux FUSE workflow validation for `/.well-known/session.json` and `/.well-known/session.refresh` in WSL long-lived session.
 12. Strict daytime tune-vs-holdout workflow with deterministic suite splitting and holdout-only final reporting.
-13. Phase 3 bootstrap has started in parallel: non-breaking multi-root domain scaffolding, filesystem domain-plan artifacts, and explicit multi-root runtime ownership are now landed while single-root remains the default mode.
-14. Phase 3 runtime now persists domain ownership into indexed file/chunk metadata, serves `/map` through domain-aware directory summaries and enrichment, and includes a tracked explicit multi-root benchmark config + fixture (`code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`).
+13. Explicit multi-root runtime ownership is landed while single-root remains the default mode.
+14. Indexed file/chunk metadata now carries domain ownership, and `/map` uses domain-aware directory summaries and enrichment.
 
 Known constraints:
 1. Default embedding runtime is `hash` unless ONNX is configured.
@@ -215,6 +215,25 @@ cargo run -p semanticfs-cli -- --config local.toml serve mcp
 ```bash
 cargo run --release -p semanticfs-cli -- --config local.toml benchmark run --soak-seconds 30
 ```
+
+## Using SemanticFS with agents (Claude Code, Cursor, OpenClaw)
+
+The intended usage pattern for agents is:
+1. **Run SemanticFS locally**
+   - Follow the Quickstart above to `cargo build`, create `local.toml`, run `index build`, then:
+   ```bash
+   cargo run -p semanticfs-cli -- --config local.toml serve mcp
+   ```
+   - The `serve mcp` command will print the MCP endpoint (host/port or socket) to use.
+2. **Register the MCP server in your agent**
+   - In Claude Code, Cursor, OpenClaw, or any MCP-capable agent, add a new **MCP server** pointing at the SemanticFS endpoint from step 1.
+   - Give it a name like `semanticfs` and keep it enabled for the workspaces where you want semantic filesystem access.
+3. **Let the agent use `/search` + `/raw`**
+   - The agent calls SemanticFS via MCP tools/resources instead of manually `cd`/`ls`/`grep`-ing:
+     - Use SemanticFS search tools to get **paths + line ranges**.
+     - Use `/raw/<path>` reads (or the equivalent MCP read tool) to verify and edit files.
+
+Once configured, agents can treat SemanticFS as a semantic filesystem layer over the roots/domains you configured in `local.toml`.
 
 ## Validation Commands
 1. Relevance:
@@ -296,27 +315,3 @@ cargo run --release -p semanticfs-cli -- --config config/relevance-multiroot.tom
 ```
 The tracked fixture is now `code` + `docs` + `config` + `scripts` + `systemd` + `github` + `fixture_repo`. Latest result on active version `1`: relevance recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`; head-to-head gives SemanticFS recall `1.0000`, MRR `1.0000`, symbol-hit `1.0000`, p95 `27.644 ms` vs `rg` recall `0.9375`, MRR `0.8021`, symbol-hit `0.4000`, p95 `30.716 ms`. All 16 tracked queries are currently rank `1`; the remaining Phase 3 work is holding this broader seven-domain contract green while expanding toward less synthetic mixed-content roots.
 
-## Documentation Map
-Use these docs by role:
-1. `docs/new-chat-handoff.md`: current status, exact next steps, execution order.
-2. `docs/big-picture-roadmap.md`: multi-phase product direction and guardrails.
-3. `docs/v1_2_execution_plan.md`: v1.2 scope, acceptance criteria, active work items.
-4. `docs/phase3_execution_plan.md`: parallel Phase 3 bootstrap scope and execution order.
-5. `docs/phase3_execution_status.md`: current Phase 3 status, completed work, open work, and exact next steps.
-6. `docs/future-steps-log.md`: running backlog/history of discussed future work.
-7. `docs/benchmark.md`: command reference and artifact semantics.
-8. `docs/implemented-v1_1.md`: v1.1 implementation baseline.
-9. `docs/release-v1_1_0-rc1.md`: release gate checklist.
-10. `docs/README.md`: documentation index and read order.
-
-## New Chat Bootstrap
-If starting a fresh assistant chat, read in this order:
-1. `README.md`
-2. `docs/new-chat-handoff.md`
-3. `docs/v1_2_execution_plan.md`
-4. `docs/phase3_execution_plan.md`
-5. `docs/phase3_execution_status.md`
-6. `docs/future-steps-log.md`
-7. `docs/benchmark.md`
-
-This sequence is the source of truth for current priorities.

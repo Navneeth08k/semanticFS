@@ -367,7 +367,8 @@ impl FuseBridge {
         snapshot_version: u64,
         active_version: u64,
     ) -> Result<Vec<GroundedHit>> {
-        self.retrieval.search(query, snapshot_version, active_version)
+        self.retrieval
+            .search(query, snapshot_version, active_version)
     }
 
     pub fn search_hits_current(&self, query: &str) -> Result<Vec<GroundedHit>> {
@@ -405,7 +406,8 @@ impl FuseBridge {
 
     #[cfg(target_os = "linux")]
     pub(crate) fn map_has_overview(&self, map_path: &str, snapshot_version: u64) -> Result<bool> {
-        self.map_engine.has_directory_overview(map_path, snapshot_version)
+        self.map_engine
+            .has_directory_overview(map_path, snapshot_version)
     }
 
     #[cfg(target_os = "linux")]

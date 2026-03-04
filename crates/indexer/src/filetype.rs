@@ -79,13 +79,25 @@ mod tests {
 
     #[test]
     fn classifies_extended_code_extensions() {
-        assert!(matches!(FileType::from_path("components/app-header.tsx"), FileType::Code(_)));
-        assert!(matches!(FileType::from_path("src/Main.java"), FileType::Code(_)));
-        assert!(matches!(FileType::from_path("lib/src/android/android_console.dart"), FileType::Code(_)));
+        assert!(matches!(
+            FileType::from_path("components/app-header.tsx"),
+            FileType::Code(_)
+        ));
+        assert!(matches!(
+            FileType::from_path("src/Main.java"),
+            FileType::Code(_)
+        ));
+        assert!(matches!(
+            FileType::from_path("lib/src/android/android_console.dart"),
+            FileType::Code(_)
+        ));
     }
 
     #[test]
     fn leaves_sql_as_non_code_for_now() {
-        assert!(matches!(FileType::from_path("supabase/quick_setup.sql"), FileType::Text));
+        assert!(matches!(
+            FileType::from_path("supabase/quick_setup.sql"),
+            FileType::Text
+        ));
     }
 }

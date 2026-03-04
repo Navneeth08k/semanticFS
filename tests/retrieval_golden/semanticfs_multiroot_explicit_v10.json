@@ -38,7 +38,7 @@
     },
     {
       "id": "m05",
-      "query": "the current backlog is now a monitor artifact, not an active promotion queue",
+      "query": "The explicit domain model is landed.",
       "expected_paths": [
         "docs/phase3_execution_status.md"
       ],

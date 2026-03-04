@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use fuse_bridge::FuseBridge;
 use indexer::embedding::{onnx_metrics_snapshot, reset_onnx_metrics, Embedder};
 use indexer::Indexer;
-use policy_guard::PolicyGuard;
+use policy_guard::{PolicyGuard, WatchTarget};
 use semanticfs_common::SemanticFsConfig;
 use serde::Deserialize;
 use serde_json::json;
@@ -12,6 +12,8 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 use sysinfo::{Pid, ProcessesToUpdate, System};
 use walkdir::WalkDir;
+
+const BASELINE_SCAN_TARGET_LIMIT: usize = 32;
 
 pub struct BenchmarkRunOptions {
     pub config_path: PathBuf,
@@ -594,6 +596,7 @@ pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
     let mut baseline_symbol_queries = 0u64;
     let mut baseline_symbol_hits = 0u64;
     let mut baseline_latencies_us = Vec::new();
+    let mut query_latency_rows: Vec<(String, String, u64, u64, i64)> = Vec::new();
 
     for path in &fixture_paths {
         let raw = std::fs::read_to_string(path)
@@ -641,6 +644,13 @@ pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
             }
             let base_elapsed = median_u64(&mut base_elapsed_samples);
             baseline_latencies_us.push(base_elapsed);
+            query_latency_rows.push((
+                q.id.clone(),
+                q.query.clone(),
+                sem_elapsed,
+                base_elapsed,
+                sem_elapsed as i64 - base_elapsed as i64,
+            ));
 
             let sem_rank = first_relevant_rank(&sem_paths, &q.expected_paths);
             let base_rank = first_relevant_rank(&base_paths, &q.expected_paths);
@@ -718,6 +728,38 @@ pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
         baseline_symbol_hits as f64 / baseline_symbol_queries as f64
     };
 
+    let mut semantic_slowest = query_latency_rows.clone();
+    semantic_slowest.sort_by(|left, right| right.2.cmp(&left.2));
+    let semantic_slowest = semantic_slowest
+        .into_iter()
+        .take(5)
+        .map(|(id, query, semantic_us, baseline_us, delta_us)| {
+            json!({
+                "id": id,
+                "query": query,
+                "semanticfs_latency_ms": micros_to_ms(semantic_us),
+                "baseline_rg_latency_ms": micros_to_ms(baseline_us),
+                "delta_ms": micros_to_ms_i64(delta_us),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let mut semantic_worst_delta = query_latency_rows.clone();
+    semantic_worst_delta.sort_by(|left, right| right.4.cmp(&left.4));
+    let semantic_worst_delta = semantic_worst_delta
+        .into_iter()
+        .take(5)
+        .map(|(id, query, semantic_us, baseline_us, delta_us)| {
+            json!({
+                "id": id,
+                "query": query,
+                "semanticfs_latency_ms": micros_to_ms(semantic_us),
+                "baseline_rg_latency_ms": micros_to_ms(baseline_us),
+                "delta_ms": micros_to_ms_i64(delta_us),
+            })
+        })
+        .collect::<Vec<_>>();
+
     let report = json!({
         "scenario": "head_to_head",
         "active_version": active,
@@ -750,6 +792,10 @@ pub fn head_to_head(options: HeadToHeadOptions) -> Result<()> {
             "mrr": semantic_mrr - baseline_mrr,
             "symbol_hit_rate": semantic_symbol_hit_rate - baseline_symbol_hit_rate,
             "p95_latency_ms": micros_to_ms(percentile(&semantic_latencies_us, 0.95)) - micros_to_ms(percentile(&baseline_latencies_us, 0.95))
+        },
+        "hotspots": {
+            "semanticfs_slowest_top5": semantic_slowest,
+            "semanticfs_worst_delta_top5": semantic_worst_delta
         },
         "datasets": datasets
     });
@@ -1260,6 +1306,10 @@ fn micros_to_ms(us: u64) -> f64 {
     (us as f64) / 1000.0
 }
 
+fn micros_to_ms_i64(us: i64) -> f64 {
+    (us as f64) / 1000.0
+}
+
 fn extract_first_hit_path(markdown: &str) -> Option<String> {
     for line in markdown.lines() {
         if !line.starts_with("## ") {
@@ -1558,55 +1608,63 @@ fn baseline_rg_search(
     topn: usize,
 ) -> Result<Vec<String>> {
     let topn = topn.max(1);
-    let rg = Command::new("rg")
-        .arg("--json")
-        .arg("-F")
-        .arg("--")
-        .arg(query)
-        .arg(&cfg.workspace.repo_root)
-        .output();
-
-    let Ok(output) = rg else {
-        return Ok(fallback_text_search(cfg, guard, query, topn));
-    };
-
-    if !output.status.success() && output.status.code() != Some(1) {
-        anyhow::bail!(
-            "rg baseline failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-
     let mut out = Vec::new();
     let mut seen = HashSet::new();
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
+    let mut saw_match = false;
+    let mut saw_rg = false;
+    for target in baseline_search_targets(cfg, guard) {
+        let mut rg = Command::new("rg");
+        rg.arg("--json").arg("-F");
+        if target.path.is_dir() && !target.recursive {
+            rg.arg("--max-depth").arg("1");
+        }
+        let rg = rg.arg("--").arg(query).arg(&target.path).output();
+
+        let Ok(output) = rg else {
+            return Ok(fallback_text_search(cfg, guard, query, topn));
+        };
+        saw_rg = true;
+
+        if !output.status.success() && output.status.code() != Some(1) {
+            anyhow::bail!(
+                "rg baseline failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
+            if out.len() >= topn {
+                break;
+            }
+            let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+                continue;
+            };
+            if v.get("type").and_then(|t| t.as_str()) != Some("match") {
+                continue;
+            }
+            let Some(path) = v
+                .get("data")
+                .and_then(|d| d.get("path"))
+                .and_then(|p| p.get("text"))
+                .and_then(|t| t.as_str())
+            else {
+                continue;
+            };
+
+            let Some(normalized) = normalize_result_path(path, cfg, guard) else {
+                continue;
+            };
+            saw_match = true;
+            if seen.insert(normalized.clone()) {
+                out.push(normalized);
+            }
+        }
         if out.len() >= topn {
             break;
         }
-        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
-            continue;
-        };
-        if v.get("type").and_then(|t| t.as_str()) != Some("match") {
-            continue;
-        }
-        let Some(path) = v
-            .get("data")
-            .and_then(|d| d.get("path"))
-            .and_then(|p| p.get("text"))
-            .and_then(|t| t.as_str())
-        else {
-            continue;
-        };
-
-        let Some(normalized) = normalize_result_path(path, cfg, guard) else {
-            continue;
-        };
-        if seen.insert(normalized.clone()) {
-            out.push(normalized);
-        }
     }
 
-    if out.is_empty() && output.status.code() == Some(1) {
+    if saw_rg && !saw_match {
         return Ok(Vec::new());
     }
     Ok(out)
@@ -1618,57 +1676,115 @@ fn fallback_text_search(
     query: &str,
     topn: usize,
 ) -> Vec<String> {
-    let root = PathBuf::from(&cfg.workspace.repo_root);
     let query_lower = query.to_ascii_lowercase();
     let mut out = Vec::new();
-    for entry in WalkDir::new(&root).into_iter().filter_map(|e| e.ok()) {
-        if !entry.file_type().is_file() {
-            continue;
-        }
-        let path = entry.path();
-        let ext = path
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("")
-            .to_ascii_lowercase();
-        let allowed = matches!(
-            ext.as_str(),
-            "rs" | "py"
-                | "ts"
-                | "tsx"
-                | "js"
-                | "jsx"
-                | "java"
-                | "go"
-                | "md"
-                | "txt"
-                | "toml"
-                | "yaml"
-                | "yml"
-                | "json"
-        );
-        if !allowed {
-            continue;
-        }
-
-        let Ok(raw) = std::fs::read_to_string(path) else {
-            continue;
-        };
-        if raw.to_ascii_lowercase().contains(&query_lower) {
-            let Some(normalized) = normalize_result_path(&path.to_string_lossy(), cfg, guard)
-            else {
-                continue;
-            };
-            out.push(normalized);
-            if out.len() >= topn {
-                break;
+    for target in baseline_search_targets(cfg, guard) {
+        if target.path.is_file() {
+            append_fallback_match(&target.path, cfg, guard, &query_lower, topn, &mut out);
+        } else {
+            let mut walker = WalkDir::new(&target.path);
+            if !target.recursive {
+                walker = walker.max_depth(1);
             }
+            for entry in walker.into_iter().filter_map(|e| e.ok()) {
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+                append_fallback_match(entry.path(), cfg, guard, &query_lower, topn, &mut out);
+                if out.len() >= topn {
+                    break;
+                }
+            }
+        }
+        if out.len() >= topn {
+            break;
         }
     }
     out
 }
 
-fn normalize_result_path(path: &str, cfg: &SemanticFsConfig, guard: &PolicyGuard) -> Option<String> {
+fn append_fallback_match(
+    path: &std::path::Path,
+    cfg: &SemanticFsConfig,
+    guard: &PolicyGuard,
+    query_lower: &str,
+    topn: usize,
+    out: &mut Vec<String>,
+) {
+    if out.len() >= topn {
+        return;
+    }
+
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let allowed = matches!(
+        ext.as_str(),
+        "rs" | "py"
+            | "ts"
+            | "tsx"
+            | "js"
+            | "jsx"
+            | "java"
+            | "go"
+            | "md"
+            | "txt"
+            | "toml"
+            | "yaml"
+            | "yml"
+            | "json"
+            | "rules"
+            | "url"
+            | "sh"
+            | "ini"
+    );
+    if !allowed {
+        return;
+    }
+
+    let Ok(raw) = std::fs::read_to_string(path) else {
+        return;
+    };
+    if !raw.to_ascii_lowercase().contains(query_lower) {
+        return;
+    }
+    let Some(normalized) = normalize_result_path(&path.to_string_lossy(), cfg, guard) else {
+        return;
+    };
+    if !out.iter().any(|existing| existing == &normalized) {
+        out.push(normalized);
+    }
+}
+
+fn baseline_search_targets(cfg: &SemanticFsConfig, guard: &PolicyGuard) -> Vec<WatchTarget> {
+    if guard.is_explicit_multi_root() {
+        let mut targets = guard.scan_targets();
+        targets.sort_by(|left, right| {
+            left.path
+                .cmp(&right.path)
+                .then_with(|| left.recursive.cmp(&right.recursive))
+        });
+        targets.dedup_by(|left, right| {
+            left.path == right.path && left.recursive == right.recursive
+        });
+        if !targets.is_empty() && targets.len() <= BASELINE_SCAN_TARGET_LIMIT {
+            return targets;
+        }
+    }
+    vec![WatchTarget {
+        path: PathBuf::from(&cfg.workspace.repo_root),
+        recursive: true,
+        priority: 0,
+    }]
+}
+
+fn normalize_result_path(
+    path: &str,
+    cfg: &SemanticFsConfig,
+    guard: &PolicyGuard,
+) -> Option<String> {
     let normalized = normalize_repo_relative(path, &cfg.workspace.repo_root);
     if !guard.is_explicit_multi_root() {
         return Some(normalized);
@@ -1735,11 +1851,7 @@ mod tests {
             .join("tests")
             .join("retrieval_golden")
             .join("semanticfs_multiroot_explicit.json");
-        let leaked_fixture = normalize_result_path(
-            &fixture_path.to_string_lossy(),
-            &cfg,
-            &guard,
-        );
+        let leaked_fixture = normalize_result_path(&fixture_path.to_string_lossy(), &cfg, &guard);
         assert!(leaked_fixture.is_none());
     }
 
