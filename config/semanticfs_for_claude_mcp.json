@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "semanticfs": {
+      "command": "C:/Users/navneeth/anaconda3/python.exe",
+      "args": [
+        "C:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS/scripts/semanticfs_mcp_stdio.py",
+        "--url",
+        "http://127.0.0.1:9466"
+      ],
+      "env": {}
+    }
+  }
+}

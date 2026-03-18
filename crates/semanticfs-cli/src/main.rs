@@ -4,6 +4,7 @@ use clap::{Args, Parser, Subcommand};
 use fuse_bridge::FuseBridge;
 use indexer::embedding::onnx_metrics_snapshot;
 use indexer::Indexer;
+use mcp::stdio::McpStdioServer;
 use mcp::McpServer;
 use policy_guard::PolicyGuard;
 use semanticfs_common::{SemanticFsConfig, WorkspaceDomainReport};
@@ -14,6 +15,8 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 mod benchmark;
+mod init;
+mod model_setup;
 
 #[derive(Parser, Debug)]
 #[command(name = "semanticfs")]
@@ -37,6 +40,11 @@ enum Commands {
         command: ServeCommand,
     },
     Health,
+    /// Download and configure an embedding model for semantic search.
+    Model {
+        #[command(subcommand)]
+        command: ModelCommand,
+    },
     Benchmark {
         #[command(subcommand)]
         command: BenchmarkCommand,
@@ -47,12 +55,32 @@ enum Commands {
     },
 }
 
+#[derive(Subcommand, Debug)]
+enum ModelCommand {
+    /// Download the ONNX embedding model to ~/.semanticfs/models/.
+    Setup {
+        /// Model name (default: bge-small-en-v1.5).
+        #[arg(long, default_value = "bge-small-en-v1.5")]
+        model: String,
+        /// Directory to store the model files.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+    },
+}
+
 #[derive(Args, Debug)]
 struct InitArgs {
+    /// Project root directory. Defaults to the git root of the current directory.
     #[arg(long)]
-    repo: String,
-    #[arg(long)]
-    mount: String,
+    root: Option<PathBuf>,
+    /// Config profile: single-repo (default) or multi-root.
+    #[arg(long, default_value = "single-repo")]
+    profile: String,
+    // Legacy positional args kept for backward compat (hidden)
+    #[arg(long, hide = true)]
+    repo: Option<String>,
+    #[arg(long, hide = true)]
+    mount: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -69,6 +97,9 @@ enum IndexCommand {
 enum ServeCommand {
     Fuse,
     Mcp,
+    /// Native stdio MCP server — no Python wrapper needed.
+    /// Launch this directly as a Claude Code MCP subprocess.
+    McpStdio,
     Observability,
 }
 
@@ -196,19 +227,33 @@ async fn main() -> Result<()> {
         Commands::Index { command } => index_command(command, &cli.config),
         Commands::Serve { command } => serve_command(command, &cli.config).await,
         Commands::Health => health_command(&cli.config),
+        Commands::Model { command } => model_command(command),
         Commands::Benchmark { command } => benchmark_command(command, &cli.config),
         Commands::Recover { command } => recover_command(command),
     }
 }
 
 fn init_command(args: InitArgs, target_path: &PathBuf) -> Result<()> {
-    let sample = format!(
-        "[workspace]\nrepo_root = \"{}\"\nmount_point = \"{}\"\n\n# Optional Phase 3 multi-root example:\n# [[workspace.domains]]\n# id = \"primary\"\n# root = \"{}\"\n# trust_label = \"trusted\"\n# allow_roots = [\"**\"]\n# deny_globs = []\n\n# copy remaining defaults from config/semanticfs.sample.toml\n",
-        args.repo, args.mount, args.repo
-    );
-    fs::write(target_path, sample)?;
-    info!(path = %target_path.display(), "initialized config");
-    Ok(())
+    // Legacy path: --repo and --mount were provided (old interface)
+    if let (Some(repo), Some(mount)) = (args.repo.as_deref(), args.mount.as_deref()) {
+        let sample = format!(
+            "[workspace]\nrepo_root = \"{repo}\"\nmount_point = \"{mount}\"\n\n# copy remaining defaults from config/semanticfs.sample.toml\n"
+        );
+        fs::write(target_path, &sample)?;
+        info!(path = %target_path.display(), "initialized config (legacy)");
+        return Ok(());
+    }
+
+    // Smart path: auto-detect git root and project type
+    let root = args
+        .root
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+
+    init::run(init::InitOptions {
+        root,
+        profile: args.profile,
+        output: target_path.clone(),
+    })
 }
 
 fn index_command(cmd: IndexCommand, config_path: &PathBuf) -> Result<()> {
@@ -260,6 +305,11 @@ async fn serve_command(cmd: ServeCommand, config_path: &PathBuf) -> Result<()> {
             let bind = cfg.observability.metrics_bind.clone();
             let server = McpServer::new(bridge);
             server.serve(&bind).await?;
+        }
+        ServeCommand::McpStdio => {
+            let bridge = FuseBridge::new(cfg.clone(), &db_path)?;
+            let server = McpStdioServer::new(bridge);
+            tokio::task::block_in_place(|| server.run())?;
         }
         ServeCommand::Observability => {
             let bridge = FuseBridge::new(cfg.clone(), &db_path)?;
@@ -432,6 +482,17 @@ fn parse_string_csv(raw: &str) -> Vec<String> {
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
         .collect()
+}
+
+fn model_command(cmd: ModelCommand) -> Result<()> {
+    match cmd {
+        ModelCommand::Setup { model, dir } => {
+            let model_dir = dir
+                .or_else(model_setup::default_model_dir)
+                .ok_or_else(|| anyhow::anyhow!("cannot determine model dir; pass --dir explicitly"))?;
+            model_setup::run(&model, &model_dir)
+        }
+    }
 }
 
 fn recover_command(cmd: RecoverCommand) -> Result<()> {

@@ -23,6 +23,7 @@ tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 sysinfo = "0.33"
+ureq = { version = "2", features = ["tls"] }
 walkdir.workspace = true
 semanticfs-common = { path = "../semanticfs-common" }
 indexer = { path = "../indexer" }

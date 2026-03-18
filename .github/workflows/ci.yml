@@ -7,15 +7,25 @@ on:
       - main
       - master
 
-jobs:
-  test-and-gate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
-      - name: Install system dependencies
+jobs:
+  # ── Cross-platform build + unit tests ────────────────────────────────────────
+  build-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libfuse3-dev protobuf-compiler
@@ -29,16 +39,60 @@ jobs:
       - name: Format check
         run: cargo fmt --check
 
+      - name: Build (release)
+        run: cargo build --release -p semanticfs-cli
+
       - name: Unit and integration tests
         run: cargo test --workspace
 
+  # ── Golden retrieval gate (Linux only — requires FUSE deps) ──────────────────
+  golden-and-gate:
+    name: Golden suite + release gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: build-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libfuse3-dev protobuf-compiler
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Golden retrieval benchmark (v14 — recall must be 1.000)
+        run: |
+          cargo run --release -p semanticfs-cli -- \
+            --config config/semanticfs.sample.toml \
+            benchmark relevance \
+            --golden tests/retrieval_golden/semanticfs_multiroot_explicit_v14.json \
+            --fixture-repo tests/fixtures/benchmark_repo
+
       - name: Release gate (fixture corpus)
         run: |
-          cargo run --release -p semanticfs-cli -- --config config/semanticfs.sample.toml benchmark release-gate --refresh --fixture-repo tests/fixtures/benchmark_repo --soak-seconds 2
+          cargo run --release -p semanticfs-cli -- \
+            --config config/semanticfs.sample.toml \
+            benchmark release-gate \
+            --refresh \
+            --fixture-repo tests/fixtures/benchmark_repo \
+            --soak-seconds 2
 
-      - name: Long soak sign-off (short CI profile)
+      - name: Short soak sign-off
         run: |
-          cargo run --release -p semanticfs-cli -- --config config/semanticfs.sample.toml benchmark soak --duration-seconds 5 --fixture-repo tests/fixtures/benchmark_repo --max-soak-p95-ms 250 --max-errors 0 --max-rss-mb 2048
+          cargo run --release -p semanticfs-cli -- \
+            --config config/semanticfs.sample.toml \
+            benchmark soak \
+            --duration-seconds 5 \
+            --fixture-repo tests/fixtures/benchmark_repo \
+            --max-soak-p95-ms 250 \
+            --max-errors 0 \
+            --max-rss-mb 2048
 
       - name: Upload benchmark artifacts
         if: always()

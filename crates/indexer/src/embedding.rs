@@ -162,11 +162,60 @@ impl Embedder {
             });
         }
 
+        // Auto-detect: if SEMANTICFS_ONNX_MODEL is unset but a model was downloaded
+        // via `semanticfs model setup`, quietly upgrade to ONNX without requiring
+        // the user to change their config.
+        if std::env::var("SEMANTICFS_ONNX_MODEL").is_err() {
+            if let Some(model_path) = find_auto_model() {
+                unsafe {
+                    std::env::set_var("SEMANTICFS_ONNX_MODEL", &model_path);
+                }
+                match OnnxSidecar::from_env(dim) {
+                    Ok(sidecar) => match sidecar.health_check() {
+                        Ok(()) => {
+                            tracing::info!(
+                                model = %model_path.display(),
+                                "auto-detected ONNX model; using onnx embedding backend"
+                            );
+                            return Ok(Self {
+                                backend: Backend::Onnx(sidecar),
+                                dim,
+                                batch_size: cfg.batch_size.max(1),
+                            });
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "auto-detected model health check failed ({}); falling back to hash",
+                                e
+                            );
+                        }
+                    },
+                    Err(e) => {
+                        tracing::warn!(
+                            "auto-detected model init failed ({}); falling back to hash",
+                            e
+                        );
+                    }
+                }
+                // Clear the env var we set so it doesn't leak into child processes
+                unsafe {
+                    std::env::remove_var("SEMANTICFS_ONNX_MODEL");
+                }
+            }
+        }
+
+        tracing::warn!(
+            "using hash embeddings — run 'semanticfs model setup' for full semantic search quality"
+        );
         Ok(Self {
             backend: Backend::Hash,
             dim,
             batch_size: cfg.batch_size.max(1),
         })
+    }
+
+    pub fn is_onnx(&self) -> bool {
+        matches!(self.backend, Backend::Onnx(_))
     }
 
     pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
@@ -411,6 +460,26 @@ fn ensure_child_alive(child: &mut Child) -> Result<()> {
         return Err(anyhow!("onnx sidecar exited unexpectedly: {}", status));
     }
     Ok(())
+}
+
+/// Look for a model that was placed by `semanticfs model setup`.
+/// Returns the path to the ONNX model file if found.
+fn find_auto_model() -> Option<PathBuf> {
+    let home = std::env::var("SEMANTICFS_HOME")
+        .map(PathBuf::from)
+        .or_else(|_| {
+            std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .map(|h| PathBuf::from(h).join(".semanticfs"))
+        })
+        .ok()?;
+
+    // bge-small-en-v1.5 (the default model from `semanticfs model setup`)
+    let candidate = home.join("models/model_quantized.onnx");
+    if candidate.exists() {
+        return Some(candidate);
+    }
+    None
 }
 
 fn update_atomic_max(atom: &AtomicU64, value: u64) {

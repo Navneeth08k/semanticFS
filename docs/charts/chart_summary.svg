@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="280" viewBox="0 0 760 280" font-family="system-ui,sans-serif">
+<rect width="760" height="280" fill="#FAFAFA" rx="8"/>
+<text x="380" y="30" text-anchor="middle" font-size="15" font-weight="600" fill="#2D2D2D">Overall Results: Naive vs SemanticFS (6 tasks, 100% accuracy both)</text>
+<rect x="25.0" y="60" width="220" height="180" fill="white" rx="8" stroke="#E8E8E8" stroke-width="1.5"/>
+<text x="135.0" y="82" text-anchor="middle" font-size="12" font-weight="600" fill="#2D2D2D">Context Tokens</text>
+<text x="135.0" y="96" text-anchor="middle" font-size="9" fill="#777777">Fresh tokens model processed</text>
+<line x1="41.0" y1="104" x2="229.0" y2="104" stroke="#E8E8E8" stroke-width="1"/>
+<rect x="37.0" y="110" width="8" height="8" fill="#E05C5C" rx="1"/>
+<text x="51.0" y="119" font-size="10" fill="#777777">Naive</text>
+<text x="233.0" y="119" text-anchor="end" font-size="13" font-weight="600" fill="#E05C5C">21,536</text>
+<rect x="37.0" y="132" width="8" height="8" fill="#4A90D9" rx="1"/>
+<text x="51.0" y="141" font-size="10" fill="#777777">SemanticFS</text>
+<text x="233.0" y="141" text-anchor="end" font-size="13" font-weight="600" fill="#4A90D9">7,799</text>
+<rect x="99.0" y="164" width="72" height="28" fill="#2ECC71" rx="14" opacity="0.15"/>
+<text x="135.0" y="182" text-anchor="middle" font-size="16" font-weight="700" fill="#2ECC71">-63.8%</text>
+<text x="135.0" y="208" text-anchor="middle" font-size="10" fill="#777777">reduction</text>
+<rect x="270.0" y="60" width="220" height="180" fill="white" rx="8" stroke="#E8E8E8" stroke-width="1.5"/>
+<text x="380.0" y="82" text-anchor="middle" font-size="12" font-weight="600" fill="#2D2D2D">Total Cost (USD)</text>
+<text x="380.0" y="96" text-anchor="middle" font-size="9" fill="#777777">API cost across 6 tasks</text>
+<line x1="286.0" y1="104" x2="474.0" y2="104" stroke="#E8E8E8" stroke-width="1"/>
+<rect x="282.0" y="110" width="8" height="8" fill="#E05C5C" rx="1"/>
+<text x="296.0" y="119" font-size="10" fill="#777777">Naive</text>
+<text x="478.0" y="119" text-anchor="end" font-size="13" font-weight="600" fill="#E05C5C">$0.2064</text>
+<rect x="282.0" y="132" width="8" height="8" fill="#4A90D9" rx="1"/>
+<text x="296.0" y="141" font-size="10" fill="#777777">SemanticFS</text>
+<text x="478.0" y="141" text-anchor="end" font-size="13" font-weight="600" fill="#4A90D9">$0.1466</text>
+<rect x="344.0" y="164" width="72" height="28" fill="#2ECC71" rx="14" opacity="0.15"/>
+<text x="380.0" y="182" text-anchor="middle" font-size="16" font-weight="700" fill="#2ECC71">-29.0%</text>
+<text x="380.0" y="208" text-anchor="middle" font-size="10" fill="#777777">reduction</text>
+<rect x="515.0" y="60" width="220" height="180" fill="white" rx="8" stroke="#E8E8E8" stroke-width="1.5"/>
+<text x="625.0" y="82" text-anchor="middle" font-size="12" font-weight="600" fill="#2D2D2D">Tool Call Turns</text>
+<text x="625.0" y="96" text-anchor="middle" font-size="9" fill="#777777">Back-and-forth exploration steps</text>
+<line x1="531.0" y1="104" x2="719.0" y2="104" stroke="#E8E8E8" stroke-width="1"/>
+<rect x="527.0" y="110" width="8" height="8" fill="#E05C5C" rx="1"/>
+<text x="541.0" y="119" font-size="10" fill="#777777">Naive</text>
+<text x="723.0" y="119" text-anchor="end" font-size="13" font-weight="600" fill="#E05C5C">23</text>
+<rect x="527.0" y="132" width="8" height="8" fill="#4A90D9" rx="1"/>
+<text x="541.0" y="141" font-size="10" fill="#777777">SemanticFS</text>
+<text x="723.0" y="141" text-anchor="end" font-size="13" font-weight="600" fill="#4A90D9">21</text>
+<rect x="589.0" y="164" width="72" height="28" fill="#2ECC71" rx="14" opacity="0.15"/>
+<text x="625.0" y="182" text-anchor="middle" font-size="16" font-weight="700" fill="#2ECC71">-8.7%</text>
+<text x="625.0" y="208" text-anchor="middle" font-size="10" fill="#777777">reduction</text>
+</svg>
