@@ -16,7 +16,7 @@ Connect Claude Code (or any MCP-capable agent) to SemanticFS in ~10 minutes.
 ### Linux / macOS (pre-built binary)
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/YOUR_ORG/semanticfs/main/scripts/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/Navneeth08k/semanticFS/main/scripts/install.sh | bash
 ```
 
 ### Build from source

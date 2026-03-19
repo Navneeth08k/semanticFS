@@ -21,3 +21,6 @@ policy-guard = { path = "../policy-guard" }
 [target.'cfg(target_os = "linux")'.dependencies]
 fuser = "0.14"
 libc = "0.2"
+
+[lints]
+workspace = true

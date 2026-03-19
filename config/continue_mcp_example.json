@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "semanticfs": {
+      "command": "semanticfs",
+      "args": [
+        "--config", "/path/to/your/semanticfs.toml",
+        "serve", "mcp-stdio"
+      ],
+      "env": {}
+    }
+  }
+}

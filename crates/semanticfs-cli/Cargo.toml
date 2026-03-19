@@ -30,3 +30,6 @@ indexer = { path = "../indexer" }
 fuse-bridge = { path = "../fuse-bridge" }
 mcp = { path = "../mcp" }
 policy-guard = { path = "../policy-guard" }
+
+[lints]
+workspace = true

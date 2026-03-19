@@ -150,7 +150,7 @@ impl McpStdioServer {
     }
 }
 
-fn tools_list() -> Value {
+pub(crate) fn tools_list() -> Value {
     json!([
         {
             "name": "search_codebase",
@@ -189,4 +189,71 @@ fn write_message(msg: &Value) -> Result<()> {
     io::stdout().write_all(framed.as_bytes())?;
     io::stdout().flush()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn tools_list_has_required_tools() {
+        let list = tools_list();
+        let arr = list.as_array().expect("tools_list must return a JSON array");
+        let names: Vec<&str> = arr
+            .iter()
+            .filter_map(|t| t["name"].as_str())
+            .collect();
+        assert!(names.contains(&"search_codebase"), "missing search_codebase tool");
+        assert!(names.contains(&"get_directory_map"), "missing get_directory_map tool");
+    }
+
+    #[test]
+    fn tools_have_required_schema_fields() {
+        let list = tools_list();
+        let arr = list.as_array().unwrap();
+        for tool in arr {
+            let name = tool["name"].as_str().unwrap_or("unknown");
+            assert!(
+                tool.get("description").and_then(|d| d.as_str()).is_some(),
+                "tool '{name}' missing description"
+            );
+            assert!(
+                tool.get("inputSchema").is_some(),
+                "tool '{name}' missing inputSchema"
+            );
+            assert_eq!(
+                tool["inputSchema"]["type"].as_str(),
+                Some("object"),
+                "tool '{name}' inputSchema.type must be 'object'"
+            );
+        }
+    }
+
+    #[test]
+    fn content_length_framing_contract() {
+        // Verify that the Content-Length value equals the byte length of the JSON body.
+        // This is the core invariant of the MCP stdio framing protocol.
+        let msg = json!({"jsonrpc": "2.0", "id": 1, "result": {"tools": []}});
+        let body = serde_json::to_string(&msg).unwrap();
+        let frame = format!("Content-Length: {}\r\n\r\n{}", body.len(), body);
+
+        let (header_part, payload) = frame.split_once("\r\n\r\n").expect("frame must contain \\r\\n\\r\\n");
+        let claimed_len: usize = header_part
+            .strip_prefix("Content-Length: ")
+            .expect("header must start with Content-Length: ")
+            .parse()
+            .expect("Content-Length value must be a valid usize");
+
+        assert_eq!(
+            claimed_len,
+            payload.len(),
+            "Content-Length header value must equal body byte length"
+        );
+        assert_eq!(
+            claimed_len,
+            body.len(),
+            "framed payload must equal original body"
+        );
+    }
 }

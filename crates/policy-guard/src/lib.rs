@@ -368,6 +368,7 @@ impl PolicyGuard {
             .collect()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn build_audit(
         &self,
         actor: &str,
@@ -1186,7 +1187,7 @@ mod tests {
             .any(|target| target.path.starts_with(root.join("crates"))));
         assert_eq!(guard.watch_enabled_domain_count(), 1);
         assert_eq!(guard.watch_target_count(), targets.len());
-        assert!(guard.scan_target_count() >= targets.len() + 1);
+        assert!(guard.scan_target_count() > targets.len());
     }
 
     #[test]

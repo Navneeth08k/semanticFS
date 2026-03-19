@@ -19,6 +19,8 @@ enum ProjectType {
     Rust,
     Node,
     Python,
+    Go,
+    Java,
     Generic,
 }
 
@@ -115,6 +117,15 @@ fn detect_project_type(root: &Path) -> ProjectType {
     {
         return ProjectType::Python;
     }
+    if root.join("go.mod").exists() {
+        return ProjectType::Go;
+    }
+    if root.join("pom.xml").exists()
+        || root.join("build.gradle").exists()
+        || root.join("build.gradle.kts").exists()
+    {
+        return ProjectType::Java;
+    }
     ProjectType::Generic
 }
 
@@ -123,6 +134,8 @@ fn project_extra_deny_globs(pt: &ProjectType) -> Vec<&'static str> {
         ProjectType::Rust => vec!["**/target/**"],
         ProjectType::Node => vec!["**/node_modules/**", "**/.next/**", "**/dist/**"],
         ProjectType::Python => vec!["**/.venv/**", "**/venv/**", "**/__pycache__/**", "**/*.pyc"],
+        ProjectType::Go => vec!["**/vendor/**"],
+        ProjectType::Java => vec!["**/target/**", "**/.gradle/**", "**/build/**", "**/*.class"],
         ProjectType::Generic => vec![],
     }
 }

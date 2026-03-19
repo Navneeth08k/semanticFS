@@ -9,3 +9,6 @@ anyhow.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 semanticfs-common = { path = "../semanticfs-common" }
+
+[lints]
+workspace = true

@@ -15,11 +15,12 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 mod benchmark;
+mod doctor;
 mod init;
 mod model_setup;
 
 #[derive(Parser, Debug)]
-#[command(name = "semanticfs")]
+#[command(name = "semanticfs", version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     #[arg(long, default_value = "config/semanticfs.sample.toml")]
     config: PathBuf,
@@ -53,6 +54,8 @@ enum Commands {
         #[command(subcommand)]
         command: RecoverCommand,
     },
+    /// Diagnose the local setup: config, index DB, embeddings, HTTP server, policy guard.
+    Doctor,
 }
 
 #[derive(Subcommand, Debug)]
@@ -90,6 +93,12 @@ enum IndexCommand {
     Enrich {
         #[arg(long)]
         version: Option<u64>,
+    },
+    /// Re-index only files modified since the last build (faster than a full rebuild).
+    Update {
+        /// Limit to files changed in the last N minutes. Default: since last `index build`.
+        #[arg(long)]
+        since_minutes: Option<u64>,
     },
 }
 
@@ -230,6 +239,11 @@ async fn main() -> Result<()> {
         Commands::Model { command } => model_command(command),
         Commands::Benchmark { command } => benchmark_command(command, &cli.config),
         Commands::Recover { command } => recover_command(command),
+        Commands::Doctor => doctor::run(doctor::DoctorOptions {
+            config_path: cli.config.clone(),
+            db_path: resolve_db_path(),
+            http_check: true,
+        }),
     }
 }
 
@@ -285,6 +299,13 @@ fn index_command(cmd: IndexCommand, config_path: &PathBuf) -> Result<()> {
             };
             indexer.enrich_map_for_version(target)?;
             println!("map enrichment complete: version={}", target);
+        }
+        IndexCommand::Update { since_minutes } => {
+            let version = indexer.build_incremental_update(since_minutes)?;
+            println!("index updated: version={}", version);
+            if enable_async_map_enrichment {
+                spawn_async_map_enrichment(config_path, &db_path, version)?;
+            }
         }
     }
     Ok(())

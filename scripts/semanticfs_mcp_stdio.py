@@ -10,7 +10,7 @@ Usage (via Claude Code --mcp-config):
   stdin/stdout using the MCP Content-Length framed JSON-RPC protocol.
 
 Direct test:
-  python semanticfs_mcp_stdio.py --url http://127.0.0.1:9466
+  python semanticfs_mcp_stdio.py --url http://127.0.0.1:9464
 """
 
 import sys

@@ -19,3 +19,6 @@ tokio = { workspace = true, optional = true }
 futures-util = { workspace = true, optional = true }
 arrow-array = { version = "57", optional = true }
 lancedb = { version = "0.26.2", optional = true }
+
+[lints]
+workspace = true

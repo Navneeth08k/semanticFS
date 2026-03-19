@@ -60,7 +60,73 @@ impl Indexer {
     }
 
     pub fn build_full_index(&self) -> Result<u64> {
-        self.build_full_index_with_plan(None)
+        let version = self.build_full_index_with_plan(None)?;
+        // Record timestamp so `index update` knows what's changed since last build.
+        let _ = self
+            .db
+            .set_runtime_state("last_full_build_unix_ms", &unix_now_ms().to_string());
+        Ok(version)
+    }
+
+    /// Re-index only files modified since the last full build (faster than a full rebuild).
+    ///
+    /// If `since_minutes` is provided, re-indexes files modified in the last N minutes.
+    /// Otherwise uses the timestamp stored by the previous `index build` run.
+    pub fn build_incremental_update(&self, since_minutes: Option<u64>) -> Result<u64> {
+        let cutoff_ms: u64 = if let Some(m) = since_minutes {
+            unix_now_ms().saturating_sub(m * 60 * 1000)
+        } else {
+            self.db
+                .get_runtime_state("last_full_build_unix_ms")?
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(0)
+        };
+
+        let mut hot_paths: Vec<String> = Vec::new();
+        for target in self.guard.scan_targets() {
+            let walker = walkdir::WalkDir::new(&target.path)
+                .follow_links(false)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.file_type().is_file());
+
+            for entry in walker {
+                if let Ok(meta) = entry.metadata() {
+                    if let Ok(mtime) = meta.modified() {
+                        let mtime_ms = mtime
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis() as u64;
+                        if mtime_ms > cutoff_ms {
+                            if let Some(path_str) = entry.path().to_str() {
+                                hot_paths.push(path_str.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let changed = hot_paths.len();
+        tracing::info!(changed_files = changed, cutoff_ms, "incremental update");
+
+        if hot_paths.is_empty() {
+            tracing::info!("no files changed since last build — index is up to date");
+            return self.db.active_version().map_err(Into::into);
+        }
+
+        let plan = ReindexPlan {
+            hot_paths,
+            metadata_paths: vec![],
+            deferred_paths: vec![],
+            bulk_event: false,
+        };
+        let version = self.build_full_index_with_plan(Some(&plan))?;
+        // Update the stored timestamp so subsequent `index update` calls use this as baseline.
+        let _ = self
+            .db
+            .set_runtime_state("last_full_build_unix_ms", &unix_now_ms().to_string());
+        Ok(version)
     }
 
     fn build_full_index_with_plan(&self, plan: Option<&ReindexPlan>) -> Result<u64> {

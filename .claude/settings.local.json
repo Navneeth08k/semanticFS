@@ -38,7 +38,21 @@
       "Bash(grep -E \"\\\\.ps1$|\\\\.sh$|\\\\.py$\")",
       "Bash(find /c/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS -type d -name fixtures -o -name golden* -o -name *golden*)",
       "Bash(cargo check:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:lumadock.com)",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "Bash(ls \"C:\\\\Users\\\\navneeth\\\\.claude\\\\plans\"\" 2>/dev/null || echo \"directory does not exist \")",
+      "Bash(cargo build:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(Get-Content \"C:\\\\Users\\\\navneeth\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-navneeth-Desktop-NavneethThings-Projects-semanticFS\\\\cbfb6870-5e12-4826-84c5-ae1a09058840\\\\tasks\\\\bfq3mrrzb.output\" -Tail 30)",
+      "Bash(python scripts/multi_repo_h2h.py)",
+      "Bash(python scripts/generate_multi_repo_charts.py)",
+      "Bash(./target/release/semanticfs.exe --help)",
+      "Bash(grep -r \"panic!\\\\|\\\\.unwrap\\(\\)\\\\|\\\\.expect\\(\" C:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS/crates --include=*.rs)",
+      "Bash(target/release/semanticfs.exe --version)",
+      "Bash(target/release/semanticfs.exe --help)"
     ]
   }
 }

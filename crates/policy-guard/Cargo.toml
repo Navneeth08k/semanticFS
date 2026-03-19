@@ -11,3 +11,6 @@ regex.workspace = true
 serde.workspace = true
 chrono.workspace = true
 semanticfs-common = { path = "../semanticfs-common" }
+
+[lints]
+workspace = true

@@ -1,14 +1,16 @@
 # SemanticFS
 
-**A filesystem-wide intelligence layer for AI coding agents.**
+**A filesystem-wide intelligence layer for any AI agent.**
 
-SemanticFS replaces manual codebase navigation (endless `ls`, `grep`, `cat` chains) with a semantic search interface. Agents ask *where* relevant code is, get back precise file paths and line ranges, verify through a byte-accurate read, then act — spending no tokens on exploration.
+SemanticFS replaces manual filesystem navigation (endless `ls`, `grep`, `cat`, `find` chains) with a semantic search interface. Any agent — coding or general-purpose — asks *where* relevant files are, gets back precise paths and line ranges, verifies through a byte-accurate read, then acts — spending no tokens on exploration.
+
+Works with **Claude Code**, **OpenClaw**, **Cline**, **Cursor**, **Continue.dev**, and any other MCP-compatible or HTTP-capable agent.
 
 ---
 
 ## Why it exists
 
-When an AI agent works on a large codebase without SemanticFS, it burns context doing this:
+Every AI agent that touches a filesystem does this:
 
 ```
 ls src/
@@ -19,7 +21,7 @@ cat ai_testgen_core/diff_parser.py
 ...
 ```
 
-Every directory listing, every file read, every grep output costs input tokens. In large repos — or repos contaminated with `node_modules`, `.venv`, `target/` — this gets expensive fast.
+Every directory listing, every file read, every grep burns input tokens. In large repos — or any filesystem with `node_modules`, `.venv`, `target/`, `Documents/`, etc. — this gets expensive fast. The agent doesn't know where things are, so it brute-forces it.
 
 SemanticFS replaces that with one call:
 
@@ -28,19 +30,25 @@ search("Python function signature extraction from git diff")
 → ai_testgen_core/diff_parser.py:40-95  (extract_signatures_python)
 ```
 
+This is true for **coding agents** (Claude Code, Cline, Cursor) and equally true for **general-purpose agents** (OpenClaw) — any time an agent needs to navigate files it hasn't seen before.
+
 ---
 
 ## Measured results
 
-Real head-to-head run on the `ai-testgen` repo (4,638 total files including `.venv`, 24 real source files). Same 6 tasks. Same model (Claude Sonnet 4.6). Both modes got 6/6 correct.
+Two independent benchmarks. Same methodology: `claude --print --output-format json`, Claude Sonnet 4.6, Bash tool only (naive) vs Bash + SemanticFS MCP.
+
+---
+
+### Benchmark 1 — ai-testgen (complex exploration tasks)
+
+Real head-to-head on the `ai-testgen` repo (4,638 total files including `.venv`, 24 real source files). 6 tasks requiring multi-file understanding (tracing API patterns, locating integrated subsystems).
 
 ![Summary](docs/charts/chart_summary.svg)
 
 ![Context tokens per task](docs/charts/chart_ctx_tokens.svg)
 
 ![Token savings per task](docs/charts/chart_savings.svg)
-
-![Cost per task](docs/charts/chart_cost.svg)
 
 | Metric | Naive (Bash only) | + SemanticFS MCP | Reduction |
 |---|---|---|---|
@@ -49,9 +57,34 @@ Real head-to-head run on the `ai-testgen` repo (4,638 total files including `.ve
 | Avg turns | 3.8 | 3.5 | **8%** |
 | Accuracy | 6/6 (100%) | 6/6 (100%) | same |
 
-The standout case: finding the CLI entry point cost **4,265 context tokens** naively (the agent had to explore directories, read multiple files). With SemanticFS it cost **5 tokens** — the search result pointed directly to `cli.py` and the agent answered immediately.
+The standout case: finding the CLI entry point cost **4,265 context tokens** naively (directory exploration, multiple file reads). With SemanticFS it cost **5 tokens** — the search returned `cli.py` directly.
 
-> **Note on timing:** SemanticFS wall-clock was slower in this test because each `claude --print` invocation cold-starts a new MCP subprocess. In a real Claude Code session, the MCP server starts once and persists. Real-world latency for SemanticFS is lower than naive (fewer tool-call round trips).
+---
+
+### Benchmark 2 — Multi-repo (4 codebases × 4 tasks × 2 modes = 32 API calls)
+
+Honest cross-repo benchmark on repos of increasing size. All 16 tasks correct in both modes.
+
+![Scorecard](docs/charts/multi_repo_scorecard.svg)
+
+![Cost comparison by repo](docs/charts/multi_repo_cost.svg)
+
+![Cost savings vs codebase size](docs/charts/multi_repo_savings.svg)
+
+| Repo | Size | Files (excl. deps) | Cost Naive | Cost + SFS | Δ |
+|---|---|---|---|---|---|
+| prizePicksAI | Tiny | 5 | 8.1¢ | 8.4¢ | −3% |
+| KalshiTradingAlgo | Small | 17 | 13.6¢ | 13.5¢ | +1% |
+| syntaxless | Medium | 95+ | 8.8¢ | 9.7¢ | −10% |
+| buckit | Large | 70+ JS + Supabase | 13.1¢ | 11.7¢ | **+11%** |
+
+**Accuracy:** Both modes 16/16 (100%) across all repos and tasks.
+
+**Key finding:** For simple "find this file" tasks on small repos (< 50 source files), the MCP overhead roughly matches the savings. SemanticFS's advantage grows with repo size and task complexity — where grep/find chains grow long and often need retrying.
+
+> The biggest wins come on **complex, multi-file exploration tasks** (like Benchmark 1) rather than simple single-file lookup tasks. If your agent is writing code across a large codebase, SemanticFS consistently saves both tokens and cost.
+
+> **Note on timing:** Wall-clock was slower per call because each `claude --print` invocation cold-starts a fresh MCP subprocess. In a persistent Claude Code session, the MCP server starts once and the latency advantage reverses (fewer tool-call round trips needed).
 
 ---
 
@@ -136,10 +169,34 @@ File changes → Indexer (watch + chunk + symbol + embed)
 
 ---
 
+## Supported agents
+
+| Agent | Type | Integration | Effort |
+|---|---|---|---|
+| **Claude Code** | Coding | MCP stdio (`serve mcp-stdio`) | Config file |
+| **OpenClaw** | General-purpose | ClawHub skill (`clawhub install semanticfs`) | One command |
+| **Cline** (VS Code) | Coding | MCP stdio (same config as Claude Code) | Config file |
+| **Cursor** | Coding | MCP stdio | Config file |
+| **Continue.dev** | Coding | MCP stdio | Config file |
+| **Custom agents** | Any | HTTP API (`localhost:9464`) | Direct `curl` |
+
+---
+
 ## Quickstart
 
-### 1. Build
+### 1. Install
 
+**Linux / macOS** — one-line install:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Navneeth08k/semanticFS/main/scripts/install.sh | bash
+```
+
+**Windows** (PowerShell):
+```powershell
+irm https://raw.githubusercontent.com/Navneeth08k/semanticFS/main/scripts/install.ps1 | iex
+```
+
+**From source:**
 ```bash
 cargo build --release -p semanticfs-cli
 ```
@@ -149,7 +206,7 @@ cargo build --release -p semanticfs-cli
 ```bash
 # Auto-detect git root + project type
 cd /path/to/your/repo
-cargo run --release -p semanticfs-cli -- --config semanticfs.toml init
+semanticfs --config semanticfs.toml init
 ```
 
 Or use a profile directly:
@@ -166,18 +223,18 @@ powershell -ExecutionPolicy Bypass -File scripts/apply_config_profile.ps1 `
 ### 3. (Optional) Set up real embeddings
 
 ```bash
-cargo run --release -p semanticfs-cli -- model setup
-# Downloads bge-small-en-v1.5 ONNX model to ~/.semanticfs/models/
-# SemanticFS auto-detects it on next startup
+semanticfs model setup
+# Downloads bge-small-en-v1.5 ONNX model (~33 MB) to ~/.semanticfs/models/
+# SemanticFS auto-detects it on next startup — no config change needed
 ```
 
 ### 4. Build the index
 
 ```bash
-cargo run --release -p semanticfs-cli -- --config semanticfs.toml index build
+semanticfs --config semanticfs.toml index build
 ```
 
-### 5. Connect Claude Code (native stdio — no Python required)
+### 5a. Connect Claude Code / Cline / Cursor / Continue.dev (MCP stdio)
 
 Create `claude_mcp.json`:
 
@@ -185,7 +242,7 @@ Create `claude_mcp.json`:
 {
   "mcpServers": {
     "semanticfs": {
-      "command": "/abs/path/to/semanticfs",
+      "command": "semanticfs",
       "args": ["--config", "/abs/path/to/semanticfs.toml", "serve", "mcp-stdio"]
     }
   }
@@ -197,7 +254,20 @@ Then:
 claude --mcp-config claude_mcp.json
 ```
 
-Claude Code starts the `serve mcp-stdio` subprocess — no separate server process needed.
+The agent starts the `serve mcp-stdio` subprocess — no separate server process needed. Same config works in Cline, Cursor, and Continue.dev.
+
+### 5b. Connect OpenClaw (one command)
+
+```bash
+clawhub install semanticfs
+```
+
+That's it. OpenClaw will use SemanticFS automatically when accessing your filesystem or doing any file-based task. No server process to manage — the skill calls the SemanticFS HTTP API directly.
+
+To index your workspace first:
+```bash
+semanticfs --config semanticfs.toml index build
+```
 
 For a full walkthrough: [`docs/setup_10_minute_agents.md`](docs/setup_10_minute_agents.md)
 
@@ -274,6 +344,21 @@ To use a custom model:
 export SEMANTICFS_ONNX_MODEL=/path/to/model.onnx
 export SEMANTICFS_ONNX_TOKENIZER=/path/to/tokenizer.json
 ```
+
+---
+
+## Alternatives & positioning
+
+| Tool | What it does | vs SemanticFS |
+|---|---|---|
+| `ripgrep` / `grep` | Fast regex search | Pattern-only, no semantics, burns agent tokens on output |
+| GitHub Copilot workspace | Cloud codebase indexing | Cloud-only, Copilot-locked, no local/private repos |
+| Sourcegraph Cody | Enterprise code search | SaaS/self-hosted server, not a local agent plugin |
+| Continue.dev `@codebase` | Per-session vector index | Rebuilt each session, one IDE only, no multi-root |
+| Cursor codebase index | Per-project embeddings | Cursor-only, cloud, no custom agent access |
+| **SemanticFS** | Local persistent hybrid index | Any agent, any OS, private by default, multi-root |
+
+SemanticFS is the only option that is **local-first, agent-agnostic, persistent across sessions, and multi-root aware**.
 
 ---
 

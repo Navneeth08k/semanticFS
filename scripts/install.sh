@@ -5,12 +5,12 @@
 # installs it to ~/.local/bin/semanticfs (or a path you choose with --prefix).
 #
 # Usage:
-#   curl -sSfL https://raw.githubusercontent.com/YOUR_ORG/semanticfs/main/scripts/install.sh | bash
+#   curl -sSfL https://raw.githubusercontent.com/Navneeth08k/semanticFS/main/scripts/install.sh | bash
 #   bash scripts/install.sh [--prefix /usr/local] [--version v1.0.0]
 
 set -euo pipefail
 
-REPO="YOUR_ORG/semanticfs"  # ← set to your GitHub org/repo before publishing
+REPO="Navneeth08k/semanticFS"  # ← set to your GitHub org/repo before publishing
 BINARY_NAME="semanticfs"
 DEFAULT_PREFIX="${HOME}/.local"
 
