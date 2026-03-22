@@ -19,9 +19,9 @@ struct ModelSpec {
 
 const MODELS: &[ModelSpec] = &[ModelSpec {
     name: "bge-small-en-v1.5",
-    onnx_url: "https://huggingface.co/BAAI/bge-small-en-v1.5/resolve/main/onnx/model_quantized.onnx",
+    onnx_url: "https://huggingface.co/BAAI/bge-small-en-v1.5/resolve/main/onnx/model.onnx",
     tokenizer_url: "https://huggingface.co/BAAI/bge-small-en-v1.5/resolve/main/tokenizer.json",
-    onnx_filename: "model_quantized.onnx",
+    onnx_filename: "model.onnx",
 }];
 
 pub fn run(model_name: &str, model_dir: &Path) -> Result<()> {

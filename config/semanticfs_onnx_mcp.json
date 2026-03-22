@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "semanticfs": {
+      "command": "C:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS/target/release/semanticfs.exe",
+      "args": ["--config", "C:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS/config/head_to_head_ai_testgen_onnx.toml", "serve", "mcp-stdio"],
+      "env": {
+        "SEMANTICFS_DB_PATH": "C:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS/.semanticfs/bench/ai_testgen_onnx.db",
+        "SEMANTICFS_ONNX_MODEL": "C:/Users/navneeth/.semanticfs/models/model.onnx"
+      }
+    }
+  }
+}

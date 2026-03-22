@@ -293,10 +293,12 @@ Head-to-head vs `ripgrep` on the v14 suite: SemanticFS recall **1.000** / MRR **
 
 ## Embeddings
 
-| Backend | Quality | Setup |
+| Backend | Best for | Setup |
 |---|---|---|
-| `hash` (default) | 100% recall on symbol/keyword queries | Zero — works out of the box |
-| `onnx` | Full semantic recall on natural-language queries | `semanticfs model setup` (~33 MB download) |
+| `hash` (default, **recommended**) | Symbol names, function names, file names, keywords — 100% recall | Zero — works out of the box |
+| `onnx` | Pure natural-language queries with no keyword match (e.g. *"where do we handle retry backoff"*) | `semanticfs model setup` (~33 MB download) |
+
+**Why hash is the default and recommended:** We benchmarked both. Hash outperformed ONNX on the standard coding-agent task set (find function X, locate class Y, trace CLI flow). These tasks are inherently symbol- and keyword-heavy — exactly what BM25 + symbol lookup is built for. ONNX adds overhead without improving results on these query types. Use ONNX if your agent asks in pure natural language with no symbol names.
 
 ---
 

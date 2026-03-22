@@ -475,9 +475,12 @@ fn find_auto_model() -> Option<PathBuf> {
         .ok()?;
 
     // bge-small-en-v1.5 (the default model from `semanticfs model setup`)
-    let candidate = home.join("models/model_quantized.onnx");
-    if candidate.exists() {
-        return Some(candidate);
+    // Try both filenames for backwards compatibility
+    for filename in &["model.onnx", "model_quantized.onnx"] {
+        let candidate = home.join("models").join(filename);
+        if candidate.exists() {
+            return Some(candidate);
+        }
     }
     None
 }

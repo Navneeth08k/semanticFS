@@ -30,8 +30,13 @@ def build_feed(session, enc):
         feed["input_ids"] = enc["input_ids"].astype(np.int64)
     if "attention_mask" in input_names:
         feed["attention_mask"] = enc["attention_mask"].astype(np.int64)
-    if "token_type_ids" in input_names and "token_type_ids" in enc:
-        feed["token_type_ids"] = enc["token_type_ids"].astype(np.int64)
+    if "token_type_ids" in input_names:
+        if "token_type_ids" in enc:
+            feed["token_type_ids"] = enc["token_type_ids"].astype(np.int64)
+        else:
+            # Some models (e.g. bge) require token_type_ids but tokenizer doesn't produce them
+            # Synthesize zeros of the same shape as input_ids
+            feed["token_type_ids"] = np.zeros_like(enc["input_ids"], dtype=np.int64)
     return feed
 
 def postprocess_embeddings(outputs: np.ndarray, attention_mask: np.ndarray, dim: int):
@@ -160,6 +165,12 @@ def main():
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer, use_fast=True)
+    # bge models don't define a pad token — use eos or add [PAD]
+    if tokenizer.pad_token is None:
+        if tokenizer.eos_token is not None:
+            tokenizer.pad_token = tokenizer.eos_token
+        else:
+            tokenizer.add_special_tokens({"pad_token": "[PAD]"})
     sess_opts = ort.SessionOptions()
     if args.intra_threads and args.intra_threads > 0:
         sess_opts.intra_op_num_threads = args.intra_threads
