@@ -70,3 +70,5 @@ __pycache__/
 .mypy_cache/
 .venv/
 venv/
+.claude/
+.claude/settings.local.json
