@@ -52,7 +52,9 @@
       "Bash(./target/release/semanticfs.exe --help)",
       "Bash(grep -r \"panic!\\\\|\\\\.unwrap\\(\\)\\\\|\\\\.expect\\(\" C:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS/crates --include=*.rs)",
       "Bash(target/release/semanticfs.exe --version)",
-      "Bash(target/release/semanticfs.exe --help)"
+      "Bash(target/release/semanticfs.exe --help)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(r[''''repo_id''''], r.get\\(''''index_build_seconds'''', ''''N/A''''\\), ''''sec''''\\) for r in d.get\\(''''repos'''', []\\)]\")",
+      "Bash(SFS=C:/Users/navneeth/Desktop/NavneethThings/Projects/semanticFS/target/release/semanticfs.exe __NEW_LINE_761e38cc889cb0b1__ cat EOF [workspace] scan_targets = [C:/Users/navneeth/Desktop/NavneethThings/Projects/prizePicksAI] deny_globs = [**/__pycache__/**, **/*.pyc, **/.git/**] [workspace.index] chunk_size = 40 chunk_overlap = 8 [[workspace.trust_domains]] id = main roots = [C:/Users/navneeth/Desktop/NavneethThings/Projects/prizePicksAI] trust = read-write EOF __NEW_LINE_761e38cc889cb0b1__ cat EOF [workspace] scan_targets = [C:/Users/navneeth/Desktop/NavneethThings/Projects/syntaxless] deny_globs = [**/node_modules/**, **/.next/**, **/.git/**, **/*.map] [workspace.index] chunk_size = 40 chunk_overlap = 8 [[workspace.trust_domains]] id = main roots = [C:/Users/navneeth/Desktop/NavneethThings/Projects/syntaxless] trust = read-write EOF __NEW_LINE_761e38cc889cb0b1__ cat EOF [workspace] scan_targets = [C:/Users/navneeth/Desktop/NavneethThings/Projects/buckit] deny_globs = [**/node_modules/**, **/.expo/**, **/.git/**, **/*.map] [workspace.index] chunk_size = 40 chunk_overlap = 8 [[workspace.trust_domains]] id = main roots = [C:/Users/navneeth/Desktop/NavneethThings/Projects/buckit] trust = read-write EOF __NEW_LINE_761e38cc889cb0b1__ echo '=== TINY: prizePicksAI \\(5 real source files\\) ===' start=$SECONDS SEMANTICFS_DB_PATH=/tmp/sfs_tiny_test.db $SFS --config /tmp/sfs_tiny.toml index build)"
     ]
   }
 }
