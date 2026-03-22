@@ -90,7 +90,7 @@ semanticfs --config semanticfs.toml index build
 
 > **What does indexing do?** It walks your source files, chunks them, extracts symbols (functions, classes, types), and builds a hybrid BM25 + vector index in a local SQLite file. The index persists — you only rebuild when files change (`index update` for incremental).
 
-> **How long does it take?** Tiny repo (< 50 files): ~3 seconds. Medium (100–500 files): ~15 seconds. Large (500+ files): ~60 seconds. Subsequent `index update` runs take < 2 seconds.
+> **How long does it take?** Measured on real repos (deps excluded): Tiny (< 10 source files): ~5 sec. Medium (100+ source files, ~5k chunks): ~40 sec. Large (300–500 source files, ~12k chunks): ~90 sec (1.5 min). This is a **one-time cost** — `index update` for incremental changes takes a few seconds.
 
 ---
 
